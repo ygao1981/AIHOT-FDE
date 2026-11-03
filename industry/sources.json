@@ -1,370 +1,615 @@
 {
-  "$comment": "示范信源：首次启动时导入（scripts/seed.ts），已存在的不会被覆盖。之后在后台“信源”里新建、修改和暂停。字段说明见 docs/customize.md。",
+  "$comment": "FDE 聚焦信源。启用前先在后台预览抓取，检查日期与去噪。部分 RSS（特别是非官方镜像）可能失效；无稳定 RSS 的中文来源保留在阅读起点，不伪造自动源。",
   "sources": [
     {
-      "id": "rss-openai-news",
-      "name": "OpenAI News",
+      "id": "fde-microsoft-ise",
+      "name": "Microsoft ISE Developer Blog",
       "kind": "rss",
       "config": {
-        "feedUrl": "https://openai.com/news/rss.xml",
+        "feedUrl": "https://devblogs.microsoft.com/ise/feed/",
         "_aihot": {
           "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "owner_entity_id": "openai",
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-google-deepmind",
-      "name": "Google DeepMind",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://deepmind.google/blog/rss.xml",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "owner_entity_id": "google",
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-google-research",
-      "name": "Google Research",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://research.google/blog/rss/",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "owner_entity_id": "google",
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方",
-        "研究"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-hugging-face",
-      "name": "Hugging Face Blog",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://huggingface.co/blog/feed.xml",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "owner_entity_id": "hugging-face",
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方",
-        "开源"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-microsoft-research",
-      "name": "Microsoft Research",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://www.microsoft.com/en-us/research/feed/",
-        "_aihot": {
-          "initialBackfillLimit": 8
+        },
+        "ingestNoiseFilter": {
+          "requireAny": [
+            "forward deployed",
+            "fde",
+            "case study",
+            "case studies",
+            "customer story",
+            "customer success",
+            "in production",
+            "production",
+            "customer",
+            "enterprise",
+            "implementation",
+            "deploy",
+            "agent",
+            "rag",
+            "workflow",
+            "evaluation",
+            "evals",
+            "lesson",
+            "field engineering",
+            "integration",
+            "how we built",
+            "how we",
+            "scaling",
+            "reliability",
+            "knowledge base",
+            "business process",
+            "cost optimization",
+            "postmortem",
+            "incident",
+            "poc",
+            "pilot",
+            "measuring",
+            "落地",
+            "实践",
+            "案例",
+            "复盘",
+            "部署",
+            "交付",
+            "知识库",
+            "智能体",
+            "工作流",
+            "教程",
+            "企业",
+            "成本",
+            "效果",
+            "验收",
+            "系统集成"
+          ],
+          "dropMarkersTitleOnly": [
+            "job opening",
+            "we are hiring",
+            "join our team",
+            "career",
+            "webinar",
+            "event recap",
+            "招聘",
+            "岗位",
+            "圆桌",
+            "直播预告",
+            "活动预告"
+          ]
         }
       },
       "tier": "T1",
       "owner_entity_id": "microsoft",
       "participation_mode": "editorial",
-      "interval_minutes": 120,
+      "interval_minutes": 180,
       "tags": [
-        "官方",
-        "研究"
+        "FDE",
+        "工程实践"
       ],
       "site_fulltext": false,
       "syndicate_fulltext": false
     },
     {
-      "id": "rss-nvidia-blog",
-      "name": "NVIDIA Blog",
+      "id": "fde-langchain",
+      "name": "LangChain Engineering Blog",
       "kind": "rss",
       "config": {
-        "feedUrl": "https://blogs.nvidia.com/feed/",
+        "feedUrl": "https://www.langchain.com/blog/rss.xml",
         "_aihot": {
           "initialBackfillLimit": 8
+        },
+        "ingestNoiseFilter": {
+          "requireAny": [
+            "forward deployed",
+            "fde",
+            "case study",
+            "case studies",
+            "customer story",
+            "customer success",
+            "in production",
+            "production",
+            "customer",
+            "enterprise",
+            "implementation",
+            "deploy",
+            "agent",
+            "rag",
+            "workflow",
+            "evaluation",
+            "evals",
+            "lesson",
+            "field engineering",
+            "integration",
+            "how we built",
+            "how we",
+            "scaling",
+            "reliability",
+            "knowledge base",
+            "business process",
+            "cost optimization",
+            "postmortem",
+            "incident",
+            "poc",
+            "pilot",
+            "measuring",
+            "落地",
+            "实践",
+            "案例",
+            "复盘",
+            "部署",
+            "交付",
+            "知识库",
+            "智能体",
+            "工作流",
+            "教程",
+            "企业",
+            "成本",
+            "效果",
+            "验收",
+            "系统集成"
+          ],
+          "dropMarkersTitleOnly": [
+            "job opening",
+            "we are hiring",
+            "join our team",
+            "career",
+            "webinar",
+            "event recap",
+            "招聘",
+            "岗位",
+            "圆桌",
+            "直播预告",
+            "活动预告"
+          ]
         }
       },
       "tier": "T1",
-      "owner_entity_id": "nvidia",
+      "owner_entity_id": "langchain",
       "participation_mode": "editorial",
-      "interval_minutes": 120,
+      "interval_minutes": 180,
       "tags": [
-        "官方"
+        "FDE",
+        "工程实践"
       ],
       "site_fulltext": false,
       "syndicate_fulltext": false
     },
     {
-      "id": "rss-aws-ml",
-      "name": "AWS Machine Learning Blog",
+      "id": "fde-aws-ai",
+      "name": "AWS AI Blog",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://aws.amazon.com/blogs/ai/feed/",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        },
+        "ingestNoiseFilter": {
+          "requireAny": [
+            "forward deployed",
+            "fde",
+            "case study",
+            "case studies",
+            "customer story",
+            "customer success",
+            "in production",
+            "production",
+            "customer",
+            "enterprise",
+            "implementation",
+            "deploy",
+            "agent",
+            "rag",
+            "workflow",
+            "evaluation",
+            "evals",
+            "lesson",
+            "field engineering",
+            "integration",
+            "how we built",
+            "how we",
+            "scaling",
+            "reliability",
+            "knowledge base",
+            "business process",
+            "cost optimization",
+            "postmortem",
+            "incident",
+            "poc",
+            "pilot",
+            "measuring",
+            "落地",
+            "实践",
+            "案例",
+            "复盘",
+            "部署",
+            "交付",
+            "知识库",
+            "智能体",
+            "工作流",
+            "教程",
+            "企业",
+            "成本",
+            "效果",
+            "验收",
+            "系统集成"
+          ],
+          "dropMarkersTitleOnly": [
+            "job opening",
+            "we are hiring",
+            "join our team",
+            "career",
+            "webinar",
+            "event recap",
+            "招聘",
+            "岗位",
+            "圆桌",
+            "直播预告",
+            "活动预告"
+          ]
+        }
+      },
+      "tier": "T1",
+      "owner_entity_id": "aws",
+      "participation_mode": "editorial",
+      "interval_minutes": 180,
+      "tags": [
+        "FDE",
+        "工程实践"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "fde-aws-ml",
+      "name": "AWS Machine Learning",
       "kind": "rss",
       "config": {
         "feedUrl": "https://aws.amazon.com/blogs/machine-learning/feed/",
         "_aihot": {
           "initialBackfillLimit": 8
+        },
+        "ingestNoiseFilter": {
+          "requireAny": [
+            "forward deployed",
+            "fde",
+            "case study",
+            "case studies",
+            "customer story",
+            "customer success",
+            "in production",
+            "production",
+            "customer",
+            "enterprise",
+            "implementation",
+            "deploy",
+            "agent",
+            "rag",
+            "workflow",
+            "evaluation",
+            "evals",
+            "lesson",
+            "field engineering",
+            "integration",
+            "how we built",
+            "how we",
+            "scaling",
+            "reliability",
+            "knowledge base",
+            "business process",
+            "cost optimization",
+            "postmortem",
+            "incident",
+            "poc",
+            "pilot",
+            "measuring",
+            "落地",
+            "实践",
+            "案例",
+            "复盘",
+            "部署",
+            "交付",
+            "知识库",
+            "智能体",
+            "工作流",
+            "教程",
+            "企业",
+            "成本",
+            "效果",
+            "验收",
+            "系统集成"
+          ],
+          "dropMarkersTitleOnly": [
+            "job opening",
+            "we are hiring",
+            "join our team",
+            "career",
+            "webinar",
+            "event recap",
+            "招聘",
+            "岗位",
+            "圆桌",
+            "直播预告",
+            "活动预告"
+          ]
         }
       },
       "tier": "T1",
-      "owner_entity_id": null,
+      "owner_entity_id": "aws",
       "participation_mode": "editorial",
-      "interval_minutes": 120,
+      "interval_minutes": 180,
       "tags": [
-        "官方",
-        "教程"
+        "FDE",
+        "工程实践"
       ],
       "site_fulltext": false,
       "syndicate_fulltext": false
     },
     {
-      "id": "rss-github-ai",
-      "name": "GitHub Blog · AI & ML",
+      "id": "fde-github-ai",
+      "name": "GitHub AI Engineering",
       "kind": "rss",
       "config": {
         "feedUrl": "https://github.blog/ai-and-ml/feed/",
         "_aihot": {
           "initialBackfillLimit": 8
+        },
+        "ingestNoiseFilter": {
+          "requireAny": [
+            "forward deployed",
+            "fde",
+            "case study",
+            "case studies",
+            "customer story",
+            "customer success",
+            "in production",
+            "production",
+            "customer",
+            "enterprise",
+            "implementation",
+            "deploy",
+            "agent",
+            "rag",
+            "workflow",
+            "evaluation",
+            "evals",
+            "lesson",
+            "field engineering",
+            "integration",
+            "how we built",
+            "how we",
+            "scaling",
+            "reliability",
+            "knowledge base",
+            "business process",
+            "cost optimization",
+            "postmortem",
+            "incident",
+            "poc",
+            "pilot",
+            "measuring",
+            "落地",
+            "实践",
+            "案例",
+            "复盘",
+            "部署",
+            "交付",
+            "知识库",
+            "智能体",
+            "工作流",
+            "教程",
+            "企业",
+            "成本",
+            "效果",
+            "验收",
+            "系统集成"
+          ],
+          "dropMarkersTitleOnly": [
+            "job opening",
+            "we are hiring",
+            "join our team",
+            "career",
+            "webinar",
+            "event recap",
+            "招聘",
+            "岗位",
+            "圆桌",
+            "直播预告",
+            "活动预告"
+          ]
         }
       },
       "tier": "T1",
-      "owner_entity_id": null,
+      "owner_entity_id": "github",
       "participation_mode": "editorial",
-      "interval_minutes": 120,
+      "interval_minutes": 180,
       "tags": [
-        "官方"
+        "FDE",
+        "工程实践"
       ],
       "site_fulltext": false,
       "syndicate_fulltext": false
     },
     {
-      "id": "rss-mistral",
-      "name": "Mistral AI",
+      "id": "fde-huggingface",
+      "name": "Hugging Face Engineering",
       "kind": "rss",
       "config": {
-        "feedUrl": "https://mistral.ai/news/rss",
+        "feedUrl": "https://huggingface.co/blog/feed.xml",
         "_aihot": {
           "initialBackfillLimit": 8
+        },
+        "ingestNoiseFilter": {
+          "requireAny": [
+            "forward deployed",
+            "fde",
+            "case study",
+            "case studies",
+            "customer story",
+            "customer success",
+            "in production",
+            "production",
+            "customer",
+            "enterprise",
+            "implementation",
+            "deploy",
+            "agent",
+            "rag",
+            "workflow",
+            "evaluation",
+            "evals",
+            "lesson",
+            "field engineering",
+            "integration",
+            "how we built",
+            "how we",
+            "scaling",
+            "reliability",
+            "knowledge base",
+            "business process",
+            "cost optimization",
+            "postmortem",
+            "incident",
+            "poc",
+            "pilot",
+            "measuring",
+            "落地",
+            "实践",
+            "案例",
+            "复盘",
+            "部署",
+            "交付",
+            "知识库",
+            "智能体",
+            "工作流",
+            "教程",
+            "企业",
+            "成本",
+            "效果",
+            "验收",
+            "系统集成"
+          ],
+          "dropMarkersTitleOnly": [
+            "job opening",
+            "we are hiring",
+            "join our team",
+            "career",
+            "webinar",
+            "event recap",
+            "招聘",
+            "岗位",
+            "圆桌",
+            "直播预告",
+            "活动预告"
+          ]
         }
       },
       "tier": "T1",
-      "owner_entity_id": null,
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-bair",
-      "name": "Berkeley AI Research",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://bair.berkeley.edu/blog/feed.xml",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "owner_entity_id": null,
+      "owner_entity_id": "hugging-face",
       "participation_mode": "editorial",
       "interval_minutes": 180,
       "tags": [
-        "研究"
+        "FDE",
+        "工程实践"
       ],
       "site_fulltext": false,
       "syndicate_fulltext": false
     },
     {
-      "id": "rss-the-verge-ai",
-      "name": "The Verge · AI",
+      "id": "fde-anthropic-engineering-mirror",
+      "name": "Anthropic Engineering（第三方 RSS 镜像）",
       "kind": "rss",
       "config": {
-        "feedUrl": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+        "feedUrl": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_engineering.xml",
         "_aihot": {
           "initialBackfillLimit": 8
+        },
+        "ingestNoiseFilter": {
+          "requireAny": [
+            "forward deployed",
+            "fde",
+            "case study",
+            "case studies",
+            "customer story",
+            "customer success",
+            "in production",
+            "production",
+            "customer",
+            "enterprise",
+            "implementation",
+            "deploy",
+            "agent",
+            "rag",
+            "workflow",
+            "evaluation",
+            "evals",
+            "lesson",
+            "field engineering",
+            "integration",
+            "how we built",
+            "how we",
+            "scaling",
+            "reliability",
+            "knowledge base",
+            "business process",
+            "cost optimization",
+            "postmortem",
+            "incident",
+            "poc",
+            "pilot",
+            "measuring",
+            "落地",
+            "实践",
+            "案例",
+            "复盘",
+            "部署",
+            "交付",
+            "知识库",
+            "智能体",
+            "工作流",
+            "教程",
+            "企业",
+            "成本",
+            "效果",
+            "验收",
+            "系统集成"
+          ],
+          "dropMarkersTitleOnly": [
+            "job opening",
+            "we are hiring",
+            "join our team",
+            "career",
+            "webinar",
+            "event recap",
+            "招聘",
+            "岗位",
+            "圆桌",
+            "直播预告",
+            "活动预告"
+          ]
         }
       },
       "tier": "T2",
-      "owner_entity_id": null,
-      "participation_mode": "editorial",
-      "interval_minutes": 60,
-      "tags": [
-        "媒体"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-techcrunch-ai",
-      "name": "TechCrunch · AI",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://techcrunch.com/category/artificial-intelligence/feed/",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T2",
-      "owner_entity_id": null,
-      "participation_mode": "editorial",
-      "interval_minutes": 60,
-      "tags": [
-        "媒体"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-ars-technica-ai",
-      "name": "Ars Technica · AI",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://arstechnica.com/ai/feed/",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T2",
-      "owner_entity_id": null,
-      "participation_mode": "editorial",
-      "interval_minutes": 60,
-      "tags": [
-        "媒体"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-mit-tech-review-ai",
-      "name": "MIT Technology Review · AI",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://www.technologyreview.com/topic/artificial-intelligence/feed",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T2",
-      "owner_entity_id": null,
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "媒体"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-the-decoder",
-      "name": "The Decoder",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://the-decoder.com/feed/",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T2",
-      "owner_entity_id": null,
-      "participation_mode": "editorial",
-      "interval_minutes": 60,
-      "tags": [
-        "媒体"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-simon-willison",
-      "name": "Simon Willison",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://simonwillison.net/atom/everything/",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T2",
-      "owner_entity_id": null,
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "个人"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-import-ai",
-      "name": "Import AI",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://importai.substack.com/feed",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T2",
-      "owner_entity_id": null,
+      "owner_entity_id": "anthropic",
       "participation_mode": "editorial",
       "interval_minutes": 180,
       "tags": [
-        "个人",
-        "周刊"
+        "FDE",
+        "工程实践"
       ],
       "site_fulltext": false,
       "syndicate_fulltext": false
     },
     {
-      "id": "rss-latent-space",
-      "name": "Latent Space",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://www.latent.space/feed",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
+      "id": "fde-curated",
+      "name": "人工精选与历史案例",
+      "kind": "external",
+      "config": {},
       "tier": "T2",
-      "owner_entity_id": null,
       "participation_mode": "editorial",
-      "interval_minutes": 180,
+      "interval_minutes": 1440,
       "tags": [
-        "个人"
+        "人工精选"
       ],
       "site_fulltext": false,
-      "syndicate_fulltext": false
+      "syndicate_fulltext": false,
+      "enabled": true
     }
   ]
 }
