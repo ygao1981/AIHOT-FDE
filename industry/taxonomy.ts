@@ -72,7 +72,7 @@ export const IDENTITY_LEXICON: ReadonlyArray<{ id: string; name: string; pattern
   { id: "google", name: "Google", patterns: [/google|gemini|deepmind/i] },
   { id: "deepseek", name: "DeepSeek", patterns: [/deepseek|深度求索/i] },
   { id: "tencent", name: "腾讯云", patterns: [/腾讯云|tencent cloud|weknora|workbuddy/i] },
-  { id: "alibaba", name: "阿里云", patterns: [/阿里云|alibaba cloud|百炼/i] },
+  { id: "alibaba", name: "阿里云", patterns: [/alibaba|阿里巴巴|阿里云|百炼/i] },
 ];
 
 export const PUBLISHER_DOMAINS: ReadonlyArray<{ entityId: string; domains: readonly string[] }> = [

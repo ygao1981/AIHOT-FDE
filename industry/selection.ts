@@ -19,6 +19,7 @@ export const SELECTION = {
    *   leaderboard 评测榜单：给各家模型跑分、排名的评测机构
    */
   classes: {
+    engineering: { label: "需重点核验的工程资料", threshold: 70 },
     marketing: { label: "泛资讯与厂商营销", threshold: 80 },
   } as Record<string, { label: string; threshold: number }>,
   /**
