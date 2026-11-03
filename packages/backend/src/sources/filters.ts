@@ -22,7 +22,11 @@ export function noiseFiltered(c: Candidate, source: SourceRow): boolean {
   const has = (text: string, words: string[] | undefined) => (words ?? []).some((k) => text.includes(k.toLowerCase()));
   const title = c.title.toLowerCase();
   const hay = `${title}\n${(c.excerpt ?? "").toLowerCase()}`;
+  // Keep explicit, high-signal sources even when a generic exclusion phrase appears.
   if (has(hay, f.keepIfMatches)) return false;
+  // Source-specific, inexpensive relevance screening before detail extraction and paid model calls.
+  // Only titles and feed excerpts are available here; keep terms broad to avoid dropping real cases.
+  if (Array.isArray(f.requireAny) && f.requireAny.length && !has(hay, f.requireAny)) return true;
   return has(title, f.dropMarkersTitleOnly) || has(hay, f.dropMarkers);
 }
 

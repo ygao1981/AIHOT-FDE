@@ -1,3 +1,17 @@
+# FDE 实战观察（AIHOT-FDE）
+
+本仓库将 [AIHOT](https://github.com/KKKKhazix/AIHOT) 通用热点框架改造成**国内外企业 AI 落地案例、FDE 交付经验和工程教程聚合站**。聚焦业务痛点、实施方法、上线阶段、验证数据与复盘教训，而非泛 AI 新闻。保留原 MIT 授权与引擎架构。
+
+- **阅读起点：** `/reading`，人工选编中外实战参考资料，不需要模型调用即可阅读。
+- **行业过滤：** `industry/sources.json` 定义目标来源，`ingestNoiseFilter.requireAny` 在模型调用之前用标题与摘要筛掉明显无关内容。
+- **六类内容：** 落地案例、工程方案、实操教程、交付方法、成本效果、项目复盘。主题见 `/topics`。
+- **安全启动：** `.env.example` 默认关闭 `COLLECT_ENABLED` 与 `MODEL_CALLS_ENABLED`；审核预算与来源后再开启。
+- **部署：** [FDE 专用 VPS 教程](docs/FDE_DEPLOY.md)，完整框架说明继续看下方原文。
+- **版权：** 只展示本站生成的摘要与原文链接，原站资料版权归原作者，未经授权不转载全文。
+- **注意：** 修改种子源并不会移除已部署数据库里的旧源；有安全停用脚本。`/reading` 中的厂商成功案例标注自述属性。
+
+---
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.png">

@@ -19,6 +19,18 @@
 
 每种信源认哪些配置项写在 [`config-keys.ts`](../packages/backend/src/sources/config-keys.ts)。填了不认识的配置项，保存会被拒绝、抓取会直接失败并在后台显示原因，不会悄悄退回通用解析。
 
+### FDE 版本：低成本筛选
+
+本站的 FDE 示范信源在 `ingestNoiseFilter.requireAny` 中配置了宽松的匹配词表。
+列表标题和摘要只要含有其中一个短语就保留；全部不命中则在正文提取、模型预筛和评分之前丢弃。
+此规则是为了控制付费模型成本，**不是全文搜索**：RSS 如果只给出极短标题，可能误删真正的案例。
+管理员先在信源管理页“预览抓取”检查遗漏，再在源配置中调整词表或删除 `requireAny`。
+`keepIfMatches` 可为特定来源补充豁免词；`dropMarkers` 与 `dropMarkersTitleOnly` 用于压制明确的推广内容。
+
+已部署过上游示范源的数据库不会随着替换 `industry/sources.json` 自动删除旧源。
+使用 `node --env-file=.env scripts/fde-disable-legacy-sources.ts` 只停用列明的旧示范源，不删除历史资料。
+改动前先备份数据库。
+
 ## 先预览，再创建
 
 进入 `/admin/sources/new`，填写 ID、名称，选择类型，再把[下一节](#每种信源怎么配置)对应的 JSON 填入“采集配置（JSON）”。这里填的是配置对象，不要包上 `kind` 或 `config`。切换类型会重置配置，先选类型再粘贴。

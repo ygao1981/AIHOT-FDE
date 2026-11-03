@@ -15,12 +15,12 @@ export const SELECTION = {
    * 信源类别 → 门槛下限。分级只说明来源是不是官方、一手；有些官方信源的日常内容主要写给开发者或业内，
    * 读者要看的只是其中的大事，就在后台“信源”里给它一个类别，门槛抬到不低于这里的数。
    * 只抬不降：分级门槛本来就更高的（媒体）不受影响。没有类别的信源只按分级。
-   *   ecosystem 生态与基础设施：芯片与硬件、推理与云服务、模型托管、开发框架与工具链、安全研究厂商、工程与开发者博客
-   *   leaderboard 评测榜单：给各家模型跑分、排名的评测机构
+   *   engineering 工程资料：对于来源官方但证据不足的工程介绍，抬高进入精选的门槛。
+   *   marketing 泛资讯与厂商营销：仅发布功能或业务宣传的来源需要更充分的技术和效果证据。
    */
   classes: {
-    ecosystem: { label: "生态与基础设施", threshold: 70 },
-    leaderboard: { label: "评测榜单", threshold: 76 },
+    engineering: { label: "需重点核验的工程资料", threshold: 70 },
+    marketing: { label: "泛资讯与厂商营销", threshold: 80 },
   } as Record<string, { label: string; threshold: number }>,
   /**
    * 没入选、但平均分高于这个数的资料，也用精选的写法（内容理解：标题、摘要、推荐理由）来写，
