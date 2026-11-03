@@ -16,13 +16,13 @@ export interface PracticeLink {
 export const PRACTICE_LINKS: readonly PracticeLink[] = [
   {
     "id": "cn-01",
-    "title": "FDE 落地全景：为什么企业需要交付闭环",
+    "title": "FDE 落地指南：从演示走向生产",
     "source": "腾讯云社区 · 技术方舟",
     "kind": "交付方法",
     "region": "国内",
     "focus": "从试点到生产",
-    "url": "https://developer.cloud.tencent.com/article/2732013",
-    "note": "企业 AI 项目为什么经常停在演示阶段，以及 FDE 如何承担业务闭环。",
+    "url": "https://developer.cloud.tencent.com/article/2766642",
+    "note": "围绕生产化的数据、评估、安全、人机兜底、场景选择与成本约束整理实施注意事项。",
     "evidence": "方法论，非客户案例"
   },
   {
@@ -38,14 +38,14 @@ export const PRACTICE_LINKS: readonly PracticeLink[] = [
   },
   {
     "id": "cn-03",
-    "title": "FDE 场景选择：先落地哪一个 AI 项目",
+    "title": "企业 AI 落地的业务语言与五步交付",
     "source": "腾讯云社区 · 技术方舟",
     "kind": "成本效果",
     "region": "国内",
     "focus": "ROI 与优先级",
-    "url": "https://cloud.tencent.com/developer/article/2734888",
-    "note": "七项硬门槛、价值评分卡、TCO 与 30/60/90 天复盘。",
-    "evidence": "方法论，需自己验证"
+    "url": "https://developer.cloud.tencent.com/article/2772461",
+    "note": "强调用业务语言定义问题，按场景识别、智能体建设、业务运行、价值验证和持续改进组织交付。",
+    "evidence": "行业方法观点，非客户验收数据"
   },
   {
     "id": "cn-04",
