@@ -594,7 +594,8 @@
         "工程实践"
       ],
       "site_fulltext": false,
-      "syndicate_fulltext": false
+      "syndicate_fulltext": false,
+      "enabled": false
     },
     {
       "id": "fde-curated",
