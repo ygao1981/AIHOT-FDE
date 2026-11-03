@@ -22,7 +22,10 @@
       "name": "Palantir / AIP",
       "group": "company",
       "entityId": "palantir",
-      "definition": "Palantir AIP 与驻场工程项目的公开实践。"
+      "definition": "Palantir AIP 与驻场工程项目的公开实践。",
+      "aliases": [
+        "AIP / Palantir"
+      ]
     },
     {
       "slug": "microsoft",
