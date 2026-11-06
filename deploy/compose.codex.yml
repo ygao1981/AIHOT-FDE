@@ -1,0 +1,68 @@
+# Use with: docker compose -f docker-compose.yml -f deploy/compose.codex.yml ...
+# Do not use a new project name against an existing fde-observer deployment: keep its volumes.
+x-fde-app: &fde-app
+  image: ${FDE_IMAGE:-fde-codex-app:local}
+  build:
+    context: .
+    dockerfile: Dockerfile.codex
+    args:
+      CODEX_VERSION: ${CODEX_VERSION:?Set an exact tested official Codex CLI version}
+  init: true
+  logging:
+    driver: json-file
+    options: {max-size: '10m', max-file: '3'}
+services:
+  db:
+    mem_limit: 512m
+    command: ['postgres','-c','shared_buffers=64MB','-c','work_mem=4MB','-c','maintenance_work_mem=32MB','-c','max_connections=40','-c','max_wal_size=512MB']
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a unique database password}
+    logging:
+      driver: json-file
+      options: {max-size: '10m', max-file: '3'}
+  setup:
+    <<: *fde-app
+  api:
+    <<: *fde-app
+    mem_limit: 384m
+    environment:
+      MODEL_CALLS_ENABLED: 'false'
+      JINA_API_KEY: ''
+      SOCIALDATA_API_KEY: ''
+      DAJIALA_KEY: ''
+      AIHOT_CREDENTIALS_DIR: /nonexistent
+      DATABASE_POOL_MAX: '3'
+  web:
+    <<: *fde-app
+    mem_limit: 384m
+  worker:
+    <<: *fde-app
+    command: ['node','modules/fde-research/worker.ts']
+    mem_limit: 1024m
+    cpus: 1.0
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    environment:
+      MODEL_CALLS_ENABLED: 'false'
+      CODEX_HOME: /codex
+      FDE_CODEX_BIN: /usr/local/bin/codex
+      FDE_CODEX_ENABLED: ${FDE_CODEX_ENABLED:-false}
+      FDE_DAILY_LIMIT: ${FDE_DAILY_LIMIT:-5}
+      FDE_CODEX_MODEL: ${FDE_CODEX_MODEL:-}
+      FDE_CODEX_REASONING: ${FDE_CODEX_REASONING:-low}
+      FDE_MAX_INPUT_CHARS: ${FDE_MAX_INPUT_CHARS:-16000}
+      FDE_CODEX_TIMEOUT_MS: ${FDE_CODEX_TIMEOUT_MS:-180000}
+      JINA_API_KEY: ''
+      SOCIALDATA_API_KEY: ''
+      DAJIALA_KEY: ''
+      EMBEDDING_API_KEY: ''
+      DASHSCOPE_API_KEY: ''
+      AIHOT_CREDENTIALS_DIR: /nonexistent
+      FEISHU_CONTENT_PUSH_ENABLED: 'false'
+      FEISHU_INTERNAL_ENABLED: 'false'
+      DATABASE_POOL_MAX: '2'
+    volumes:
+      - type: bind
+        source: ${FDE_CODEX_HOME:?Set an absolute dedicated Codex directory}
+        target: /codex
+        bind: {create_host_path: false}
