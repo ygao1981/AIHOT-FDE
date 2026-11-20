@@ -62,3 +62,38 @@ jobs:
           path: ${{ runner.temp }}/fde-qa-output/
           if-no-files-found: warn
           retention-days: 7
+
+  personal-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: fde-workbench
+    env:
+      FDE_COLLECT_ENABLED: "false"
+      FDE_ANALYSIS_ENABLED: "false"
+      FDE_AUTO_ANALYZE: "false"
+      FDE_MODEL_PROVIDER: "off"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.22.3
+          package-manager-cache: false
+      - name: Configure a disposable personal workbench
+        run: |
+          node scripts/init.mjs
+          docker compose config --quiet
+      - name: Build and start the SQLite entry
+        run: docker compose up -d --build --wait --wait-timeout 60
+      - name: Health and in-container backup
+        run: |
+          curl --fail --silent http://127.0.0.1:3210/api/health
+          docker compose exec -T app node scripts/manage.mjs status
+          docker compose exec -T app node scripts/manage.mjs backup
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose logs --tail 60
+      - name: Remove this CI-only container and volume
+        if: always()
+        run: docker compose down --volumes

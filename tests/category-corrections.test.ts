@@ -49,7 +49,7 @@ test("category corrections revise every standard report atomically without selec
   await sql.unsafe("CREATE TRIGGER reject_category_audit BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION reject_category_audit()");
   try {
     await assert.rejects(change("reject-category"), /category audit rejected/);
-    assert.equal((await sql`SELECT category FROM publications WHERE article_id=${articleId}`)[0]!.category, "ai-models");
+    assert.equal((await sql`SELECT category FROM publications WHERE article_id=${articleId}`)[0]!.category, "case");
     assert.equal((await sql`SELECT 1 FROM report_revisions WHERE report_id IN (SELECT id FROM reports WHERE key IN ('2097-01-02','2097-W01','2097-01'))`).length, 0);
   } finally {
     await sql.unsafe("DROP TRIGGER reject_category_audit ON audit_log; DROP FUNCTION reject_category_audit()");

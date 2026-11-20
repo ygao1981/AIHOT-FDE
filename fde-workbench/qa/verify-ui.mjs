@@ -65,6 +65,28 @@ try {
   page.setDefaultTimeout(15000);
   report.phase = 'browser-interaction';
   const pageErrors=[]; page.on('pageerror',e=>pageErrors.push(e.message));
+  const nextArticleResponse = (expected = {}) => page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return response.request().method() === 'GET' && response.status() === 200 && url.pathname === '/api/articles'
+      && ['q', 'status', 'editorialStatus'].every(key => (url.searchParams.get(key) || '') === (expected[key] || ''));
+  });
+  const waitForArticleList = expected => page.waitForFunction(expected => {
+    const list = document.getElementById('article-list');
+    return list?.getAttribute('aria-busy') === 'false'
+      && !list.querySelector('.loading-state')
+      && list.querySelectorAll('.article-card').length === expected.count
+      && document.getElementById('result-count')?.textContent === expected.caption
+      && document.getElementById('search')?.value === (expected.q || '')
+      && document.getElementById('filter-status')?.value === (expected.status || '')
+      && document.getElementById('filter-editorial')?.value === (expected.editorialStatus || '');
+  }, expected);
+  const afterArticleAction = async (action, expected) => {
+    // Listen before the action; the response must match this query, including a debounced search.
+    const [response] = await Promise.all([nextArticleResponse(expected), action()]);
+    await response.finished();
+    // The caption can retain an earlier result while the new list is still loading.
+    await waitForArticleList(expected);
+  };
   await page.goto(config.baseUrl);
   await page.locator('#login-screen').waitFor({state:'visible'});
   await page.screenshot({path:`${outputDir}/desktop-login.png`,fullPage:true});
@@ -74,16 +96,14 @@ try {
   assert.match(await page.locator('#login-error').innerText(),/口令未通过验证/);
   checked('登录错误显示中文反馈');
   await page.locator('#login-token').fill(config.accessToken);
-  await page.locator('#login-submit').click();
+  await afterArticleAction(() => page.locator('#login-submit').click(), { count: 2, caption: '共 2 篇资料' });
   await page.locator('#workspace').waitFor({state:'visible'});
   await page.waitForFunction(()=>document.getElementById('stat-total').textContent==='2');
-  await page.locator('.article-card').nth(1).waitFor();
   const cookies=await context.cookies(); assert.equal(cookies.find(c=>c.name==='fde_session').httpOnly,true);
   assert.equal(await page.evaluate(()=>localStorage.length+sessionStorage.length),0);
   checked('登录成功，HttpOnly 会话且浏览器存储无口令');
   await page.screenshot({path:`${outputDir}/desktop-library.png`,fullPage:true});
-  await page.locator('#filter-editorial').selectOption('shortlisted');
-  await page.waitForFunction(()=>document.querySelectorAll('.article-card').length===1);
+  await afterArticleAction(() => page.locator('#filter-editorial').selectOption('shortlisted'), { editorialStatus: 'shortlisted', count: 1, caption: '找到 1 篇资料' });
   assert.match(await page.locator('.article-card').innerText(),/2026\.11\.01/);
   checked('选题筛选与纯日期在负时区下不前移');
   await page.getByRole('button',{name:'界面样例：售后知识检索试点',exact:true}).click();
@@ -94,10 +114,16 @@ try {
   const note='界面测试笔记：先核对试点范围，再决定是否形成正式选题。';
   await page.locator('#personal-notes').fill(note);
   await page.locator('#save-notes').click();
-  await page.waitForFunction(()=>document.getElementById('notes-state').textContent==='笔记已保存');
+  await page.waitForFunction(()=>document.getElementById('notes-state').textContent==='笔记已保存'
+    && document.getElementById('save-notes').textContent==='保存笔记'
+    && document.getElementById('article-list').getAttribute('aria-busy')==='false');
   assert.equal(store.getArticle(fixture.id).personalNotes,note);
+  const editorialResponse = page.waitForResponse(r => r.url().endsWith(`/api/articles/${fixture.id}`) && r.request().method()==='PATCH' && r.status()===200);
   await page.locator('#detail-editorial').selectOption('drafting');
-  await page.waitForFunction(()=>document.getElementById('detail-editorial').disabled===false);
+  await (await editorialResponse).finished();
+  await page.waitForFunction(()=>document.getElementById('detail-editorial').disabled===false
+    && document.getElementById('detail-editorial').value==='drafting'
+    && document.getElementById('article-list').getAttribute('aria-busy')==='false');
   assert.equal(store.getArticle(fixture.id).editorialStatus,'drafting');
   const downloadPromise=page.waitForEvent('download');
   await page.getByRole('button',{name:'导出 Markdown',exact:true}).click();
@@ -106,11 +132,11 @@ try {
   checked('详情区分事实与建议，笔记和进度持久化，Markdown 下载包含笔记');
   await page.screenshot({path:`${outputDir}/desktop-detail.png`,fullPage:true});
   await page.locator('#close-detail').click();
-  await page.locator('#clear-filters').click();
-  await page.locator('#search').fill('不存在的验收关键词');
-  await page.waitForFunction(()=>document.getElementById('result-count').textContent==='找到 0 篇资料');
+  await afterArticleAction(() => page.locator('#clear-filters').click(), { count: 2, caption: '共 2 篇资料' });
+  await afterArticleAction(() => page.locator('#search').fill('不存在的验收关键词'), { q: '不存在的验收关键词', count: 0, caption: '找到 0 篇资料' });
+  await page.locator('#article-list').getByRole('heading', { name: '暂时没有符合条件的资料', exact: true }).waitFor();
   assert.match(await page.locator('#article-list').innerText(),/没有符合条件/);
-  await page.locator('#clear-filters').click();
+  await afterArticleAction(() => page.locator('#clear-filters').click(), { count: 2, caption: '共 2 篇资料' });
   checked('无结果筛选有清晰空状态并能重置');
   await page.locator('#open-import').click();
   await page.locator('#import-url').fill('https://example.org/fde-ui-import');
@@ -119,14 +145,18 @@ try {
   await page.locator('#import-submit').click();
   await page.locator('#import-dialog').waitFor({state:'hidden'});
   await page.waitForFunction(()=>document.getElementById('detail-title')?.textContent==='界面样例：手动导入的实施经验');
+  await waitForArticleList({ count: 3, caption: '共 3 篇资料' });
   assert.equal(store.findUrl('https://example.org/fde-ui-import').body,sampleBody);
   assert.equal(await page.locator('#detail-dialog').getByRole('button',{name:'加入分析队列',exact:true}).isDisabled(),true);
   assert.equal(await page.getByRole('button',{name:'导出 Markdown',exact:true}).isDisabled(),true);
   assert.equal(store.db.prepare('SELECT count(*) n FROM attempts').get().n,0);
   checked('粘贴正文可手动入库，模型关闭时不触发请求且未分析导出禁用');
   await page.locator('#close-detail').click();
+  const sourcesResponse = page.waitForResponse(r => new URL(r.url()).pathname==='/api/sources' && r.request().method()==='GET' && r.status()===200);
   await page.locator('#tab-sources').click();
-  await page.locator('.source-card').first().waitFor();
+  await (await sourcesResponse).finished();
+  await page.waitForFunction(()=>document.getElementById('source-list').getAttribute('aria-busy')==='false'
+    && document.querySelectorAll('#source-list .source-card').length>0);
   assert.equal(await page.locator('#collect-now').isDisabled(),true);
   assert.ok((await page.locator('.source-card').count())>0);
   const manual=page.locator('.source-card').filter({hasText:'Datawhale FDE100'});
@@ -136,25 +166,27 @@ try {
   const firstSource=page.locator('.source-card').filter({hasText:'美团技术团队'}).getByRole('switch');
   const disabledResponse = page.waitForResponse(r => r.url().endsWith('/api/sources/meituan-engineering') && r.request().method() === 'POST' && r.status() === 200);
   await firstSource.uncheck();
-  await disabledResponse;
+  await (await disabledResponse).finished();
   await page.locator('.source-card').filter({hasText:'美团技术团队'}).getByText('已停用',{exact:true}).waitFor();
   assert.equal(store.sources().find(s=>s.id==='meituan-engineering').enabled,false);
   const enabledResponse = page.waitForResponse(r => r.url().endsWith('/api/sources/meituan-engineering') && r.request().method() === 'POST' && r.status() === 200);
   await page.locator('.source-card').filter({hasText:'美团技术团队'}).getByRole('switch').check();
-  await enabledResponse;
+  await (await enabledResponse).finished();
   await page.locator('.source-card').filter({hasText:'美团技术团队'}).getByText('已启用',{exact:true}).waitFor();
   assert.equal(store.sources().find(s=>s.id==='meituan-engineering').enabled,true);
   checked('来源可启停并恢复，人工阅读入口明确，采集关闭按钮禁用');
+  const usageResponse = page.waitForResponse(r => new URL(r.url()).pathname==='/api/overview' && r.request().method()==='GET' && r.status()===200);
   await page.locator('#tab-usage').click();
-  await page.locator('.usage-card').first().waitFor();
+  await (await usageResponse).finished();
+  await page.waitForFunction(()=>document.getElementById('usage-content').getAttribute('aria-busy')==='false'
+    && document.querySelectorAll('#usage-content .usage-card').length===3);
   assert.match(await page.locator('#usage-content').innerText(),/金额未知/);
   assert.match(await page.locator('#usage-content').innerText(),/单位为 token/);
   assert.match(await page.locator('#usage-content').innerText(),/API/);
   await page.screenshot({path:`${outputDir}/desktop-usage.png`,fullPage:true});
   checked('用量显示未知金额，次数和 token 不冒充美元');
   await page.setViewportSize({width:390,height:844});
-  await page.locator('#tab-library').click();
-  await page.locator('.article-card').first().waitFor();
+  await afterArticleAction(() => page.locator('#tab-library').click(), { count: 3, caption: '共 3 篇资料' });
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:`${outputDir}/mobile-library.png`,fullPage:true});
   await page.getByRole('button',{name:'界面样例：售后知识检索试点',exact:true}).click();
