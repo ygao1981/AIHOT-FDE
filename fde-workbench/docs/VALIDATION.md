@@ -4,7 +4,7 @@
 
 ## GitHub 验收结果
 
-实现提交 [`18b8a78`](https://github.com/ygao1981/AIHOT-FDE/commit/18b8a78f05d3b62d21f75e63e35e2681ed6b0e13) 的 [FDE workbench workflow](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44747333791) 已通过两个 job：
+实现与验收脚本提交 [`d9200c0`](https://github.com/ygao1981/AIHOT-FDE/commit/d9200c08a930e1954e7db404b0ea5facbf647649) 的 [FDE workbench workflow](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44749368030) 已通过两个 job。后续纯文档提交不改变本次被验收的源码、测试和部署配置：
 
 | Job | 实际验证 |
 |---|---|
@@ -78,15 +78,25 @@ DOM 联调覆盖资料渲染、标题不执行 HTML、日期精度、原文证�
 
 最初真实浏览器验收未完成：云端浏览器无法访问测试服务；本地 Chromium 在页面打开前被系统拒绝创建 socket。没有修改权限绕过，也没有生成页面截图。
 
-随后在 GitHub runner 完成真实浏览器验收。首轮发现验收脚本把搜索加载前的旧标题误当成新结果；已改为等待匹配参数的响应与稳定 DOM，保留全部断言。第二轮十组检查全部通过，流程中没有未捕获脚本异常、外部页面请求或模型尝试。桌面研究库、资料详情、用量及移动研究库截图已实际查看。
+随后在 GitHub runner 完成真实浏览器验收。首轮发现验收脚本把搜索加载前的旧标题误当成新结果；已改为等待匹配参数的响应与稳定 DOM，保留全部断言。第二轮与第三轮十组检查均通过，流程中没有未捕获脚本异常、外部页面请求或模型尝试。第三轮增加移动端详情和关闭按钮位于 390×844 视口内的断言，并将详情截图改为实际视口；报告显示详情边界为 `(0, 0, 390, 844)`，关闭按钮完整可见。桌面研究库、资料详情、用量以及移动研究库、移动详情截图已实际查看。
 
 可重跑脚本为 [`qa/verify-ui.mjs`](../qa/verify-ui.mjs)，测试使用真实后端、独立虚构 SQLite、关闭模型与采集。后续提交以对应 run 的报告为准。生产部署不需要安装 Playwright 或浏览器。
 
 ## 旧版入口的补充检查
 
-原 Check workflow 首轮发现旧行业测试夹具中的分类/主题未同步。本次仅调整对应测试数据和断言，没有修改旧站业务实现或关闭 gate。完整 typecheck、生产 web build、245 项 standalone 测试以及 request-target 单测在开发环境通过。原 Docker 构建和烟测也在 GitHub 通过。
+原 Check workflow 前两轮发现旧行业测试夹具中的分类/主题与当前 FDE 目录未同步，以及环境变量检查只扫描旧入口的问题。本次同步合法分类、实际主题别名和指标字段契约；环境检查加入新入口生产 `.mjs`、真实数字配置 helper 与 Compose/Dockerfile 的使用。双向配置断言保留，没有白名单豁免，没有修改旧站业务实现或关闭 gate。
 
-旧版 PostgreSQL 集成和 Web 全套检查由独立的 [Check workflow](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44747333603) 运行，结果不能混入新版 53 项测试统计。
+本地完整 typecheck、生产 web build、245 项 standalone 测试以及定向环境和指标测试通过。实现提交 `d9200c08a930e1954e7db404b0ea5facbf647649` 的 [Check workflow](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44749367965) 最终两个 job 均成功：
+
+| 检查 | 实际结果 |
+|---|---|
+| Typecheck 与生产 Web 构建 | 通过 |
+| Web 全套测试 | 59 通过，0 失败、0 跳过 |
+| PostgreSQL / 后端全套测试 | 1052 通过，0 失败、0 跳过 |
+| 构建后站点烟测 | 通过 |
+| 原入口 Docker 构建、启动与烟测 | 通过 |
+
+这些结果用于确认保留入口的兼容性，不混入新版 53 项测试统计，也不代表已经迁移或连接用户的旧数据库。
 
 ## 资源观察
 

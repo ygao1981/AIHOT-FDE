@@ -46,6 +46,6 @@ npm start
 
 本仓库保留 [AIHOT](https://github.com/KKKKhazix/AIHOT) 及此前 FDE 适配，借鉴了来源配置、任务收据、模型预算与读取不触发模型等设计。原公开站点的多服务、PostgreSQL 和多轮精选流程仍在历史目录中，详见 [旧版 README](README-LEGACY.md)。
 
-**根目录 `package.json`、`compose.yml`、`apps/` 和旧 `docs/FDE_*` 属于历史入口。** 部署本次个人版时进入 `fde-workbench/`，使用其独立配置。没有自动数据库迁移；不要向同一数据目录启动两个实例。
+**根目录 `package.json`、`docker-compose.yml`、`apps/` 和旧 `docs/FDE_*` 属于历史入口。** 部署本次个人版时进入 `fde-workbench/`，使用其独立配置。没有自动数据库迁移；不要向同一数据目录启动两个实例。
 
 源代码沿用 [MIT License](LICENSE)，保留 [NOTICE](NOTICE)。界面使用新名称“FDE 研究台”；信源内容的权利仍归原作者，公开写作时保留出处并自行核验。

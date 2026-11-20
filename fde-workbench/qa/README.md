@@ -113,4 +113,4 @@ DOM 脚本不创建数据库，所有 API 都由测试数据模拟。它通过�
 
 这类启动失败应如实保留为失败结果。可在允许运行浏览器的独立开发机或 GitHub runner 执行同一脚本；后续验证结论以该次生成的 JSON、截图和 CI 退出码为准。不要因为 DOM 检查通过，就把真实浏览器检查标为通过。
 
-后续已在 [GitHub run 44747333791](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44747333791) 完成真实 Chromium 验收：10 组流程通过、两种视口、模型尝试为 0。首轮发现的异步加载等待问题已修复，没有用固定 sleep 或删除断言解决。完整版本与范围见 [VALIDATION](../docs/VALIDATION.md)。
+后续已在 [GitHub run 44749368030](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44749368030) 完成真实 Chromium 验收：10 组流程通过、两种视口、模型尝试为 0；详情与关闭按钮在移动视口内，截图已实际查看。首轮发现的异步加载等待问题已修复，没有用固定 sleep 或删除断言解决。完整版本与范围见 [VALIDATION](../docs/VALIDATION.md)。

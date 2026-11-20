@@ -11,7 +11,7 @@
 - 仓库：`https://github.com/ygao1981/AIHOT-FDE`
 - 工作分支：`codex/fde-workbench-v2`
 - GitHub 交付：[PR #3](https://github.com/ygao1981/AIHOT-FDE/pull/3)，保留草稿供目标环境验收；没有合并到 main。
-- 已通过新版 CI 的实现提交：`18b8a78f05d3b62d21f75e63e35e2681ed6b0e13`。之后的文档和验收脚本修订以分支历史为准。
+- 已通过新版及旧版完整 CI 的实现与验收脚本提交：`d9200c08a930e1954e7db404b0ea5facbf647649`。之后的纯文档修订以分支历史为准。
 - 初始代码基线：`194fbef74a79b2194d0119000f42f6badc5741f3`，来自此前 `codex/fde-cli-single-pass`。
 - 开始工作时 `main`：`05c9b2c95398d43057800ac10fefd1c2721ff0b1`。
 - 本版实际版本以 `git rev-parse HEAD` 和该分支历史为准；不要将初始基线误认成新版交付提交。
@@ -51,8 +51,9 @@
 - `npm test`：53 项通过，0 失败，0 跳过。后续补验以 [VALIDATION](fde-workbench/docs/VALIDATION.md) 的最新记录为准。
 - `npm audit --omit=dev`：当次 0 已知漏洞；已将 fast-xml-parser 更新到 5.12.1。
 - DOM 联调：6 组通过，使用模拟 API，不等于浏览器通过。
-- **真实 Chromium 验收通过**：[GitHub run 44747333791](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44747333791)，10 组浏览器流程，1440×1000 / 390×844；登录、筛选、笔记、导入、导出、来源开关、用量、窄屏与退出均通过，模型尝试为 0。
+- **真实 Chromium 验收通过**：[GitHub run 44749368030](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44749368030)，10 组浏览器流程，1440×1000 / 390×844；登录、筛选、笔记、导入、导出、来源开关、用量、窄屏与退出均通过，模型尝试为 0。移动端详情和关闭按钮位于视口内，桌面与移动端截图已实际查看。
 - **新版基础 Docker 通过**：同一 CI 完成单服务镜像构建、启动、健康检查和容器内 SQLite 备份，所有采集与模型开关关闭。
+- **旧版完整回归通过**：[Check run 44749367965](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44749367965)，59 项 Web 测试、1052 项后端测试均为 0 失败、0 跳过；typecheck、生产构建、站点烟测、原 Docker 构建和烟测均通过。仅同步旧行业测试夹具并扩展环境配置检查，没有修改旧站业务源码或关闭检查。
 - 原生采集代码对 9 个默认来源逐一运行；每源读取列表及一篇正文，全部取得可用条目。Palantir 详情受限，使用明确标注的 feed_excerpt。
 - 实际 CLI `0.172.0-alpha.2` 的非模型版本/参数/登录状态诊断通过参数检查，专用空目录未登录。
 - 一条虚构资料、模型/采集关闭、10 次健康请求后的空闲 RSS 为 88.9 MiB，测量期间峰值 99.3 MiB；应用生产依赖约 14 MiB。不包含 CLI 分析峰值、Node 安装、镜像、数据库增长与备份。
@@ -64,7 +65,6 @@
 - **真实账号分析**：用户 Plus/其他 ChatGPT 权益、官方 API 余额和所选模型可用性未验证。需要用户本人完成登录，再验收一篇。
 - **用户 VPS**：没有连接，也没有查看实际磁盘、内存、端口、MariaDB 或其他服务。
 - **Codex Docker / systemd**：基础镜像已通过 CI；真实 CLI 版本、登录目录、容器内认证和目标系统服务仍需在选定机器验证。
-- **旧版全套测试**：没有修改旧站业务源码。CI 暴露的旧行业测试夹具已同步；本地完整 typecheck、生产 web build 和 245 项 standalone 测试通过。旧 PostgreSQL 与 Web 全套状态以对应 Check workflow 为准，不与新版检查混算。
 
 ## 6. 必须知道的运维边界
 
