@@ -1,4 +1,4 @@
-// Failure cases: a benchmark, price change, tool or follow-up is counted as a new model; a category
+// Failure cases: an industry without a release category exposes an irrelevant launch metric; a category
 // correction leaves frozen daily/weekly/monthly columns stale, rewrites the lead or selection, triggers
 // a paid digest, leaves an obsolete section introduction, or commits without its audit/revision.
 import { tag } from "./setup.ts";
@@ -14,14 +14,15 @@ import { QUEUES, getBoss, stopBoss } from "@aihot/backend/jobs/queue";
 
 after(async () => { await stopBoss(); await closeDb(); });
 
-test("new models require a launch classification as well as an official, new model event", () => {
+test("FDE daily metrics omit model-launch counts while retaining event totals", () => {
   const base = { category: "case", tags: ["落地案例"], authority: 0, previous: null,
     entry: { sourceId: "official", firstParty: true } } as EditionEntry;
   const rows = [base, { ...base, tags: ["实操教程"] }, { ...base, tags: ["工程方案"] },
     { ...base, category: "architecture" }, { ...base, authority: 3 },
     { ...base, previous: { key: "2026-09-30", title: "已报过的发布" } }, { ...base, tags: [] }];
-  assert.equal(dailyMetrics(rows).modelsReleased, 0, "FDE 版不统计模型新品发布");
-  assert.equal(dailyMetrics(rows).totalEvents, 7);
+  const metrics = dailyMetrics(rows);
+  assert.equal(Object.hasOwn(metrics, "modelsReleased"), false, "FDE 版不提供模型新品发布指标");
+  assert.equal(metrics.totalEvents, 7);
 });
 
 test("category corrections revise every standard report atomically without selecting, rewriting or notifying", async () => {
@@ -37,7 +38,7 @@ test("category corrections revise every standard report atomically without selec
   await publishArticle(articleId, { releasedAt: new Date() });
   const entry = { itemId: articleId, title: "冻结标题", summary: "冻结摘要", sourceId, firstParty: true, role: "官方" };
   const contents = [
-    { kind: "daily", key: "2097-01-02", content: { leadItemId: articleId, lead: { title: "冻结头条" }, highlights: [articleId], flashes: [], sections: [{ label: "真实项目", items: [entry] }], metrics: { totalEvents: 1, modelsReleased: 0 } } },
+    { kind: "daily", key: "2097-01-02", content: { leadItemId: articleId, lead: { title: "冻结头条" }, highlights: [articleId], flashes: [], sections: [{ label: "真实项目", items: [entry] }], metrics: { totalEvents: 1 } } },
     ...(["weekly", "monthly"] as const).map(kind => ({ kind, key: kind === "weekly" ? "2097-W01" : "2097-01", content: { headline: "冻结头条", leadItemId: articleId, storyOrder: [articleId], overview: "保留总述", themes: [{ heading: "真实项目", summary: "旧模型导读", storyRefs: [entry] }], metrics: { totalStories: 1 } } })),
   ];
   for (const r of contents) await sql`INSERT INTO reports (kind,key,window_start,window_end,content,generated_at,origin)
@@ -63,7 +64,8 @@ test("category corrections revise every standard report atomically without selec
     assert.equal(c.leadItemId, articleId);
     if (r.kind === "daily") {
       assert.deepEqual(c.sections, [{ label: "工程方案", items: [entry] }]);
-      assert.equal(c.metrics.modelsReleased, 0);
+      assert.equal(Object.hasOwn(c.metrics, "modelsReleased"), false);
+      assert.equal(c.metrics.totalEvents, 1);
       assert.deepEqual(c.highlights, [articleId]);
       assert.equal(c.lead.title, "冻结头条");
     } else {
@@ -77,5 +79,6 @@ test("category corrections revise every standard report atomically without selec
   await overrideFields(articleId, { fields: {}, clear: ["category", "tags"], version: 1, reason: "验证撤销纠错" }, "test-category");
   const [restored] = await sql`SELECT content FROM reports WHERE kind='daily' AND key='2097-01-02'`;
   assert.equal(restored!.content.sections[0].label, "真实项目");
-  assert.equal(restored!.content.metrics.modelsReleased, 0);
+  assert.equal(Object.hasOwn(restored!.content.metrics, "modelsReleased"), false);
+  assert.equal(restored!.content.metrics.totalEvents, 1);
 });

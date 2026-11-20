@@ -3,7 +3,7 @@
 // - a company topic takes an article about another company that only mentions it (several subjects,
 //   its name nowhere in the title), or drops one about it whose title names it in English, in another
 //   case, next to Chinese text, or only by a product (it is the article's only subject);
-// - a Latin name matches inside another word ("Metadata" is not Meta); a headline naming a company
+// - a Latin name matches inside another word ("Microsoftish" is not Microsoft); a headline naming a company
 //   that is not a subject of the article gets in;
 // - a technical-direction topic stops taking its tags;
 // - withdrawn or not yet released articles appear in a list or a count;
@@ -93,24 +93,24 @@ async function members(slug: string): Promise<string[]> {
 test("a company topic takes the articles about it, not the ones that only mention it", async () => {
   const about = await report({ at: hoursAgo(30), title: `Claude Code 推出插件 ${T}`, subjects: ["anthropic"] });
   const product = await report({ at: hoursAgo(31), title: `Sonnet 新版上线 ${T}`, subjects: ["anthropic"] });
-  const english = await report({ at: hoursAgo(32), title: `企业智能体落地方案 ${T}`, originalTitle: `Anthropic deploys an agent ${T}`, subjects: ["anthropic", "openai"] });
-  const subpoena = await report({ at: hoursAgo(33), title: `加州检察长向 OpenAI 发出传票 ${T}`, subjects: ["openai", "anthropic", "hugging-face"] });
-  const lowerCase = await report({ at: hoursAgo(34), title: `openai 公布新的安全框架 ${T}`, subjects: ["openai", "anthropic"] });
-  const pact = await report({ at: hoursAgo(35), title: `二十余家科技公司签署安全协议 ${T}`, subjects: ["openai", "anthropic", "google"] });
-  const metadata = await report({ at: hoursAgo(36), title: `Microservices 框架部署，OpenAI 参与 ${T}`, subjects: ["microsoft", "openai"] });
-  const adjacent = await report({ at: hoursAgo(37), title: `采用Microsoft的Agent方案 ${T}`, subjects: ["microsoft", "openai"] });
-  const headline = await report({ at: hoursAgo(38), title: `Anthropic 被一篇盘点提到 ${T}`, subjects: ["google"] });
+  const english = await report({ at: hoursAgo(32), title: `企业智能体落地方案 ${T}`, originalTitle: `Anthropic deploys an agent ${T}`, subjects: ["anthropic", "langchain"] });
+  const deployment = await report({ at: hoursAgo(33), title: `LangChain 发布客户部署案例 ${T}`, subjects: ["langchain", "anthropic", "aws"] });
+  const lowerCase = await report({ at: hoursAgo(34), title: `langchain 公布新的评测流程 ${T}`, subjects: ["langchain", "anthropic"] });
+  const pact = await report({ at: hoursAgo(35), title: `三家团队发布联合交付方法 ${T}`, subjects: ["langchain", "anthropic", "aws"] });
+  const embedded = await report({ at: hoursAgo(36), title: `Microsoftish 框架部署，LangChain 参与 ${T}`, subjects: ["microsoft", "langchain"] });
+  const adjacent = await report({ at: hoursAgo(37), title: `采用Microsoft的Agent方案 ${T}`, subjects: ["microsoft", "langchain"] });
+  const headline = await report({ at: hoursAgo(38), title: `Anthropic 被一篇盘点提到 ${T}`, subjects: ["aws"] });
   const agent = await report({ at: hoursAgo(39), title: `Agent 工作流部署 ${T}`, tags: ["Agent"] });
 
   const anthropic = await members("anthropic");
   for (const id of [about, product, english]) assert.ok(anthropic.includes(id), "about Anthropic");
-  for (const id of [subpoena, lowerCase, pact, headline]) assert.ok(!anthropic.includes(id), "only mentions Anthropic");
-  const openai = await members("openai");
-  for (const id of [subpoena, lowerCase, metadata]) assert.ok(openai.includes(id), "about OpenAI");
-  for (const id of [english, pact]) assert.ok(!openai.includes(id), "only mentions OpenAI");
+  for (const id of [deployment, lowerCase, pact, headline]) assert.ok(!anthropic.includes(id), "only mentions Anthropic");
+  const langchain = await members("langchain");
+  for (const id of [deployment, lowerCase, embedded]) assert.ok(langchain.includes(id), "about LangChain");
+  for (const id of [english, pact]) assert.ok(!langchain.includes(id), "only mentions LangChain");
   const microsoft = await members("microsoft");
   assert.ok(microsoft.includes(adjacent), "Microsoft next to Chinese text");
-  assert.ok(!microsoft.includes(metadata), "Microservices is not Microsoft");
+  assert.ok(!microsoft.includes(embedded), "Microsoft inside a longer Latin word is not a company name");
   assert.ok((await members("agent")).includes(agent), "a technical direction takes its tag");
 
   // The article page names the topics it belongs to.
@@ -119,7 +119,7 @@ test("a company topic takes the articles about it, not the ones that only mentio
     return (JSON.parse(res.body) as { topics: Array<{ slug: string }> }).topics.map((t) => t.slug);
   };
   assert.deepEqual(await topicsOf(about), ["anthropic", "cases"]);
-  assert.deepEqual(await topicsOf(subpoena), ["openai", "cases"]);
+  assert.deepEqual(await topicsOf(deployment), ["langchain", "cases"]);
   assert.deepEqual(await topicsOf(pact), ["cases"]);
   assert.deepEqual(await topicsOf(agent), ["agent", "cases"]);
 });

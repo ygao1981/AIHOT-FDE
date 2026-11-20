@@ -2,6 +2,17 @@
 
 日期：2026-11-20。范围：`fde-workbench/` 个人版。环境：Linux x64、Node v24.22.3、npm 11.19.1。**这不是用户 VPS 的测试报告。**
 
+## GitHub 验收结果
+
+实现提交 [`18b8a78`](https://github.com/ygao1981/AIHOT-FDE/commit/18b8a78f05d3b62d21f75e63e35e2681ed6b0e13) 的 [FDE workbench workflow](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44747333791) 已通过两个 job：
+
+| Job | 实际验证 |
+|---|---|
+| `personal-workbench` | 安装、语法、53 项业务测试、依赖审计、6 组 DOM 检查、10 组真实 Chromium 流程 |
+| `personal-docker` | 基础单服务镜像构建、容器启动、健康接口、容器内 SQLite 备份和清理 |
+
+浏览器覆盖 1440×1000 与 390×844，报告 `browserValidationCompleted=true`、`modelRequests=0`。测试使用虚构资料和临时随机口令，没有访问生产数据。截图和 JSON 是该 run 的 `fde-workbench-qa` artifact，保留期为 7 天；过期后可运行仓库中的同一脚本重建。
+
 ## 本地自动验证
 
 | 检查 | 实际结果 | 证明范围 |
@@ -67,7 +78,15 @@ DOM 联调覆盖资料渲染、标题不执行 HTML、日期精度、原文证�
 
 最初真实浏览器验收未完成：云端浏览器无法访问测试服务；本地 Chromium 在页面打开前被系统拒绝创建 socket。没有修改权限绕过，也没有生成页面截图。
 
-已提交可重跑的 [`qa/verify-ui.mjs`](../qa/verify-ui.mjs) 和独立 GitHub Actions 工作流。脚本使用真实后端、独立虚构 SQLite、关闭模型与采集，检查 1440×1000 和 390×844 两个视口的登录、笔记、筛选、导入、导出、来源启停及用量，并输出 JSON/截图。当前浏览器结论须以实际 CI 报告为准；只有成功运行后才可更新为通过。生产部署不需要安装 Playwright 或浏览器。
+随后在 GitHub runner 完成真实浏览器验收。首轮发现验收脚本把搜索加载前的旧标题误当成新结果；已改为等待匹配参数的响应与稳定 DOM，保留全部断言。第二轮十组检查全部通过，流程中没有未捕获脚本异常、外部页面请求或模型尝试。桌面研究库、资料详情、用量及移动研究库截图已实际查看。
+
+可重跑脚本为 [`qa/verify-ui.mjs`](../qa/verify-ui.mjs)，测试使用真实后端、独立虚构 SQLite、关闭模型与采集。后续提交以对应 run 的报告为准。生产部署不需要安装 Playwright 或浏览器。
+
+## 旧版入口的补充检查
+
+原 Check workflow 首轮发现旧行业测试夹具中的分类/主题未同步。本次仅调整对应测试数据和断言，没有修改旧站业务实现或关闭 gate。完整 typecheck、生产 web build、245 项 standalone 测试以及 request-target 单测在开发环境通过。原 Docker 构建和烟测也在 GitHub 通过。
+
+旧版 PostgreSQL 集成和 Web 全套检查由独立的 [Check workflow](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44747333603) 运行，结果不能混入新版 53 项测试统计。
 
 ## 资源观察
 
@@ -87,8 +106,7 @@ DOM 联调覆盖资料渲染、标题不执行 HTML、日期精度、原文证�
 
 - 用户 VPS 的系统、磁盘、inode、内存、端口和长期资源峰值。
 - 用户真实 ChatGPT / API 权益、官方登录、单篇分析质量与账户用量。
-- Docker 镜像构建、容器内 CLI 认证与 systemd 常驻运行。
-- 旧版 PostgreSQL 公开站点的完整回归。
+- 容器内真实 Codex CLI 认证与分析、目标 VPS 的 Docker 条件及 systemd 常驻运行；基础 Docker 已通过 CI。
 - 长期来源稳定性与未来页面变化；跨网站同内容的语义去重。
 
 这些项不影响先运行关闭模型的个人试用，但不能在交接时写成已验收。下一个 Codex 只需补目标环境相关检查，不必重复消耗模型额度测试已由假服务覆盖的错误分支。

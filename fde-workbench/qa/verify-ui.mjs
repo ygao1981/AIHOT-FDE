@@ -130,7 +130,7 @@ try {
   const download=await downloadPromise; await download.saveAs(`${outputDir}/fixture-export.md`);
   assert.match(readFileSync(`${outputDir}/fixture-export.md`,'utf8'),/界面测试笔记/);
   checked('详情区分事实与建议，笔记和进度持久化，Markdown 下载包含笔记');
-  await page.screenshot({path:`${outputDir}/desktop-detail.png`,fullPage:true});
+  await page.screenshot({path:`${outputDir}/desktop-detail.png`,fullPage:false});
   await page.locator('#close-detail').click();
   await afterArticleAction(() => page.locator('#clear-filters').click(), { count: 2, caption: '共 2 篇资料' });
   await afterArticleAction(() => page.locator('#search').fill('不存在的验收关键词'), { q: '不存在的验收关键词', count: 0, caption: '找到 0 篇资料' });
@@ -193,13 +193,31 @@ try {
   await page.locator('#personal-notes').waitFor();
   assert.equal(await page.locator('#personal-notes').inputValue(),note);
   assert.equal(await page.locator('#detail-dialog').evaluate(el=>el.scrollWidth<=innerWidth),true);
-  await page.screenshot({path:`${outputDir}/mobile-detail.png`,fullPage:true});
+  const mobileDetailGeometry = await page.evaluate(() => {
+    const bounds = element => {
+      const { top, right, bottom, left, width, height } = element.getBoundingClientRect();
+      return { top, right, bottom, left, width, height };
+    };
+    return {
+      viewport: { width: innerWidth, height: innerHeight },
+      dialog: bounds(document.getElementById('detail-dialog')),
+      closeButton: bounds(document.getElementById('close-detail')),
+    };
+  });
+  report.mobileDetailGeometry = mobileDetailGeometry;
+  assert.deepEqual(mobileDetailGeometry.viewport, { width: 390, height: 844 });
+  for (const [name, bounds] of Object.entries({ dialog: mobileDetailGeometry.dialog, closeButton: mobileDetailGeometry.closeButton })) {
+    // Allow subpixel rounding at the viewport edge; the dialog content may scroll internally.
+    assert.ok(bounds.width > 0 && bounds.height > 0 && bounds.left >= -1 && bounds.top >= -1
+      && bounds.right <= 391 && bounds.bottom <= 845, `${name} must fit inside the 390 × 844 viewport`);
+  }
+  await page.screenshot({path:`${outputDir}/mobile-detail.png`,fullPage:false});
   await page.locator('#close-detail').click();
   await page.locator('#logout').click();
   await page.locator('#login-screen').waitFor();
   await page.screenshot({path:`${outputDir}/mobile-login.png`,fullPage:true});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-  checked('390 像素窄屏无横向溢出，保存内容重开仍在，退出可回登录');
+  checked('390 像素窄屏无横向溢出，详情及关闭按钮位于视口内，笔记保留且可退出');
   assert.deepEqual(pageErrors,[]);
   assert.deepEqual(externalRequests, []);
   assert.equal(store.db.prepare('SELECT count(*) n FROM attempts').get().n, 0);

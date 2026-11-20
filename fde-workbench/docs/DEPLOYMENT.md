@@ -152,7 +152,7 @@ FDE_AUTO_ANALYZE=false
 
 ## 6. 可选 Docker
 
-只有目标机器已经采用 Docker 且空间足够时才考虑。镜像和构建缓存的占用高于原生方案。本次开发环境没有 Docker daemon，镜像构建和容器登录仍需目标机器验证。
+只有目标机器已经采用 Docker 且空间足够时才考虑。镜像和构建缓存的占用高于原生方案。基础镜像、健康检查与容器内备份已在 GitHub CI 通过，见 [VALIDATION](VALIDATION.md)。这不替代目标 VPS 检查；真实 Codex 版本与容器登录仍需目标机器验证。
 
 在本目录初始化 `.env` 后，API / off 模式运行：
 

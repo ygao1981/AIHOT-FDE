@@ -112,3 +112,5 @@ DOM 脚本不创建数据库，所有 API 都由测试数据模拟。它通过�
 整理脚本时，DOM 检查的六组断言可以通过，其中包括“分析开启时，已过滤资料仍不安排模型”的检查。最初开发环境中的 Chromium 在进入页面前被系统拒绝创建 socket，报 `Operation not permitted`，因此当时没有完成真实浏览器交互，也没有产生页面截图。
 
 这类启动失败应如实保留为失败结果。可在允许运行浏览器的独立开发机或 GitHub runner 执行同一脚本；后续验证结论以该次生成的 JSON、截图和 CI 退出码为准。不要因为 DOM 检查通过，就把真实浏览器检查标为通过。
+
+后续已在 [GitHub run 44747333791](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44747333791) 完成真实 Chromium 验收：10 组流程通过、两种视口、模型尝试为 0。首轮发现的异步加载等待问题已修复，没有用固定 sleep 或删除断言解决。完整版本与范围见 [VALIDATION](../docs/VALIDATION.md)。
