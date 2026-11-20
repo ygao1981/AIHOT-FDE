@@ -1,0 +1,16 @@
+# Optional override: docker compose -f compose.yml -f compose.codex.yml ...
+services:
+  app:
+    build:
+      args:
+        CODEX_VERSION: ${FDE_CODEX_VERSION:?Set an exact tested official Codex version}
+    mem_limit: 1280m
+    environment:
+      FDE_CODEX_BIN: /usr/local/bin/codex
+      FDE_CODEX_HOME: /codex
+    volumes:
+      - type: bind
+        source: ${FDE_CODEX_HOST_DIR:?Set an existing dedicated absolute directory}
+        target: /codex
+        bind:
+          create_host_path: false

@@ -1,0 +1,27 @@
+[Unit]
+Description=FDE personal research workbench
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fde
+Group=fde
+WorkingDirectory=/opt/fde-workbench/fde-workbench
+EnvironmentFile=/opt/fde-workbench/fde-workbench/.env
+ExecStart=/usr/bin/node /opt/fde-workbench/fde-workbench/src/main.mjs
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=360
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/fde-workbench
+# Set FDE_DATA_DIR=/var/lib/fde-workbench in the same .env used by CLI commands.
+MemoryMax=768M
+CPUQuota=100%
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

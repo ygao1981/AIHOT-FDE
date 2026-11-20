@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="私人 FDE 研究工作台：整理 AI 落地案例、核对原文证据、记录经验与选题。">
+  <meta name="robots" content="noindex, nofollow">
+  <title>FDE 研究台</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <svg class="symbol-bank" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-library" viewBox="0 0 24 24"><path d="M4 4h5v16H4zM9 7h5v13H9zM16 5l4-1 3 15-4 1z"/></symbol>
+    <symbol id="i-sources" viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 7 7M5 5a14 14 0 0 1 14 14"/><circle cx="5.5" cy="18.5" r="1"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 4v16h17M8 15v-4M13 15V7M18 15v-6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 10a8 8 0 0 0-14-4L3 9m0-6v6h6M4 14a8 8 0 0 0 14 4l3-3m0 6v-6h-6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6L10 14M10 5H5v14h14v-5"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+  </svg>
+
+  <div id="startup" class="startup" role="status"><span class="spinner"></span><span>正在打开研究台…</span></div>
+
+  <main id="login-screen" class="login-layout" hidden>
+    <section class="login-intro" aria-labelledby="login-title">
+      <a class="brand login-brand" href="/" aria-label="FDE 研究台首页"><span class="brand-mark" aria-hidden="true">F</span><span>FDE 研究台</span></a>
+      <p class="eyebrow">个人研究工作台</p>
+      <h1 id="login-title">把案例读透，<br>把经验留下。</h1>
+      <p class="login-lead">从国内外 AI 落地实践中，整理业务问题、实施方法与原文证据，沉淀成自己的笔记和选题。</p>
+      <div class="login-steps" aria-label="研究流程"><span><b>01</b> 收集资料</span><span><b>02</b> 核对证据</span><span><b>03</b> 形成选题</span></div>
+    </section>
+    <section class="login-card" aria-labelledby="login-heading">
+      <span class="private-label"><span class="status-dot"></span>私人工作区</span>
+      <h2 id="login-heading">进入研究台</h2>
+      <p>输入部署时设置的访问口令。</p>
+      <form id="login-form">
+        <label for="login-token">访问口令</label>
+        <div class="password-field"><input id="login-token" name="token" type="password" autocomplete="current-password" required spellcheck="false"><button id="show-token" type="button" aria-pressed="false" aria-controls="login-token">显示</button></div>
+        <p id="login-error" class="form-error" role="alert" hidden></p>
+        <button id="login-submit" type="submit" class="button primary full">进入工作区 <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+      </form>
+      <p class="form-hint login-hint">口令用于保护研究资料，不是模型服务的密钥。请勿在此输入模型 API Key。</p>
+    </section>
+  </main>
+
+  <div id="workspace" hidden>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+    <header class="app-header">
+      <a class="brand" href="#library"><span class="brand-mark" aria-hidden="true">F</span><span>FDE 研究台<small>个人研究工作台</small></span></a>
+      <nav class="main-tabs" role="tablist" aria-label="工作区导航">
+        <button id="tab-library" type="button" role="tab" aria-selected="true" aria-controls="view-library" data-view="library"><svg class="icon" aria-hidden="true"><use href="#i-library"/></svg>研究库</button>
+        <button id="tab-sources" type="button" role="tab" aria-selected="false" aria-controls="view-sources" tabindex="-1" data-view="sources"><svg class="icon" aria-hidden="true"><use href="#i-sources"/></svg>信源</button>
+        <button id="tab-usage" type="button" role="tab" aria-selected="false" aria-controls="view-usage" tabindex="-1" data-view="usage"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>用量</button>
+      </nav>
+      <div class="header-actions"><button id="open-import" type="button" class="button primary"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>导入资料</button><button id="logout" type="button" class="button text-button">退出</button></div>
+    </header>
+
+    <main id="main-content" class="main-content" tabindex="-1">
+      <div id="workspace-error" class="notice error" role="alert" hidden><p id="workspace-error-text"></p><button id="retry-workspace" class="button small" type="button">重新加载</button></div>
+      <div id="pause-banner" class="notice warning" hidden><div><strong>分析已暂停</strong><p id="pause-reason"></p></div><button id="resume-banner" type="button" class="button small">恢复处理</button></div>
+
+      <section id="view-library" class="view" role="tabpanel" aria-labelledby="tab-library">
+        <div class="page-heading"><div><p class="eyebrow">资料 · 证据 · 选题</p><h1>研究库</h1><p class="page-lead">优先看业务问题、实施方法和可复用经验。</p></div><div class="page-actions"><button id="refresh-library" class="button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>刷新</button><button id="export-all" class="button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>导出研究资料</button></div></div>
+        <div class="stat-grid" aria-label="研究库概况"><div class="stat-card"><span>已收录资料</span><strong id="stat-total">—</strong></div><div class="stat-card"><span>待分析资料</span><strong id="stat-candidate">—</strong></div><div class="stat-card"><span>已完成分析</span><strong id="stat-analyzed">—</strong></div><div class="stat-card emphasis"><span>已列入选题</span><strong id="stat-shortlisted">—</strong></div></div>
+        <p id="analysis-mode" class="section-note"></p>
+        <form id="filter-form" class="filter-bar" aria-label="筛选研究资料">
+          <div class="search-field"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><label for="search" class="sr-only">搜索资料</label><input id="search" type="search" name="q" placeholder="搜索标题、研究内容或笔记" autocomplete="off"><button type="submit" class="search-submit">搜索</button></div>
+          <div class="select-field"><label for="filter-editorial">选题进度</label><select id="filter-editorial" name="editorialStatus"><option value="">全部进度</option value="new">待整理</option><option value="shortlisted">已选题</option><option value="drafting">写作中</option><option value="published">已发布</option><option value="archived">已归档</option></select></div>
+          <div class="select-field"><label for="filter-status">分析进度</label><select id="filter-status" name="status"><option value="">全部状态</option><option value="candidate">待分析</option><option value="queued">排队中</option><option value="analyzing">分析中</option><option value="analyzed">已分析</option><option value="needs_body">待补正文</option><option value="skipped">已跳过</option><option value="failed">分析未完成</option></select></div>
+          <button id="clear-filters" type="button" class="button text-button">重置</button>
+        </form>
+        <div class="list-caption"><span id="result-count" role="status">正在读取资料…</span><span>每篇保留原文入口</span></div>
+        <div id="article-list" class="article-list" aria-busy="true"></div>
+        <div id="pagination" class="pagination" hidden><span id="page-label"></span><div><button id="previous-page" class="button small" type="button">上一页</button><button id="next-page" class="button small" type="button">下一页</button></div></div>
+      </section>
+
+      <section id="view-sources" class="view" role="tabpanel" aria-labelledby="tab-sources" hidden>
+        <div class="page-heading"><div><p class="eyebrow">把注意力放在相关来源</p><h1>信源管理</h1><p class="page-lead">检查启用的来源，先收集，再选择需要分析的资料。</p></div><button id="collect-now" type="button" class="button primary"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>检查信源更新</button></div>
+        <div id="collection-notice" class="notice subtle"><p>正在读取采集配置…</p></div>
+        <div class="list-caption"><span id="sources-count"></span><span>启用或停用不会删除已有资料</span></div>
+        <div id="source-list" class="source-grid" aria-busy="true"></div>
+      </section>
+
+      <section id="view-usage" class="view" role="tabpanel" aria-labelledby="tab-usage" hidden>
+        <div class="page-heading"><div><p class="eyebrow">看清消耗，控制节奏</p><h1>用量与运行</h1><p class="page-lead">采集与分析分别控制。先小批试用，再决定处理规模。</p></div><button id="refresh-usage" type="button" class="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>刷新用量</button></div>
+        <div id="usage-content" aria-busy="true"></div>
+      </section>
+      <footer class="workspace-footer"><span>FDE 研究台</span><p>研究结论以原文为依据，个人判断单独记录。</p></footer>
+    </main>
+  </div>
+
+  <dialog id="detail-dialog" class="detail-dialog" aria-labelledby="detail-title">
+    <div class="drawer-toolbar"><span>资料研究</span><button id="close-detail" class="icon-button" type="button" aria-label="关闭资料详情"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <div id="detail-content" class="detail-content"></div>
+  </dialog>
+
+  <dialog id="import-dialog" class="import-dialog" aria-labelledby="import-title">
+    <form id="import-form">
+      <div class="dialog-heading"><div><p class="eyebrow">收集第一手材料</p><h2 id="import-title">导入资料</h2></div><button id="close-import" class="icon-button" type="button" aria-label="关闭导入窗口"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <p class="dialog-lead">保存原文链接。网页难以读取时，可以一并粘贴有权使用的正文。</p>
+      <div class="form-field"><label for="import-url">原文链接 <span class="required">必填</span></label><input id="import-url" type="url" name="url" required placeholder="https://…" autocomplete="url"></div>
+      <div class="form-field"><label for="import-heading">资料标题 <span>选填</span></label><input id="import-heading" type="text" name="title" maxlength="300" placeholder="留空时尝试从原文读取"></div>
+      <div class="form-field"><label for="import-body">原文正文 <span>选填</span></label><textarea id="import-body" name="body" rows="8" maxlength="120000" placeholder="粘贴正文，保留重要数据、条件和作者的原话。请勿粘贴访问口令、密钥或未获授权的客户资料。"></textarea><p class="form-hint">只提供链接也可以保存资料。正文不足时，可稍后补充。</p></div>
+      <p id="import-error" class="form-error" role="alert" hidden></p>
+      <div class="dialog-footer"><p>先保存资料，分析由你手动安排。</p><button id="import-submit" class="button primary" type="submit">保存资料</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <noscript><div class="noscript">请启用浏览器的 JavaScript 后使用研究台。</div></noscript>
+</body>
+</html>

@@ -1,3 +1,5 @@
+> **历史版本文档。** 本文对应旧 PostgreSQL 入口。2026-11-20 的个人 FDE 研究台已改为独立的 `fde-workbench/`；请使用[新版部署提示词](../fde-workbench/docs/CODEX_DEPLOY_PROMPT.md)并先读根 `CHECKPOINT.md`。不要混用两版环境变量和 Compose。
+
 # 给 Codex 的任务：部署 FDE 个人研究版
 
 请实际检查、修复和部署，不要只生成教程。默认中文汇报，不能把未运行的测试写成通过。
