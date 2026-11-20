@@ -132,8 +132,8 @@ test("every table and column is used by the code that reads and writes the datab
 });
 
 // import.meta.env.DEV and the like are the web build's own flags, not environment variables.
-const ENV_READ = /\b(?:process\.env|(?<!import\.meta\.)env)\.([A-Z][A-Z0-9_]+)|\b(?:process\.env|env)\[\s*["']([A-Z][A-Z0-9_]+)["']\s*\]|\b(?:str|int|bool)\(\s*"([A-Z][A-Z0-9_]+)"/g;
-const envReads = (files: Array<{ text: string }>) => new Set(files.flatMap(({ text }) => [...text.matchAll(ENV_READ)].map((m) => (m[1] ?? m[2] ?? m[3])!)));
+const ENV_READ = /\b(?:process\.env|(?<!import\.meta\.)env)\.([A-Z][A-Z0-9_]+)|\b(?:process\.env|env)\[\s*["']([A-Z][A-Z0-9_]+)["']\s*\]|\b(?:str|int|bool)\(\s*"([A-Z][A-Z0-9_]+)"|\bnumber\(\s*(?:process\.env|env)\s*,\s*["']([A-Z][A-Z0-9_]+)["']/g;
+const envReads = (files: Array<{ text: string }>) => new Set(files.flatMap(({ text }) => [...text.matchAll(ENV_READ)].map((m) => (m[1] ?? m[2] ?? m[3] ?? m[4])!)));
 const assigned = (file: string, pattern: RegExp) => [...readFileSync(path.join(ROOT, file), "utf8").matchAll(pattern)].map((m) => m[1]!);
 
 // .env.example is the template. A deployment's own files, where the repository has them, set the rest
@@ -141,24 +141,40 @@ const assigned = (file: string, pattern: RegExp) => [...readFileSync(path.join(R
 // ports), the Caddyfile the HTTPS domain; a server deployment may keep its own templates beside it
 // (`<name>.env.example`) and set a few in its systemd units (`Environment=`). Keys and secrets are read by name through credential(group,
 // NAME) or a model preset, so a name the code gives whole as a string counts as read, and so does one a
-// deployment file substitutes (the database password, the HTTPS domain).
+// deployment file substitutes (the database password, the HTTPS domain). The independent workbench
+// keeps its own source, management scripts, Compose and Dockerfile; its QA and tests are not readers
+// of production configuration.
 const matches = (text: string, pattern: RegExp) => [...text.matchAll(pattern)].map((m) => (m[1] ?? m[2])!);
 const NAMED = /["']([A-Z][A-Z0-9_]+)["']/g;
 const SUBSTITUTED = /\$\{([A-Z][A-Z0-9_]+)|\{\$([A-Z][A-Z0-9_]+)\}/g;
 const COMPOSE = "docker-compose.yml";
-const DEPLOYMENT = [COMPOSE, "deploy/Caddyfile"].filter((file) => existsSync(path.join(ROOT, file)));
+const COMPOSE_FILES = [COMPOSE, "fde-workbench/compose.yml", "fde-workbench/compose.codex.yml"].filter((file) => existsSync(path.join(ROOT, file)));
+const DOCKERFILES = ["fde-workbench/Dockerfile"].filter((file) => existsSync(path.join(ROOT, file)));
+const DEPLOYMENT = [...COMPOSE_FILES, ...DOCKERFILES, "deploy/Caddyfile"].filter((file) => existsSync(path.join(ROOT, file)));
 const tracked = (pattern: string) => execFileSync("git", ["ls-files", "--", pattern], { cwd: ROOT, encoding: "utf8" }).split("\n").filter(Boolean);
+
+test("environment reads include numeric configuration helpers without accepting unrelated names", () => {
+  const read = envReads([{ text: `
+    env.FDE_HOST; process.env.FDE_MODEL_PROVIDER; env['FDE_CODEX_HOME'];
+    number(env, 'FDE_PORT', 3210, 1, 65535); number(process.env, "FDE_DAILY_LIMIT", 5, 1, 50);
+    import.meta.env.DEV; number(settings, 'UNRELATED_VALUE', 1); const label = 'DISPLAY_ONLY';
+  ` }]);
+  assert.deepEqual([...read].sort(), ["FDE_CODEX_HOME", "FDE_DAILY_LIMIT", "FDE_HOST", "FDE_MODEL_PROVIDER", "FDE_PORT"]);
+});
 
 test("every environment variable the code reads is listed in a template, and every listed one is read", () => {
   const listed = new Set(tracked("*.env.example").flatMap((file) => assigned(file, /^#?\s*([A-Z][A-Z0-9_]+)=/gm)));
   const preset = new Set([
-    ...(DEPLOYMENT.includes(COMPOSE) ? assigned(COMPOSE, /^\s+([A-Z][A-Z0-9_]+):\s/gm) : []),
+    ...COMPOSE_FILES.flatMap((file) => assigned(file, /^\s+([A-Z][A-Z0-9_]+):\s/gm)),
+    ...DOCKERFILES.flatMap((file) => assigned(file, /^ENV\s+([A-Z][A-Z0-9_]+)(?:=|\s)/gm)),
     ...tracked("*.service").flatMap((unit) => assigned(unit, /^Environment="?([A-Z][A-Z0-9_]+)=/gm)),
   ]);
-  const read = envReads(production());
+  const runtime = [...production(), ...sources("fde-workbench/src", /\.mjs$/), ...sources("fde-workbench/scripts", /\.mjs$/)];
+  const read = envReads(runtime);
   const readAnywhere = new Set([...read, ...envReads(sources("scripts")),
-    ...[...production(), ...sources("scripts")].flatMap(({ text }) => matches(text, NAMED)),
-    ...DEPLOYMENT.flatMap((file) => matches(readFileSync(path.join(ROOT, file), "utf8"), SUBSTITUTED))]);
+    ...[...runtime, ...sources("scripts")].flatMap(({ text }) => matches(text, NAMED)),
+    ...DEPLOYMENT.flatMap((file) => matches(readFileSync(path.join(ROOT, file), "utf8"), SUBSTITUTED)),
+    ...DOCKERFILES.flatMap((file) => matches(readFileSync(path.join(ROOT, file), "utf8"), /\$([A-Z][A-Z0-9_]+)/g))]);
   assert.deepEqual([...read].filter((name) => !listed.has(name) && !preset.has(name)), [], "list it in an environment template, or stop reading it");
   assert.deepEqual([...listed].filter((name) => !readAnywhere.has(name)), [], "no code reads it: remove it from the template");
 });

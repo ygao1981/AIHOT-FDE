@@ -1,0 +1,1166 @@
+[
+  {
+    "id": "meituan-engineering",
+    "name": "美团技术团队",
+    "homepage": "https://tech.meituan.com/",
+    "url": "https://tech.meituan.com/atom.xml",
+    "kind": "rss",
+    "enabled": true,
+    "disposition": "auto",
+    "language": "zh",
+    "category": "engineering",
+    "publisherType": "customer",
+    "priority": 5,
+    "intervalHours": 24,
+    "maxItems": 8,
+    "allowedHosts": [
+      "tech.meituan.com"
+    ],
+    "notes": "国内业务团队的一手工程实践；重点收商家 Agent、评测、业务流程、数据与运行经验。论文合集、模型发布和招聘不自动视为落地案例。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 10,
+      "sampleUrl": "https://tech.meituan.com/2026/11/17/Agent-Evaluation-White-Paper-02.html",
+      "limitations": [
+        "RSS rss.xml 缺少条目日期；采用官方 Atom。Atom 只有 updated，详情 .vp-post-date 才是可见原文日期。",
+        "平台规模与中小企业交付条件不同；业务成果仍为团队自述。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 9254,
+      "dateEvidence": [
+        {
+          "kind": "published",
+          "method": "visible_article_date",
+          "selector": ".vp-post-date",
+          "value": "2026-11-17"
+        }
+      ],
+      "feedDateFields": {
+        "sampledEntries": 10,
+        "publishedCount": 0,
+        "updatedOnlyCount": 10
+      }
+    },
+    "timeZone": "Asia/Shanghai",
+    "detailDateSelector": ".vp-post-date",
+    "linkPattern": "^https://tech\\.meituan\\.com/\\d{4}/\\d{2}/\\d{2}/[^/?#]+\\.html$"
+  },
+  {
+    "id": "microsoft-frontier",
+    "name": "Microsoft Frontier Engineering（原 ISE 入口）",
+    "homepage": "https://devblogs.microsoft.com/frontier-engineering/",
+    "url": "https://devblogs.microsoft.com/frontier-engineering/feed/",
+    "kind": "rss",
+    "enabled": true,
+    "disposition": "auto",
+    "language": "en",
+    "category": "delivery",
+    "publisherType": "vendor",
+    "priority": 5,
+    "intervalHours": 24,
+    "maxItems": 8,
+    "allowedHosts": [
+      "devblogs.microsoft.com"
+    ],
+    "notes": "客户协作、评估、受限环境、工业数据与交付方法。旧 /ise/ 已重定向到 Frontier Engineering；使用新站真实 RSS。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 10,
+      "sampleUrl": "https://devblogs.microsoft.com/frontier-engineering/japanese-llm-evaluation-pipeline-hackathon/",
+      "limitations": [
+        "不同网络出口曾出现 403；本环境普通 HTTP 已成功，VPS 必须复测。",
+        "案例包含 hackathon、原型与生产项目，须逐篇标阶段；Azure 产品偏向。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 29565,
+      "dateEvidence": [
+        {
+          "kind": "published",
+          "method": "html_meta",
+          "key": "article:published_time",
+          "value": "2026-09-14T07:00:00+00:00"
+        },
+        {
+          "kind": "published",
+          "method": "json_ld",
+          "key": "datePublished",
+          "value": "2026-09-14T07:00:00+00:00"
+        },
+        {
+          "kind": "published",
+          "method": "json_ld",
+          "key": "datePublished",
+          "value": "2026-09-14T07:00:00+00:00"
+        }
+      ],
+      "feedDateFields": {
+        "sampledEntries": 10,
+        "publishedCount": 10,
+        "updatedOnlyCount": 0
+      }
+    },
+    "linkPattern": "^https://devblogs\\.microsoft\\.com/frontier-engineering/(?!feed/|author/|category/)[^/?#]+/?$"
+  },
+  {
+    "id": "anthropic-engineering",
+    "name": "Anthropic Engineering",
+    "homepage": "https://www.anthropic.com/engineering",
+    "url": "https://www.anthropic.com/engineering",
+    "kind": "html_list",
+    "enabled": true,
+    "disposition": "auto",
+    "language": "en",
+    "category": "engineering",
+    "publisherType": "vendor",
+    "priority": 5,
+    "intervalHours": 24,
+    "maxItems": 8,
+    "allowedHosts": [
+      "www.anthropic.com"
+    ],
+    "notes": "关注评估、工具调用、长任务、上下文、权限、成本与失败经验；内部工程与客户方法不能直接当成通用效果保证。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 24,
+      "sampleUrl": "https://www.anthropic.com/research/building-strong-safety-evaluations",
+      "limitations": [
+        "页面显示总文章数与静态可解析数不同；本轮只验证到 24 个列表卡片。",
+        "文章路径目前包含 /research/，不能只允许 /engineering/。未验证官方 RSS。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 59647,
+      "dateEvidence": [
+        {
+          "kind": "published",
+          "method": "html_meta",
+          "key": "article:published_time",
+          "value": "2026-11-13T00:00:00.000Z"
+        },
+        {
+          "kind": "published",
+          "method": "json_ld",
+          "key": "datePublished",
+          "value": "2026-11-13T00:00:00.000Z"
+        }
+      ]
+    },
+    "itemSelector": "article[data-listing-row]",
+    "linkSelector": "h3 a",
+    "titleSelector": "h3",
+    "dateSelector": "time",
+    "linkPattern": "^https://www\\.anthropic\\.com/(research|engineering)/[^/?#]+$"
+  },
+  {
+    "id": "langchain-customers",
+    "name": "LangChain 客户工程案例",
+    "homepage": "https://www.langchain.com/customers",
+    "url": "https://www.langchain.com/customers",
+    "kind": "html_list",
+    "enabled": true,
+    "disposition": "auto",
+    "language": "en",
+    "category": "case",
+    "publisherType": "vendor",
+    "priority": 5,
+    "intervalHours": 24,
+    "maxItems": 8,
+    "allowedHosts": [
+      "www.langchain.com",
+      "langchain.com"
+    ],
+    "notes": "只采客户页面中的文章卡片，排除视频和 Logo 链接；优先客户工程师署名与可解释交付过程的文章。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 33,
+      "sampleUrl": "https://www.langchain.com/blog/how-orange-business-built-live-intelligence-on-langchain-and-langsmith",
+      "limitations": [
+        "36 张 article 卡片去重为 33 个 URL；卡片没有日期，详情 JSON-LD datePublished 有原文日期。",
+        "厂商筛选的成功案例，指标未独立审计；不能把标题中的倍数直接当 ROI。",
+        "新 RSS /blog/rss.xml 实测有效但范围更宽，默认保留客户列表。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 7894,
+      "dateEvidence": [
+        {
+          "kind": "published",
+          "method": "json_ld",
+          "key": "datePublished",
+          "value": "2026-10-13T16:50:00.000Z"
+        }
+      ]
+    },
+    "itemSelector": "[data-body-story-title]",
+    "linkSelector": "a[data-body-story-card=\"article\"]",
+    "titleSelector": ".t-heading-6-rg",
+    "linkPattern": "^https://www\\.langchain\\.com/blog/[^/?#]+$"
+  },
+  {
+    "id": "hamel-evals",
+    "name": "Hamel Husain：AI 评测与交付",
+    "homepage": "https://hamel.dev/",
+    "url": "https://hamel.dev/index.xml",
+    "kind": "rss",
+    "enabled": true,
+    "disposition": "auto",
+    "language": "en",
+    "category": "engineering",
+    "publisherType": "individual",
+    "priority": 5,
+    "intervalHours": 48,
+    "maxItems": 8,
+    "allowedHosts": [
+      "hamel.dev"
+    ],
+    "notes": "作者及合作者的实验、客户评测经验与错误分析。重点提取评测集、业务判定、人工校准和成本取舍。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 20,
+      "sampleUrl": "https://hamel.dev/blog/posts/decision-model-evals/",
+      "limitations": [
+        "/blog/ 只是跳首页的空壳；真实 feed 从首页声明发现，为 /index.xml。",
+        "有培训与咨询业务，实验样本和客户自述不能直接外推；历史工具与模型价格须另行核验。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 47192,
+      "dateEvidence": [
+        {
+          "kind": "published",
+          "method": "html_meta",
+          "key": "dcterms.date",
+          "value": "2026-10-20"
+        },
+        {
+          "kind": "published",
+          "method": "json_ld",
+          "key": "datePublished",
+          "value": "2026-10-20"
+        }
+      ],
+      "feedDateFields": {
+        "sampledEntries": 12,
+        "publishedCount": 12,
+        "updatedOnlyCount": 0
+      }
+    },
+    "linkPattern": "^https://hamel\\.dev/blog/posts/[^?#]+"
+  },
+  {
+    "id": "eugene-applied-ai",
+    "name": "Eugene Yan：应用 AI 与工程",
+    "homepage": "https://eugeneyan.com/",
+    "url": "https://eugeneyan.com/rss/",
+    "kind": "rss",
+    "enabled": true,
+    "disposition": "auto",
+    "language": "en",
+    "category": "engineering",
+    "publisherType": "individual",
+    "priority": 4,
+    "intervalHours": 48,
+    "maxItems": 8,
+    "allowedHosts": [
+      "eugeneyan.com"
+    ],
+    "notes": "应用 AI、检索、评测与工程模式；仅选 /writing/ 文章，排除演讲视频入口，按业务适用性再筛。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 214,
+      "sampleUrl": "https://eugeneyan.com/writing/cybersecurity-evals",
+      "limitations": [
+        "feed 含文章与演讲，共 214 条；默认最多 8 条，首轮不能把历史存档当当天新消息。",
+        "作者原创综述中的第三方结果仍需追到原研究；个人观点不等于任职单位声明。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 50183,
+      "dateEvidence": [
+        {
+          "kind": "published",
+          "method": "html_meta",
+          "key": "article:published_time",
+          "value": "2026-06-21T00:00:00Z"
+        }
+      ],
+      "feedDateFields": {
+        "sampledEntries": 12,
+        "publishedCount": 12,
+        "updatedOnlyCount": 0
+      }
+    },
+    "linkPattern": "^https://eugeneyan\\.com/writing/[^?#]+"
+  },
+  {
+    "id": "shopify-engineering",
+    "name": "Shopify Engineering",
+    "homepage": "https://shopify.engineering/",
+    "url": "https://shopify.engineering/blog.atom",
+    "kind": "rss",
+    "enabled": true,
+    "disposition": "auto",
+    "language": "en",
+    "category": "case",
+    "publisherType": "customer",
+    "priority": 4,
+    "intervalHours": 24,
+    "maxItems": 8,
+    "allowedHosts": [
+      "shopify.engineering"
+    ],
+    "notes": "实际构建 Sidekick 等业务系统的团队复盘；重点关注 Agent 架构、业务工具、评测、成本与运营。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 441,
+      "sampleUrl": "https://shopify.engineering/secure-agentic-apps",
+      "limitations": [
+        "全工程 feed 有 441 条，包含非 AI 内容；必须限制每轮数量并做主题筛选。",
+        "feed published 与详情 datePublished 的精度可能不同，优先详情原文日期。",
+        "平台自身能力和流量规模不能直接等同于客户现场交付条件。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 15458,
+      "dateEvidence": [
+        {
+          "kind": "published",
+          "method": "html_meta",
+          "key": "datePublished",
+          "value": "2026-11-18T00:00:00.000Z"
+        }
+      ],
+      "feedDateFields": {
+        "sampledEntries": 12,
+        "publishedCount": 12,
+        "updatedOnlyCount": 0
+      }
+    },
+    "linkPattern": "^https://shopify\\.engineering/[^/?#]+$"
+  },
+  {
+    "id": "dify-zh",
+    "name": "Dify 中文入口：案例与工程",
+    "homepage": "https://www.dify.ai/zh/blog",
+    "url": "https://www.dify.ai/zh/blog",
+    "kind": "html_list",
+    "enabled": true,
+    "disposition": "auto",
+    "language": "mixed",
+    "category": "case",
+    "publisherType": "vendor",
+    "priority": 3,
+    "intervalHours": 24,
+    "maxItems": 8,
+    "allowedHosts": [
+      "www.dify.ai",
+      "dify.ai"
+    ],
+    "notes": "中文入口包含中英文文章及海外客户译文；关注私有部署、现有系统集成、知识管理和应用运营。语言不代表项目发生地。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 152,
+      "sampleUrl": "https://www.dify.ai/zh/blog/ai-agent-or-workflow-how-to-choose-the-right-approach",
+      "limitations": [
+        "152 个含标题的静态文章链接；首页有置顶、产品发布及融资宣传，需继续主题筛选。",
+        "匿名客户和厂商自述只能作选题线索；“中文”不等于“国内案例”。",
+        "未验证官方 RSS，使用静态 HTML 列表及正文 article:published_time。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 14372,
+      "dateEvidence": [
+        {
+          "kind": "published",
+          "method": "html_meta",
+          "key": "article:published_time",
+          "value": "2026-10-16T12:00:00.000Z"
+        },
+        {
+          "kind": "published",
+          "method": "json_ld",
+          "key": "datePublished",
+          "value": "2026-10-16T12:00:00.000Z"
+        }
+      ]
+    },
+    "linkSelector": "a[href^=\"/zh/blog/\"]:has(h2), a[href^=\"/zh/blog/\"]:has(h3)",
+    "titleSelector": "h2, h3",
+    "dateSelector": "time",
+    "linkPattern": "^https://(?:www\\.)?dify\\.ai/zh/blog/[^/?#]+$"
+  },
+  {
+    "id": "palantir-delivery",
+    "name": "Palantir：AIP 与交付实践",
+    "homepage": "https://blog.palantir.com/",
+    "url": "https://blog.palantir.com/feed",
+    "kind": "rss",
+    "enabled": true,
+    "disposition": "auto",
+    "language": "en",
+    "category": "delivery",
+    "publisherType": "vendor",
+    "priority": 4,
+    "intervalHours": 24,
+    "maxItems": 8,
+    "allowedHosts": [
+      "blog.palantir.com"
+    ],
+    "notes": "关注 Bootcamp、业务工作流、数据和行动的连接；订阅中仍有招聘与观点稿。详情访问受限时仅据原站 feed 正文记录证据范围。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "feed_body_only",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 10,
+      "sampleUrl": "https://blog.palantir.com/securing-software-at-the-speed-of-ai-0b1d7ddd2bf0?source=rss----3c87dc14372f---4",
+      "limitations": [
+        "feed 200 且包含 content:encoded；抽验详情 403，不能声称详情抓取已通过。",
+        "采集器须标 bodyKind=feed_excerpt；模型说明仅据订阅内容，未核验完整原文。",
+        "Bootcamp 速度不是长期生产 ROI；AI FDE 也是 Palantir 软件 Agent 产品名。"
+      ],
+      "sampleHttpStatus": 403,
+      "sampleBodyChars": 0,
+      "dateEvidence": [],
+      "feedDateFields": {
+        "sampledEntries": 10,
+        "publishedCount": 10,
+        "updatedOnlyCount": 0
+      }
+    },
+    "linkPattern": "^https://blog\\.palantir\\.com/[^/?#]+"
+  },
+  {
+    "id": "datawhale-hello-agents",
+    "name": "Datawhale Hello-Agents",
+    "homepage": "https://github.com/datawhalechina/hello-agents",
+    "url": "https://github.com/datawhalechina/hello-agents/releases.atom",
+    "kind": "rss",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "zh",
+    "category": "tutorial",
+    "publisherType": "community",
+    "priority": 5,
+    "intervalHours": 168,
+    "maxItems": 8,
+    "allowedHosts": [
+      "github.com"
+    ],
+    "notes": "官方中文 Agent 教程与代码。正文手动按章节阅读；版本订阅只提示教材更新，不能替代实战案例。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 3,
+      "sampleUrl": "https://github.com/datawhalechina/hello-agents/releases/tag/V1.0.3",
+      "limitations": [
+        "Atom 3 条，为 release 说明；只有 updated，不能当教材或章节的原始发布日期。",
+        "在线阅读站依赖 JavaScript；仓库 README 和原始 Markdown 更适合人工阅读。",
+        "运行教程可能调用模型 API；阅读仓库不需要模型 API key。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 2154,
+      "dateEvidence": [],
+      "feedDateFields": {
+        "sampledEntries": 3,
+        "publishedCount": 0,
+        "updatedOnlyCount": 3
+      }
+    },
+    "timeZone": "Asia/Shanghai"
+  },
+  {
+    "id": "datawhale-all-in-rag",
+    "name": "Datawhale All-in-RAG",
+    "homepage": "https://github.com/datawhalechina/all-in-rag",
+    "url": "https://github.com/datawhalechina/all-in-rag",
+    "kind": "manual",
+    "enabled": false,
+    "disposition": "manual",
+    "language": "zh",
+    "category": "tutorial",
+    "publisherType": "community",
+    "priority": 5,
+    "intervalHours": 168,
+    "maxItems": 8,
+    "allowedHosts": [
+      "github.com"
+    ],
+    "notes": "官方 RAG 教程、文档处理、检索、评估与项目代码；建立方法库，按需要手动选章导入。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "manual_verified",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": null,
+      "sampleUrl": null,
+      "limitations": [
+        "release Atom 有效但 0 条，不能伪装成可用增量源。",
+        "仓库文档原始发布日期未核实，保留 null；提交时间不自动冒充发布日期。",
+        "教学代码不是客户投产证据，复现实验需按项目版本与许可。"
+      ]
+    },
+    "timeZone": "Asia/Shanghai"
+  },
+  {
+    "id": "datawhale-fde100",
+    "name": "Datawhale FDE100",
+    "homepage": "https://fde100.datawhale.cn/",
+    "url": "https://fde100.datawhale.cn/",
+    "kind": "manual",
+    "enabled": false,
+    "disposition": "manual",
+    "language": "zh",
+    "category": "case",
+    "publisherType": "community",
+    "priority": 5,
+    "intervalHours": 168,
+    "maxItems": 8,
+    "allowedHosts": [
+      "fde100.datawhale.cn"
+    ],
+    "notes": "FDE 案例汇集入口，人工发现选题后追溯案例作者、原始资料与结果口径。当前不自动抓全文。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "js_only",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": null,
+      "sampleUrl": null,
+      "limitations": [
+        "普通 HTTP 返回 JavaScript 应用壳，未取得可验证案例正文与原始日期。",
+        "未找到并验证稳定官方增量数据接口；不安装浏览器、不逆向受控接口。",
+        "部分中文案例发生在海外，指标多为作者自述。"
+      ]
+    },
+    "timeZone": "Asia/Shanghai"
+  },
+  {
+    "id": "alibaba-agentscope",
+    "name": "AgentScope 官方项目",
+    "homepage": "https://github.com/agentscope-ai/agentscope",
+    "url": "https://github.com/agentscope-ai/agentscope/releases.atom",
+    "kind": "rss",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "mixed",
+    "category": "tutorial",
+    "publisherType": "vendor",
+    "priority": 3,
+    "intervalHours": 168,
+    "maxItems": 8,
+    "allowedHosts": [
+      "github.com"
+    ],
+    "notes": "阿里通义团队相关开源 Agent 框架；关注代码示例、编排与运行约束，版本更新只作为工具观察。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 10,
+      "sampleUrl": "https://github.com/agentscope-ai/agentscope/releases/tag/v2.0.12",
+      "limitations": [
+        "release 流不是客户落地案例；Atom 仅 updated，不能将更新时间当原始发布证据。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 16857,
+      "dateEvidence": [],
+      "feedDateFields": {
+        "sampledEntries": 10,
+        "publishedCount": 0,
+        "updatedOnlyCount": 10
+      }
+    }
+  },
+  {
+    "id": "alibaba-spring-ai",
+    "name": "Spring AI Alibaba 官方项目",
+    "homepage": "https://github.com/alibaba/spring-ai-alibaba",
+    "url": "https://github.com/alibaba/spring-ai-alibaba/releases.atom",
+    "kind": "rss",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "mixed",
+    "category": "tutorial",
+    "publisherType": "vendor",
+    "priority": 3,
+    "intervalHours": 168,
+    "maxItems": 8,
+    "allowedHosts": [
+      "github.com"
+    ],
+    "notes": "Java 技术栈的 AI 应用框架与集成示例；按实际项目选用，不把升级日志当 FDE 经验。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 10,
+      "sampleUrl": "https://github.com/alibaba/spring-ai-alibaba/releases/tag/v2.0.0-M1.1",
+      "limitations": [
+        "发布说明偏框架变更，缺少业务目标与验证结果；部分说明正文较短。",
+        "Atom updated 只表明发布记录更新；示例适配与版本兼容需另外验证。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 1095,
+      "dateEvidence": [],
+      "feedDateFields": {
+        "sampledEntries": 10,
+        "publishedCount": 0,
+        "updatedOnlyCount": 10
+      }
+    }
+  },
+  {
+    "id": "alibaba-cloud-practices",
+    "name": "阿里云 Spring Cloud Alibaba 最佳实践",
+    "homepage": "https://sca.aliyun.com/blog/case/",
+    "url": "https://sca.aliyun.com/blog/case/",
+    "kind": "html_list",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "zh",
+    "category": "tutorial",
+    "publisherType": "vendor",
+    "priority": 3,
+    "intervalHours": 168,
+    "maxItems": 8,
+    "allowedHosts": [
+      "sca.aliyun.com"
+    ],
+    "notes": "官方站的中文实践资料；可读 Spring AI Alibaba 代码助手教程，但栏目也含普通云原生迁移。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 5,
+      "sampleUrl": "https://sca.aliyun.com/blog/sca-gvr7dx_awbbpb_zvckkyzhmfqhgql4/?source=blog/",
+      "limitations": [
+        "本轮栏目只有 5 篇，最新卡片为 2025-02-24；FDE 密度与新鲜度不足以默认每日启用。",
+        "样本是教程；列表日期为 2024-10-10，原文工程实践不等于生产效果验证。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 3206,
+      "dateEvidence": []
+    },
+    "timeZone": "Asia/Shanghai",
+    "linkSelector": "a.card[href^=\"/blog/\"]",
+    "titleSelector": "h2",
+    "dateSelector": "p.text-xs",
+    "linkPattern": "^https://sca\\.aliyun\\.com/blog/(?!case/|article/|ecosystem/)[^/?#]+/"
+  },
+  {
+    "id": "baidu-appbuilder",
+    "name": "百度千帆 AppBuilder SDK",
+    "homepage": "https://github.com/baidubce/app-builder",
+    "url": "https://github.com/baidubce/app-builder/releases.atom",
+    "kind": "rss",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "zh",
+    "category": "tutorial",
+    "publisherType": "vendor",
+    "priority": 3,
+    "intervalHours": 168,
+    "maxItems": 8,
+    "allowedHosts": [
+      "github.com"
+    ],
+    "notes": "百度官方 SDK 和企业知识问答、文档组件、端云工具调用示例，适合实施参考；运行云服务另需平台凭据。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 10,
+      "sampleUrl": "https://github.com/baidubce/app-builder/releases/tag/go%2Fappbuilder%2Fv1.1.4",
+      "limitations": [
+        "release 记录含补丁和组件升级，缺乏完整生产案例；正文可能很短。",
+        "Atom updated 不是教程原始发布日期；获取公开资料无需百度 API token，执行示例可能需要。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 1082,
+      "dateEvidence": [],
+      "feedDateFields": {
+        "sampledEntries": 10,
+        "publishedCount": 0,
+        "updatedOnlyCount": 10
+      }
+    },
+    "timeZone": "Asia/Shanghai"
+  },
+  {
+    "id": "baidu-paddleocr",
+    "name": "PaddleOCR 官方项目",
+    "homepage": "https://github.com/PaddlePaddle/PaddleOCR",
+    "url": "https://github.com/PaddlePaddle/PaddleOCR/releases.atom",
+    "kind": "rss",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "mixed",
+    "category": "tutorial",
+    "publisherType": "vendor",
+    "priority": 3,
+    "intervalHours": 168,
+    "maxItems": 8,
+    "allowedHosts": [
+      "github.com"
+    ],
+    "notes": "文档解析、复杂 PDF 和表格结构化是企业 RAG 的基础环节；从官方实现和升级说明学习，不做模型发布快讯。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 10,
+      "sampleUrl": "https://github.com/PaddlePaddle/PaddleOCR/releases/tag/v3.7.0",
+      "limitations": [
+        "是文档处理组件资料，不是 FDE 完整交付案例；效果要在自己的扫描件、版式与硬件上复测。",
+        "Atom 更新时间不代替技术文档发布日期。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 2044,
+      "dateEvidence": [],
+      "feedDateFields": {
+        "sampledEntries": 10,
+        "publishedCount": 0,
+        "updatedOnlyCount": 10
+      }
+    }
+  },
+  {
+    "id": "tencent-weknora",
+    "name": "腾讯 WeKnora 官方项目",
+    "homepage": "https://github.com/Tencent/WeKnora",
+    "url": "https://github.com/Tencent/WeKnora/releases.atom",
+    "kind": "rss",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "mixed",
+    "category": "tutorial",
+    "publisherType": "vendor",
+    "priority": 3,
+    "intervalHours": 168,
+    "maxItems": 8,
+    "allowedHosts": [
+      "github.com"
+    ],
+    "notes": "腾讯官方开源知识库系统，适合研究文档接入、检索、权限、工具调用与部署；通过实际项目代码核对能力。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 10,
+      "sampleUrl": "https://github.com/Tencent/WeKnora/releases/tag/v0.9.0",
+      "limitations": [
+        "SDK/平台能力声明不等于客户已生产验证；release 说明更新密集且长，不默认加入选题流。",
+        "不用腾讯社区域名替作者背书；本源依据 Tencent 官方 GitHub 仓库。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 29012,
+      "dateEvidence": [],
+      "feedDateFields": {
+        "sampledEntries": 10,
+        "publishedCount": 0,
+        "updatedOnlyCount": 10
+      }
+    }
+  },
+  {
+    "id": "microsoft-playbook",
+    "name": "Microsoft ISE Engineering Fundamentals Playbook",
+    "homepage": "https://microsoft.github.io/code-with-engineering-playbook/",
+    "url": "https://microsoft.github.io/code-with-engineering-playbook/",
+    "kind": "manual",
+    "enabled": false,
+    "disposition": "manual",
+    "language": "en",
+    "category": "delivery",
+    "publisherType": "vendor",
+    "priority": 5,
+    "intervalHours": 168,
+    "maxItems": 8,
+    "allowedHosts": [
+      "microsoft.github.io"
+    ],
+    "notes": "用来建立需求发现、完成标准、测试、交付与运维检查表。是持续维护的手册，不是新闻订阅。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "manual_verified",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": null,
+      "sampleUrl": null,
+      "limitations": [
+        "无逐章原始发布日期保证；未知日期保留 null。不是 AI 专用手册，也不证明具体客户 ROI。"
+      ]
+    }
+  },
+  {
+    "id": "aws-manufacturing",
+    "name": "AWS 制造业工程案例",
+    "homepage": "https://aws.amazon.com/blogs/industries/category/industries/manufacturing/",
+    "url": "https://aws.amazon.com/blogs/industries/category/industries/manufacturing/",
+    "kind": "html_list",
+    "enabled": false,
+    "disposition": "disabled",
+    "language": "en",
+    "category": "case",
+    "publisherType": "vendor",
+    "priority": 4,
+    "intervalHours": 72,
+    "maxItems": 8,
+    "allowedHosts": [
+      "aws.amazon.com"
+    ],
+    "notes": "制造业客户联合文章适合知识传承、设备、数据接入和工业系统选题；当前普通 HTTP 列表被拒绝，默认关闭。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "blocked",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 403,
+      "entryCount": null,
+      "sampleUrl": null,
+      "limitations": [
+        "本轮列表 HTTP 403，CSS 选择器未验证，仅为待复测候选，不可声明已接通。",
+        "搜索工具能读某些文章，不代表 VPS 采集器可以抓列表。",
+        "参考架构、试点和已部署客户必须分开，厂商资料不等于独立审计。"
+      ]
+    },
+    "linkSelector": "article h2 a, h2.lb-bold a",
+    "linkPattern": "^https://aws\\.amazon\\.com/blogs/industries/[^/?#]+/$"
+  },
+  {
+    "id": "aws-machine-learning",
+    "name": "AWS Machine Learning Blog",
+    "homepage": "https://aws.amazon.com/blogs/machine-learning/",
+    "url": "https://aws.amazon.com/blogs/machine-learning/feed/",
+    "kind": "rss",
+    "enabled": false,
+    "disposition": "disabled",
+    "language": "en",
+    "category": "engineering",
+    "publisherType": "vendor",
+    "priority": 2,
+    "intervalHours": 72,
+    "maxItems": 8,
+    "allowedHosts": [
+      "aws.amazon.com"
+    ],
+    "notes": "广泛机器学习工程与客户方案，主题噪声比制造业专栏更高；当前 feed 403，不默认启用。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "blocked",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 403,
+      "entryCount": null,
+      "sampleUrl": null,
+      "limitations": [
+        "HTTP 403，未取得本轮 XML 与条目，不填造 entryCount。",
+        "即便未来连通，也需限定客户工程、评测与交付，排除日常产品发布。"
+      ],
+      "feedDateFields": null
+    }
+  },
+  {
+    "id": "chip-huyen",
+    "name": "Chip Huyen：AI Engineering",
+    "homepage": "https://huyenchip.com/",
+    "url": "https://huyenchip.com/feed.xml",
+    "kind": "rss",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "en",
+    "category": "engineering",
+    "publisherType": "individual",
+    "priority": 4,
+    "intervalHours": 168,
+    "maxItems": 8,
+    "allowedHosts": [
+      "huyenchip.com"
+    ],
+    "notes": "系统设计、从原型到生产、模型与应用取舍；更适合作为低频方法库。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 10,
+      "sampleUrl": "https://huyenchip.com//2025/01/16/ai-engineering-pitfalls.html",
+      "limitations": [
+        "本次 feed 最新条目仍是 2025-01-16；接口可用不等于持续更新。",
+        "历史 SDK、模型能力、成本与接口须核对现行文档。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 23360,
+      "dateEvidence": [
+        {
+          "kind": "published",
+          "method": "html_meta",
+          "key": "article:published_time",
+          "value": "2025-01-16T00:00:00+00:00"
+        },
+        {
+          "kind": "published",
+          "method": "json_ld",
+          "key": "datePublished",
+          "value": "2025-01-16T00:00:00+00:00"
+        }
+      ],
+      "feedDateFields": {
+        "sampledEntries": 10,
+        "publishedCount": 10,
+        "updatedOnlyCount": 0
+      }
+    }
+  },
+  {
+    "id": "airbnb-engineering",
+    "name": "Airbnb Engineering & Data Science",
+    "homepage": "https://airbnb.tech/",
+    "url": "https://airbnb.tech/feed/",
+    "kind": "rss",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "en",
+    "category": "case",
+    "publisherType": "customer",
+    "priority": 4,
+    "intervalHours": 48,
+    "maxItems": 8,
+    "allowedHosts": [
+      "airbnb.tech"
+    ],
+    "notes": "实际业务中的 AI 数据、生产评测、隐私处理和成本取舍。质量较高，先作为扩展候选控制默认数量。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 10,
+      "sampleUrl": "https://airbnb.tech/infrastructure/de-identifying-text-at-scale-how-airbnb-protects-personal-data-in-ai-training/",
+      "limitations": [
+        "也有通用基础设施和传统推荐系统文章；需逐篇筛选。",
+        "案例来自团队自述，平台流量规模与个人交付条件不同。",
+        "样本详情未发现可靠发布日期字段，日期证据来自原站 feed pubDate。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 31536,
+      "dateEvidence": [],
+      "feedDateFields": {
+        "sampledEntries": 10,
+        "publishedCount": 10,
+        "updatedOnlyCount": 0
+      }
+    }
+  },
+  {
+    "id": "netflix-engineering",
+    "name": "Netflix TechBlog",
+    "homepage": "https://netflixtechblog.com/",
+    "url": "https://netflixtechblog.com/feed",
+    "kind": "rss",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "en",
+    "category": "case",
+    "publisherType": "customer",
+    "priority": 3,
+    "intervalHours": 48,
+    "maxItems": 8,
+    "allowedHosts": [
+      "netflixtechblog.com"
+    ],
+    "notes": "生产内容处理、搜索、推荐与生成式 AI 系统复盘；仅作扩展源，控制大型平台基础设施噪声。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "feed_body_only",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 10,
+      "sampleUrl": "https://netflixtechblog.com/engineering-ai-discover-e244944cdc38?source=rss----2615bd06b42e---4",
+      "limitations": [
+        "RSS 200/10 条且有正文；抽验详情 403，只能依据订阅内容，不宣称全文验证。",
+        "必须标识 feed_excerpt；大规模基础设施实践并非直接可复制的客户交付方案。"
+      ],
+      "sampleHttpStatus": 403,
+      "sampleBodyChars": 0,
+      "dateEvidence": [],
+      "feedDateFields": {
+        "sampledEntries": 10,
+        "publishedCount": 10,
+        "updatedOnlyCount": 0
+      }
+    }
+  },
+  {
+    "id": "doordash-engineering",
+    "name": "DoorDash Engineering",
+    "homepage": "https://careersatdoordash.com/engineering-blog/",
+    "url": "https://careersatdoordash.com/engineering-blog/",
+    "kind": "html_list",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "en",
+    "category": "case",
+    "publisherType": "customer",
+    "priority": 4,
+    "intervalHours": 48,
+    "maxItems": 8,
+    "allowedHosts": [
+      "careersatdoordash.com"
+    ],
+    "notes": "内部支持 Agent、业务成本与线上工程改进的具名团队复盘。网站虽含招聘，本源限定工程文章路径。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 13,
+      "sampleUrl": "https://careersatdoordash.com/blog/building-an-automated-improvement-harness-for-an-ai-support-agent/",
+      "limitations": [
+        "列表及样本正文、日期已成功；同页有职业内容，必须保留工程列表和文章路径约束。",
+        "作者给出的效率提升缺少完整独立审计口径时只记原作者报告。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 25761,
+      "dateEvidence": [
+        {
+          "kind": "published",
+          "method": "html_meta",
+          "key": "article:published_time",
+          "value": "2026-11-10T12:53:19+00:00"
+        }
+      ]
+    },
+    "linkSelector": "a[href^=\"https://careersatdoordash.com/blog/\"]",
+    "linkPattern": "^https://careersatdoordash\\.com/blog/[^/?#]+/$"
+  },
+  {
+    "id": "stripe-engineering",
+    "name": "Stripe Dev Blog：工程",
+    "homepage": "https://stripe.dev/blog/topic/engineering",
+    "url": "https://stripe.dev/blog/feed",
+    "kind": "rss",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "en",
+    "category": "engineering",
+    "publisherType": "customer",
+    "priority": 3,
+    "intervalHours": 72,
+    "maxItems": 8,
+    "allowedHosts": [
+      "stripe.dev"
+    ],
+    "notes": "支付系统、Agent 工具接入与工程取舍；工程页面可发现文章，但 feed 覆盖全开发者博客，默认只观察。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 131,
+      "sampleUrl": "https://stripe.dev/blog/claimable-sandboxes-frictionless-stripe-accounts-for-agents",
+      "limitations": [
+        "旧 stripe.com/blog/engineering 跳转到 stripe.dev/blog/topic/engineering；旧 /blog/feed 404，新域名 feed 有效。",
+        "feed 131 条且范围宽，先过滤产品公告与非工程内容；样本发布日期在 JSON-LD。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 11904,
+      "dateEvidence": [
+        {
+          "kind": "published",
+          "method": "json_ld",
+          "key": "datePublished",
+          "value": "2026-11-02"
+        }
+      ],
+      "feedDateFields": {
+        "sampledEntries": 12,
+        "publishedCount": 12,
+        "updatedOnlyCount": 0
+      }
+    }
+  },
+  {
+    "id": "intercom-engineering",
+    "name": "Intercom / Fin：客服 Agent 工程",
+    "homepage": "https://www.intercom.com/blog/",
+    "url": "https://www.intercom.com/blog/feed",
+    "kind": "rss",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "en",
+    "category": "engineering",
+    "publisherType": "vendor",
+    "priority": 3,
+    "intervalHours": 72,
+    "maxItems": 8,
+    "allowedHosts": [
+      "www.intercom.com"
+    ],
+    "notes": "客服 Agent 的知识维护、工具、审批与运营；有原始工程叙述，但整个博客销售与产品传播较多。",
+    "checkedAt": "2026-11-20T13:21:12+00:00",
+    "verification": {
+      "status": "passed",
+      "method": "Public HTTP GET; XML parsed with ElementTree; static HTML inspected with lxml; no login, browser rendering, source API key, or LLM call.",
+      "httpStatus": 200,
+      "entryCount": 20,
+      "sampleUrl": "https://www.intercom.com/blog/operator-a-look-under-the-hood",
+      "limitations": [
+        "旧 /blog/engineering/ 为 404；从当前首页发现 /blog/feed，有 20 条。",
+        "案例与“应该购买本产品”的论证交织，技术细节可参考，商业结论不直接照搬。"
+      ],
+      "sampleHttpStatus": 200,
+      "sampleBodyChars": 11794,
+      "dateEvidence": [
+        {
+          "kind": "published",
+          "method": "html_meta",
+          "key": "article:published_time",
+          "value": "2026-05-15"
+        },
+        {
+          "kind": "published",
+          "method": "json_ld",
+          "key": "datePublished",
+          "value": "2026-05-15"
+        },
+        {
+          "kind": "published",
+          "method": "json_ld",
+          "key": "datePublished",
+          "value": "2026-05-15"
+        }
+      ],
+      "feedDateFields": {
+        "sampledEntries": 12,
+        "publishedCount": 11,
+        "updatedOnlyCount": 0
+      }
+    }
+  }
+]

@@ -1,0 +1,61 @@
+# FDE 研究台
+
+个人使用的企业 AI 落地研究库与公众号选题台。借鉴 AIHOT 的采集、筛选、分析和展示思路，将运行入口收敛为 **Node.js + SQLite + 一个后台进程**。采集和规则筛选由脚本完成，模型只处理你选择的资料。
+
+这是仓库中独立的个人版，目录为 `fde-workbench/`。它不依赖根目录的 npm workspaces、PostgreSQL、MariaDB、Redis 或旧版 Compose，也不会迁移或修改旧版数据库。旧版仍保留作参考。
+
+## 能做什么
+
+- 从已核验的 RSS、Atom 和静态网页列表采集文章，保留原文链接和来源日期。
+- 用本地规则筛除明显无关内容，支持人工补充链接与正文。
+- 选择官方 API 或已登录 ChatGPT 的官方 Codex CLI，单篇生成一次结构化研究结果。
+- 记录业务问题、实施方案、阶段依据、效果、经验、限制和原文引文。
+- 保存个人笔记、选题进度，导出已分析资料的 Markdown。
+- 查看采集状态、分析次数、API 费用估算与未知预留。
+
+不提供公众号自动发布、多用户协作、公开 RSS、付费数据接口或完整历史归档。`已发布` 只是你的选题进度标签。
+
+## 五分钟本地启动
+
+需要 Node.js **24.22.1 或更新的 24.x**。本版在 24.22.3 验证。先从仓库根目录进入本目录：
+
+```bash
+cd fde-workbench
+npm ci --ignore-scripts
+npm run init
+npm run doctor
+npm run check
+npm test
+npm start
+```
+
+打开 `http://127.0.0.1:3210`。登录口令由初始化脚本写入本目录 `.env` 的 `FDE_ACCESS_TOKEN`。在自己的终端查看，不发到聊天或提交 Git。初始化不会覆盖已有配置。
+
+首次启动 **采集、分析和自动分析全部关闭**。没有模型账号也可以导入资料、做个人笔记、管理选题。未完成分析的资料暂不提供 Markdown 导出。
+
+## 推荐启用顺序
+
+1. 按 [部署文档](docs/DEPLOYMENT.md) 在目标机器完成资源与端口检查。
+2. 保持模型关闭，仅将 `FDE_COLLECT_ENABLED=true`，重启，检查首批来源与文章质量。
+3. 选择 `api` 或 `codex`，先设置 `FDE_DAILY_LIMIT=1`，保持 `FDE_AUTO_ANALYZE=false`。
+4. 在界面人工选择一篇资料，核对原文引文、实际用量和结果。
+5. 质量与额度确认后，再决定是否增加每日次数或开启自动分析。
+
+首次采集、旧文章和未披露日期的资料不会自动送给模型；它们仍可以人工排队分析。打开网页、搜索、保存笔记和导出均不触发模型。
+
+## 文档入口
+
+| 目的 | 文档 |
+|---|---|
+| 当前完成情况、限制、后续接手 | [仓库 CHECKPOINT](../CHECKPOINT.md)、[Codex 接手顺序](docs/CODEX_HANDOFF.md) |
+| 直接交给 Codex 安装与验收 | [Codex 部署提示词](docs/CODEX_DEPLOY_PROMPT.md) |
+| 系统设计与模块职责 | [ARCHITECTURE](docs/ARCHITECTURE.md) |
+| 信源选择、偏差和实际核验 | [SOURCES](docs/SOURCES.md)、[机器可读审计](config/source-audit.json) |
+| API / Plus CLI、用量与失败处理 | [MODEL_USAGE](docs/MODEL_USAGE.md) |
+| 本机 / VPS / 可选 Docker | [DEPLOYMENT](docs/DEPLOYMENT.md) |
+| 研究与公众号选题 | [EDITORIAL_WORKFLOW](docs/EDITORIAL_WORKFLOW.md) |
+| 备份、恢复、升级和锁处理 | [OPERATIONS](docs/OPERATIONS.md) |
+| 已运行的验证与未验证项 | [VALIDATION](docs/VALIDATION.md) |
+| 修改规则 | [AGENTS](AGENTS.md)、[CHANGELOG](CHANGELOG.md) |
+
+信源列表不等于转载许可，模型结果也不等于事实核查。准备公开文章时，保留出处，核对效果数字和部署阶段，加入自己的分析。

@@ -10,3 +10,8 @@ This repository also contains third-party material under its own terms:
 
 The demo sources in industry/sources.json are public feeds of their publishers. Their content belongs
 to them; by default the site shows only a summary and a link to the original.
+
+The independent personal edition in fde-workbench/ is named "FDE 研究台". It retains the source
+license and credits above, but does not use AIHOT branding in its user interface. The curated
+sources in fde-workbench/config/sources.json retain their publishers' rights. Their inclusion
+is not a license to redistribute full articles or a verification of business claims.
