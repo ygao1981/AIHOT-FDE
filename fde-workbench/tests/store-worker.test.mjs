@@ -5,6 +5,90 @@ import { Worker } from '../src/worker.mjs';
 import { analysisKey,prepareArticle } from '../src/analysis.mjs';
 import { fixture,add,output } from './helpers.mjs';
 import { acquireLock } from '../src/main.mjs';
+import { importArticle } from '../src/collect.mjs';
+
+test('busy-time enqueue and repeated notifications drain promptly with one model at a time',async t=>{
+  const {store,config}=fixture(t),first=Promise.withResolvers(),release=Promise.withResolvers();
+  let calls=0,active=0,maximum=0;
+  const worker=new Worker(store,config,{analyzer:async()=>{
+    calls++;maximum=Math.max(maximum,++active);
+    if(calls===1){first.resolve();await release.promise;}
+    active--;return output();
+  }}),a=add(store),b=add(store,2);
+  try{
+    worker.start();worker.enqueue(a.id);await first.promise;
+    worker.enqueue(b.id);worker.enqueue(b.id);void worker.wake();
+    release.resolve();await worker.wake();
+    assert.equal(calls,2);assert.equal(maximum,1);
+    assert.equal(store.getArticle(a.id).status,'analyzed');assert.equal(store.getArticle(b.id).status,'analyzed');
+    assert.equal(store.overview(config).usage.attempts24h,2);
+  }finally{release.resolve();await worker.stop();}
+});
+test('slow collection does not block analysis of a durable queue item',async t=>{
+  const {store,config}=fixture(t,{collectEnabled:true}),release=Promise.withResolvers(),analyzed=Promise.withResolvers();
+  const worker=new Worker(store,config,{collector:async()=>{await release.promise;return {added:0};},analyzer:async()=>{analyzed.resolve();return output();}});
+  try{
+    worker.enqueue(add(store).id);const tick=worker.tick();
+    await analyzed.promise;assert.equal(worker.collecting,true);
+    await tick;assert.equal(store.overview(config).usage.attempts24h,1);
+  }finally{release.resolve();await worker.stop();}
+});
+test('a failed analysis stops the drain and resume processes only the remaining queued item',async t=>{
+  const {store,config}=fixture(t);let calls=0;
+  const worker=new Worker(store,config,{analyzer:async()=>{if(++calls===1)throw Object.assign(new Error('test failure'),{code:'timeout'});return output();}});
+  const a=add(store),b=add(store,2);worker.enqueue(a.id);worker.enqueue(b.id);
+  await worker.wake();await worker.wake();
+  assert.equal(calls,1);assert.equal(store.getArticle(a.id).status,'failed');assert.equal(store.getArticle(b.id).status,'queued');
+  store.setSetting('analysis_pause',null);await worker.wake();
+  assert.equal(calls,2);assert.equal(store.getArticle(a.id).status,'failed');assert.equal(store.getArticle(b.id).status,'analyzed');
+});
+test('daily and monthly blocks end the drain without spinning or making a model request',async t=>{
+  const {store,config}=fixture(t,{dailyLimit:1});let calls=0;
+  const worker=new Worker(store,config,{analyzer:async()=>{calls++;return output();}});
+  worker.enqueue(add(store).id);worker.enqueue(add(store,2).id);
+  await worker.wake();await worker.wake();assert.equal(calls,1);
+  config.dailyLimit=2;config.monthlyBudgetUsd=0.000001;
+  await worker.wake();assert.equal(calls,1);assert.equal(store.overview(config).usage.attempts24h,1);
+  assert.equal(store.overview(config).stats.queued,1);
+});
+test('automatic filling stays bounded while paused or out of daily allowance, then recovers',async t=>{
+  const {store,config}=fixture(t,{autoAnalyze:true,dailyLimit:1});let calls=0;
+  const worker=new Worker(store,config,{analyzer:async()=>{calls++;return output();}});
+  for(let i=1;i<=4;i++)add(store,i,{backfill:false});
+  store.setSetting('analysis_pause','test pause');await worker.tick();await worker.tick();
+  assert.equal(store.overview(config).stats.candidate,4);assert.equal(store.overview(config).stats.queued,0);
+  store.setSetting('analysis_pause',null);await worker.tick();await worker.tick();await worker.tick();
+  assert.equal(calls,1);assert.equal(store.overview(config).stats.candidate,3);assert.equal(store.overview(config).stats.queued,0);
+  store.db.prepare('UPDATE attempts SET started_at=?').run(new Date(Date.now()-86400001).toISOString());
+  await worker.tick();assert.equal(calls,2);assert.equal(store.overview(config).stats.candidate,2);
+});
+test('startup consumes a persisted queue and shutdown leaves the next task queued',async t=>{
+  const {store,config}=fixture(t),started=Promise.withResolvers(),release=Promise.withResolvers();let calls=0;
+  const a=add(store),b=add(store,2);
+  store.queue(a.id,analysisKey(prepareArticle(a),config));store.queue(b.id,analysisKey(prepareArticle(b),config));
+  const worker=new Worker(store,config,{analyzer:async()=>{calls++;started.resolve();await release.promise;return output();}});
+  try{
+    worker.start();await started.promise;const stopping=worker.stop();release.resolve();await stopping;
+    await worker.wake();assert.equal(calls,1);assert.equal(store.getArticle(b.id).status,'queued');
+  }finally{release.resolve();await worker.stop();}
+});
+test('empty wakes and local rejections never call a model or leave a valid task stuck',async t=>{
+  const {store,config}=fixture(t);let calls=0;
+  const worker=new Worker(store,config,{analyzer:async()=>{calls++;return output();}});
+  await worker.wake();await worker.tick();assert.equal(calls,0);
+  const a=add(store,1,{title:'招聘：工程岗位'}),b=add(store,2);
+  store.queue(a.id,analysisKey(prepareArticle(a),config));worker.enqueue(b.id);await worker.wake();
+  assert.equal(calls,1);assert.equal(store.getArticle(a.id).status,'skipped');assert.equal(store.getArticle(b.id).status,'analyzed');
+});
+test('manual revision of an automatically collected article waits for explicit analysis',async t=>{
+  const {store,config}=fixture(t,{autoAnalyze:true});let calls=0;
+  const worker=new Worker(store,config,{analyzer:async()=>{calls++;return output();}}),a=add(store,1,{backfill:false});
+  await worker.tick();assert.equal(calls,1);
+  await importArticle(store,{url:a.url,title:a.title,body:a.body+'人工补充的实施记录。'},config);
+  assert.equal(store.getArticle(a.id).backfill,true);
+  await worker.tick();assert.equal(calls,1);assert.equal(store.getArticle(a.id).status,'candidate');
+  worker.enqueue(a.id);await worker.wake();assert.equal(calls,2);
+});
 
 test('completed analysis is reused; reading and exporting never invoke the model',async t=>{
   const {store,config}=fixture(t);let calls=0;

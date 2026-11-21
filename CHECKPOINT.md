@@ -1,17 +1,33 @@
-# CHECKPOINT — FDE 研究台 v2
+# CHECKPOINT — FDE 研究台 v2.1
 
-更新日期：2026-11-20。此文件是后续 Codex 接手的起点，不包含账号或运行数据。
+更新日期：2026-11-22（Asia/Singapore）。此文件是后续 Codex 接手的起点，不包含账号或运行数据。
+
+## 最新交接：2.1.0
+
+用户明确要求先独立判断 T3 对自身需求的价值，再选择是否采用。当前决定为：**不安装或嵌入整套 T3，不复制其代码；补齐现有 FDE 研究台的少量实际缺口。** 详细依据与舍弃方案见 [T3_DESIGN_REVIEW](fde-workbench/docs/T3_DESIGN_REVIEW.md)。
+
+- 本轮开始基线：`57d5a49910398e85254b5497624ad7743fd44b9d`；工作分支继续为 `codex/fde-workbench-v2`，沿用 PR #3。
+- T3 审查基线：`pingdotgg/t3code@b4277089795299da077e784f9f3432b3cc1c1c7d`；重点核对持久化、任务执行、provider、CLI 进程边界及外部触发。
+- 本轮实现：持久入队后唤醒、单消费者排空、采集与分析分离、额度阻塞退出、自动队列有界；Windows 官方 CLI 启动器及进程树适配；认证 HTTP 的 intake 客户端。
+- 人工修订正文后保持人工选择分析；未知消耗不自动重试，网页恢复不会重发失败资料。
+- 数据库仍为 `user_version=1`，无需结构迁移；没有新增运行依赖；三个默认开关和 provider=off 均保留。
+- 当前建议：**先 Windows 本机原生试运行**。本机睡眠/关机期间不会采集；VPS 是否能承载需真实预检。
+- 本地验证：Linux x64 / Node 24.22.3，安装成功，27 个文件语法与配置通过，79 项测试通过、0 失败、0 跳过，依赖审计 0 已知漏洞。模型使用假 CLI / 本地假服务，未调用用户账号。
+- 已新增 Windows CI。首次上传时远端结果尚待确认；后续精确提交和运行链接以 [VALIDATION](fde-workbench/docs/VALIDATION.md) 最新节为准。真实 Windows 官方登录、沙箱和一篇分析未在用户机器验证。
+- 本轮不更改来源目录或抓取解析器，不重复宣称旧来源审计是本日重新核验；旧版公开站业务源码也未修改。
+
+接手先读 [WINDOWS_LOCAL](fde-workbench/docs/WINDOWS_LOCAL.md) 与 [CODEX_DEPLOY_PROMPT](fde-workbench/docs/CODEX_DEPLOY_PROMPT.md)。外部程序按 [EVENT_INTAKE](fde-workbench/docs/EVENT_INTAKE.md) 提交资料；二开任务使用 [CODEX_DEVELOPMENT_PROMPT](fde-workbench/docs/CODEX_DEVELOPMENT_PROMPT.md)。下方 2.0 的实现与历史证据继续保留，不能代替 2.1 新代码的验证。
 
 ## 1. 当前目标与入口
 
-用户需要个人 FDE / 企业 AI 落地研究、教程阅读和微信公众号选题。低频使用，优先脚本，少量模型分析；Linux VPS 已有 MariaDB，磁盘曾紧张；模型可采用本人登录的官方 Codex CLI。
+用户需要个人 FDE / 企业 AI 落地研究、教程阅读和微信公众号选题。低频使用，优先脚本，少量模型分析；本机是 Windows，Linux VPS 已有 MariaDB，磁盘曾紧张；模型可采用本人登录的官方 Codex CLI。
 
 本次完成独立轻量入口 **`fde-workbench/`**，产品名“FDE 研究台”。Node.js + SQLite，一个服务进程、串行模型任务。不要执行根目录旧版 Compose 来部署这套入口。
 
 - 仓库：`https://github.com/ygao1981/AIHOT-FDE`
 - 工作分支：`codex/fde-workbench-v2`
 - GitHub 交付：[PR #3](https://github.com/ygao1981/AIHOT-FDE/pull/3)，保留草稿供目标环境验收；没有合并到 main。
-- 已通过新版及旧版完整 CI 的实现与验收脚本提交：`d9200c08a930e1954e7db404b0ea5facbf647649`。之后的纯文档修订以分支历史为准。
+- 2.0 历史版本通过新版及旧版完整 CI 的提交：`d9200c08a930e1954e7db404b0ea5facbf647649`。本轮 2.1 源码已改变，其独立验收见顶部与 VALIDATION。
 - 初始代码基线：`194fbef74a79b2194d0119000f42f6badc5741f3`，来自此前 `codex/fde-cli-single-pass`。
 - 开始工作时 `main`：`05c9b2c95398d43057800ac10fefd1c2721ff0b1`。
 - 本版实际版本以 `git rev-parse HEAD` 和该分支历史为准；不要将初始基线误认成新版交付提交。
@@ -43,7 +59,7 @@
 5. **账户方式明确。** 官方 API key 与 ChatGPT 登录官方 CLI 不混用，不把订阅说成固定可兑换 token 的 API 额度。
 6. **轻量网络路径。** 不包含付费公众号采集、Jina、无头浏览器或反爬绕过。任意人工链接不能借代理访问私网。
 
-## 4. 已实际执行的验证
+## 4. 2.0 历史验证（保留证据）
 
 开发环境为 Linux x64、Node 24.22.3、npm 11.19.1；不是用户 VPS。
 

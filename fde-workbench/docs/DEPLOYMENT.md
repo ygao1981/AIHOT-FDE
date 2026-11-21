@@ -4,6 +4,8 @@
 
 本次没有登录用户 VPS，也没有读取它的容量、进程或账单。以下容量是试运行建议，不是对目标机器的判断。
 
+**当前推荐先在用户的 Windows 本机试运行。** 完整 PowerShell、CLI 路径与本机验收步骤见 [WINDOWS_LOCAL.md](WINDOWS_LOCAL.md)。以下系统检查、SSH 和 systemd 示例面向 Linux；不要在 Windows 原样执行这些命令。无需为 FDE 研究台安装 T3。
+
 ## 1. 怎样选机器
 
 | 目标机器当前情况 | 建议 |

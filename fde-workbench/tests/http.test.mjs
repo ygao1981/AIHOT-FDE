@@ -17,7 +17,7 @@ async function app(t,overrides={}) {
 }
 test('private APIs require login; health contains no credentials; session uses HttpOnly',async t=>{
   const ctx=await app(t);assert.equal((await ctx.request('/api/articles')).status,401);
-  assert.deepEqual(await(await ctx.request('/api/health')).json(),{ok:true,version:'2.0.0'});
+  assert.deepEqual(await(await ctx.request('/api/health')).json(),{ok:true,version:'2.1.0'});
   const login=await ctx.request('/api/login',{method:'POST',body:JSON.stringify({token:ctx.config.accessToken})});
   assert.equal(login.status,200);assert.match(login.headers.get('set-cookie'),/HttpOnly/);
   const cookie=login.headers.get('set-cookie').split(';')[0];
@@ -42,4 +42,15 @@ test('manual pasted material stays pending and the analysis switch is enforced a
   assert.equal(result.status,200);const data=await result.json();assert.equal(data.article.status,'candidate');
   const queued=await ctx.request(`/api/articles/${data.article.id}/queue`,{method:'POST',headers:auth,body:'{}'});
   assert.equal(queued.status,409);assert.equal((await queued.json()).error.code,'analysis_disabled');assert.equal(ctx.calls,0);
+});
+test('authenticated resume wakes queued work and cached requeue never adds another attempt',async t=>{
+  const ctx=await app(t),a=add(ctx.store),auth={Authorization:`Bearer ${ctx.config.accessToken}`};
+  ctx.store.setSetting('analysis_pause','test pause');
+  const queue=await ctx.request(`/api/articles/${a.id}/queue`,{method:'POST',headers:auth,body:'{}'});
+  assert.equal(queue.status,202);await ctx.worker.wake();assert.equal(ctx.calls,0);
+  const resume=await ctx.request('/api/control',{method:'POST',headers:auth,body:'{"action":"resume"}'});
+  assert.equal(resume.status,200);await ctx.worker.wake();assert.equal(ctx.calls,1);
+  const repeated=await ctx.request(`/api/articles/${a.id}/queue`,{method:'POST',headers:auth,body:'{}'});
+  assert.equal((await repeated.json()).cached,true);await ctx.worker.wake();
+  assert.equal(ctx.calls,1);assert.equal(ctx.store.overview(ctx.config).usage.attempts24h,1);
 });

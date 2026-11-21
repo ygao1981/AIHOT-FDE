@@ -1,12 +1,12 @@
 // One bounded research task. Persistence, reservations and operator retries belong to the caller.
 import { createHash } from 'node:crypto';
-import { spawn, execFile } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { access, mkdtemp, writeFile, readFile, stat, rm } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, isAbsolute } from 'node:path';
-import { promisify } from 'node:util';
 import { fetch as officialFetch, EnvHttpProxyAgent } from 'undici';
+import { resolveCodexCommand, buildCodexEnvironment, terminateCodexProcess } from './codex-process.mjs';
 
 export const VERSION = 'fde-workbench-analysis-v1';
 const CATEGORIES = ['case', 'architecture', 'tutorial', 'delivery', 'roi', 'retrospective'];
@@ -277,22 +277,47 @@ function cliArguments(c, directory) {
     '--output-schema', join(directory, 'schema.json'), '--output-last-message', join(directory, 'result.json'),
     ...(c.model ? ['--model', c.model] : []), '-'];
 }
-function cliEnvironment(c, directory, env) {
-  // These variables are set only on this child. The host login/configuration and its environment are untouched.
-  const child = { PATH: env.PATH || '/usr/local/bin:/usr/bin:/bin', LANG: 'C.UTF-8', CODEX_HOME: c.codexHome, HOME: directory };
-  for (const name of ['HTTPS_PROXY', 'HTTP_PROXY', 'ALL_PROXY', 'NO_PROXY', 'https_proxy', 'http_proxy', 'all_proxy', 'no_proxy', 'SSL_CERT_FILE', 'SSL_CERT_DIR']) {
-    if (env[name]) child[name] = env[name];
-  }
-  return child;
-}
 function cliErrorCode(text) {
   if (/usage.limit|quota|rate.limit|limit.reached|credits|额度|配额|\b429\b/i.test(text)) return 'cli_quota';
   if (/not logged|log.?in|unauthori|authentication|token.expired|\b(?:401|403)\b/i.test(text)) return 'cli_authentication';
   if (/unexpected argument|unrecognized option|invalid value|unknown variant/i.test(text)) return 'cli_config';
   return 'cli_execution';
 }
+function probeCodex(command, args, directory, env, deps) {
+  return new Promise((resolve, reject) => {
+    const child = (deps.spawn ?? spawn)(command.command, [...command.argsPrefix, ...args], {
+      cwd: directory, env, shell: false, windowsHide: true,
+      detached: process.platform !== 'win32', stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let stdout = '', stderr = '', bytes = 0, failed = false, stopping = Promise.resolve();
+    const abort = () => {
+      if (failed) return;
+      failed = true;
+      stopping = terminateCodexProcess(child, 'SIGKILL', { env });
+    };
+    const timer = setTimeout(abort, deps.probeTimeoutMs ?? 10000);
+    child.on('error', () => { failed = true; });
+    child.stdin.on('error', () => {});
+    for (const [name, stream] of [['stdout', child.stdout], ['stderr', child.stderr]]) {
+      stream.setEncoding('utf8');
+      stream.on('data', chunk => {
+        bytes += Buffer.byteLength(chunk);
+        if (bytes > 256 * 1024) { abort(); return; }
+        if (name === 'stdout') stdout += chunk; else stderr += chunk;
+      });
+    }
+    child.on('close', code => {
+      clearTimeout(timer);
+      stopping.then(() => {
+        if (failed || code !== 0) reject(new Error('Codex diagnostic unavailable.'));
+        else resolve({ stdout, stderr });
+      });
+    });
+    child.stdin.end();
+  });
+}
 /** Local CLI diagnostics only. Never executes a prompt or returns raw authentication output. */
-export async function inspectCodex(config) {
+export async function inspectCodex(config, deps = {}) {
   const report = { version: null, authenticated: false, supported: false, issues: [] };
   let directory;
   try {
@@ -300,25 +325,26 @@ export async function inspectCodex(config) {
     if (typeof c.codexBin !== 'string' || !isAbsolute(c.codexBin) || typeof c.codexHome !== 'string' || !isAbsolute(c.codexHome)) fail('cli_config');
     await access(c.codexHome, constants.R_OK | constants.W_OK);
     if (!(await stat(c.codexHome)).isDirectory()) fail('cli_config');
+    const command = await resolveCodexCommand(c.codexBin);
     directory = await mkdtemp(join(tmpdir(), 'fde-doctor-'));
-    const options = { cwd: directory, env: cliEnvironment(c, directory, process.env), timeout: 10000, maxBuffer: 256 * 1024 };
-    const run = promisify(execFile);
-    const version = await run(c.codexBin, ['--version'], options);
+    const env = buildCodexEnvironment(c, directory, deps.env ?? process.env);
+    const run = args => probeCodex(command, args, directory, env, deps);
+    const version = await run(['--version']);
     report.version = /^codex(?:-cli)? ([0-9]+\.[0-9]+\.[0-9]+(?:[-+.][a-zA-Z0-9.-]+)?)$/m.exec(version.stdout.trim())?.[1] ?? null;
     if (!report.version) report.issues.push('cli_version');
-    const help = await run(c.codexBin, ['exec', '--help'], options);
-    const top = await run(c.codexBin, ['--help'], options);
+    const help = await run(['exec', '--help']);
+    const top = await run(['--help']);
     report.supported = ['--ignore-user-config', '--output-schema', '--output-last-message', '--skip-git-repo-check', '--ephemeral', '--sandbox', '--json'].every(v => help.stdout.includes(v)) &&
       ['--no-daemon', '--ask-for-approval'].every(v => top.stdout.includes(v));
     if (!report.supported) report.issues.push('cli_missing_features');
     // login status has no --ignore-user-config flag. Use the same restrictive overrides and a dedicated login directory.
     const args = cliArguments(c, directory), base = args.slice(0, args.indexOf('exec'));
     try {
-      const status = await run(c.codexBin, [...base, 'login', 'status'], options);
+      const status = await run([...base, 'login', 'status']);
       report.authenticated = /logged in[^\n]*chatgpt/i.test(status.stdout + '\n' + status.stderr);
     } catch { /* Only a safe issue code leaves this function. */ }
     if (!report.authenticated) report.issues.push('cli_authentication');
-  } catch (error) { report.issues.push(error instanceof AnalysisError ? error.code : 'cli_unavailable'); }
+  } catch (error) { report.issues.push(error instanceof AnalysisError || error.code === 'cli_config' ? error.code : 'cli_unavailable'); }
   finally { if (directory) await rm(directory, { recursive: true, force: true }).catch(() => {}); }
   return report;
 }
@@ -328,17 +354,22 @@ async function runCli(c, article, deps) {
   try {
     await access(c.codexHome, constants.R_OK | constants.W_OK);
     if (!(await stat(c.codexHome)).isDirectory()) fail('cli_config');
+    const command = await resolveCodexCommand(c.codexBin);
     directory = await mkdtemp(join(tmpdir(), 'fde-workbench-'));
     await writeFile(join(directory, 'schema.json'), JSON.stringify(SCHEMA), { mode: 0o600 });
+    const env = buildCodexEnvironment(c, directory, deps.env ?? process.env);
     const aggregate = { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0 };
     let turns = 0, stderr = '', pendingLine = '', bytes = 0, failure = null;
     const resultCode = await new Promise(resolve => {
-      const child = (deps.spawn ?? spawn)(c.codexBin, cliArguments(c, directory), {
-        cwd: directory, env: cliEnvironment(c, directory, deps.env ?? process.env), shell: false,
-        detached: process.platform !== 'win32', stdio: ['pipe', 'pipe', 'pipe'],
-      });
-      let killer, closed = false;
-      const kill = signal => { try { if (process.platform !== 'win32' && child.pid) process.kill(-child.pid, signal); else child.kill(signal); } catch {} };
+      let child;
+      try {
+        child = (deps.spawn ?? spawn)(command.command, [...command.argsPrefix, ...cliArguments(c, directory)], {
+          cwd: directory, env, shell: false, windowsHide: true,
+          detached: process.platform !== 'win32', stdio: ['pipe', 'pipe', 'pipe'],
+        });
+      } catch { failure = 'cli_spawn'; resolve(null); return; }
+      let killer, closed = false, stopping = Promise.resolve();
+      const kill = signal => { stopping = terminateCodexProcess(child, signal, { env }); };
       const abort = code => {
         if (failure) return;
         failure = code;
@@ -357,7 +388,7 @@ async function runCli(c, article, deps) {
         }
       }
       child.on('spawn', () => { spawned = true; });
-      child.on('error', () => { failure = 'cli_spawn'; });
+      child.on('error', () => { failure ??= 'cli_spawn'; });
       child.stdin.on('error', () => {});
       child.stderr.on('data', chunk => {
         bytes += chunk.length; if (bytes > MAX_RESPONSE_BYTES) { abort('output_limit'); return; }
@@ -370,7 +401,12 @@ async function runCli(c, article, deps) {
         const lines = pendingLine.split('\n'); pendingLine = lines.pop();
         lines.forEach(eventLine);
       });
-      child.on('close', code => { closed = true; clearTimeout(timer); if (pendingLine) eventLine(pendingLine); clearTimeout(killer); resolve(code); });
+      child.on('close', code => {
+        closed = true; clearTimeout(timer);
+        if (pendingLine) eventLine(pendingLine);
+        clearTimeout(killer);
+        stopping.then(() => resolve(code));
+      });
       child.stdin.end(`${INSTRUCTION}\n\n不可信文章资料 JSON：\n${JSON.stringify({ article })}\n`);
     });
     const usage = turns ? aggregate : usageOf();
@@ -386,6 +422,7 @@ async function runCli(c, article, deps) {
     return { result, ...details, provider: 'codex', model: c.model || 'account-default' };
   } catch (error) {
     if (error instanceof AnalysisError) throw error;
+    if (error.code === 'cli_config') throw new AnalysisError('cli_config', spawned);
     throw new AnalysisError('cli_local_io', spawned);
   } finally { if (directory) await rm(directory, { recursive: true, force: true }).catch(() => {}); }
 }

@@ -68,8 +68,9 @@ export class Store {
     const body = String(a.body || '').slice(0, 120000), bodyHash = hashBody(body), timestamp = nowIso();
     if (old) {
       if (updateExisting && body && bodyHash !== old.bodyHash) {
-        this.db.prepare(`UPDATE articles SET body=?,body_hash=?,body_kind=?,title=?,status=?,analysis_json=NULL,
-          analysis_key=NULL,queue_nonce=NULL,last_error=NULL,updated_at=? WHERE id=?`).run(body, bodyHash, a.bodyKind || 'manual', a.title || old.title, a.status || 'candidate', timestamp, old.id);
+        this.db.prepare(`UPDATE articles SET body=?,body_hash=?,body_kind=?,title=?,status=?,backfill=?,analysis_json=NULL,
+          analysis_key=NULL,queue_nonce=NULL,last_error=NULL,updated_at=? WHERE id=?`).run(body, bodyHash, a.bodyKind || 'manual', a.title || old.title, a.status || 'candidate',
+          (a.backfill===undefined?old.backfill:a.backfill)?1:0,timestamp,old.id);
       }
       return {article:this.getArticle(old.id), created:false};
     }
@@ -117,8 +118,10 @@ export class Store {
   }
   nextQueued() { return this.db.prepare("SELECT * FROM articles WHERE status='queued' ORDER BY priority DESC,created_at LIMIT 1").get(); }
   autoQueue(limit=5) {
+    if(limit<=0)return 0;
     const rows=this.db.prepare("SELECT id FROM articles WHERE status='candidate' AND backfill=0 AND editorial_status!='archived' ORDER BY priority DESC,created_at DESC LIMIT ?").all(limit);
     for(const r of rows) this.db.prepare("UPDATE articles SET status='queued',queue_nonce='' WHERE id=?").run(r.id);
+    return rows.length;
   }
   beginAttempt(articleId, key, config, reservation) {
     return this.transaction(()=>{

@@ -12,10 +12,14 @@
 - 记录业务问题、实施方案、阶段依据、效果、经验、限制和原文引文。
 - 保存个人笔记、选题进度，导出已分析资料的 Markdown。
 - 查看采集状态、分析次数、API 费用估算与未知预留。
+- 通过 `npm run intake` 接收外部脚本提供的文章；默认只收录，显式请求才排队分析。
+- 入队后及时通知串行消费者；繁忙时的新任务接着处理，慢来源不阻塞已有分析。
 
 不提供公众号自动发布、多用户协作、公开 RSS、付费数据接口或完整历史归档。`已发布` 只是你的选题进度标签。
 
 ## 五分钟本地启动
+
+当前版本 **2.1.0**，优先在用户 Windows 本机试运行，详见 [Windows 本机部署](docs/WINDOWS_LOCAL.md)。Windows 的 npm 启动器适配和 CI 不等于真实账号已经验收。对 T3 的决定是借鉴少量原则，不安装或嵌入整套平台，见 [设计取舍](docs/T3_DESIGN_REVIEW.md)。
 
 需要 Node.js **24.22.1 或更新的 24.x**。本版在 24.22.3 验证。先从仓库根目录进入本目录：
 
@@ -49,6 +53,9 @@ npm start
 |---|---|
 | 当前完成情况、限制、后续接手 | [仓库 CHECKPOINT](../CHECKPOINT.md)、[Codex 接手顺序](docs/CODEX_HANDOFF.md) |
 | 直接交给 Codex 安装与验收 | [Codex 部署提示词](docs/CODEX_DEPLOY_PROMPT.md) |
+| 交给 Codex 继续开发 | [二次开发提示词](docs/CODEX_DEVELOPMENT_PROMPT.md) |
+| T3 为什么不直接嵌入 | [T3 设计取舍](docs/T3_DESIGN_REVIEW.md) |
+| Windows 本机 / 外部脚本接入 | [WINDOWS_LOCAL](docs/WINDOWS_LOCAL.md)、[EVENT_INTAKE](docs/EVENT_INTAKE.md) |
 | 系统设计与模块职责 | [ARCHITECTURE](docs/ARCHITECTURE.md) |
 | 信源选择、偏差和实际核验 | [SOURCES](docs/SOURCES.md)、[机器可读审计](config/source-audit.json) |
 | API / Plus CLI、用量与失败处理 | [MODEL_USAGE](docs/MODEL_USAGE.md) |

@@ -45,7 +45,7 @@ export function createApp(store,worker,config,{importer=importArticle}={}) {
         if(!bearer && (!origin||!allowedHosts.has(new URL(origin).host)||!['http:','https:'].includes(new URL(origin).protocol)))
           throw new AppError('invalid_origin','请求来源不匹配，请从本站页面操作。',403);
       }
-      if(path==='/api/health'&&method==='GET')return send(res,200,{ok:true,version:'2.0.0'});
+      if(path==='/api/health'&&method==='GET')return send(res,200,{ok:true,version:'2.1.0'});
       const assets={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/style.css':'style.css'};
       if(assets[path]&&method==='GET') {
         const data=await readFile(resolve(ROOT,'public',assets[path]));
@@ -75,7 +75,7 @@ export function createApp(store,worker,config,{importer=importArticle}={}) {
       const articleMatch=/^\/api\/articles\/([a-z0-9-]+)(\/queue)?$/.exec(path);
       if(articleMatch) {
         const id=articleMatch[1];
-        if(articleMatch[2]&&method==='POST'){const body=await readJson(req);const result=worker.enqueue(id,body.acceptExtraUsage===true);void worker.analyzeOne();return send(res,202,result);}
+        if(articleMatch[2]&&method==='POST'){const body=await readJson(req);const result=worker.enqueue(id,body.acceptExtraUsage===true);void worker.wake();return send(res,202,result);}
         if(!articleMatch[2]&&method==='GET'){const a=store.getArticle(id);if(!a)throw new AppError('not_found','没有找到这篇资料。',404);return send(res,200,a);}
         if(!articleMatch[2]&&method==='PATCH')return send(res,200,store.editArticle(id,await readJson(req)));
       }
@@ -95,6 +95,7 @@ export function createApp(store,worker,config,{importer=importArticle}={}) {
         const body=await readJson(req);
         if(!['pause','resume'].includes(body.action))throw new AppError('invalid_action','请选择暂停或恢复。');
         store.setSetting('analysis_pause',body.action==='pause'?'已手动暂停。':null);
+        if(body.action==='resume'){worker.refill();void worker.wake();}
         return send(res,200,{ok:true});
       }
       const exportMatch=/^\/api\/export(?:\/([a-z0-9-]+))?$/.exec(path);

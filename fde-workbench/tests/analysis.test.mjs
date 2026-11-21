@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
+import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdtemp, mkdir, writeFile, readFile, rm, access } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -12,6 +13,7 @@ const ARTICLE = { title: 'Enterprise RAG implementation and evaluation', url: 'h
   body: `${QUOTE} We integrated retrieval with the support workflow and evaluated source citations. The team documented deployment lessons and limitations. We did not publish revenue or ROI measurements. ${'The customer reviewed the retrieved knowledge and retained human approval. '.repeat(4)}` };
 const CONFIG = { provider: 'api', model: 'example-model', reasoning: 'low', maxInputChars: 16000, maxOutputTokens: 3000,
   timeoutMs: 1000, apiKey: 'sk-local-test-only', inputPrice: 0.1, outputPrice: 0.4 };
+const CLI_TIMEOUT_TEST_MS = process.platform === 'win32' ? 1500 : 250;
 function result(overrides = {}) {
   return { relevance: 'relevant', category: 'case', score: 80, stage: 'production', stageEvidence: QUOTE,
     title: '企业知识检索的实施经验', summary: '文章介绍企业知识检索与人工审批流程的集成，给出生产使用的明确表述。收入和投资回报未披露，仍需独立核验厂商声明。',
@@ -41,17 +43,27 @@ async function httpFixture(t, handler) {
   } } };
 }
 const json = (res, data, status = 200) => { res.writeHead(status, { 'content-type': 'application/json', 'x-request-id': 'req_local_test' }); res.end(JSON.stringify(data)); };
+async function writeTestCli(directory, source) {
+  const packageRoot = join(directory, 'node_modules', '@openai', 'codex');
+  await mkdir(join(packageRoot, 'bin'), { recursive: true });
+  await writeFile(join(packageRoot, 'package.json'), JSON.stringify({ name: '@openai/codex', type: 'module', bin: { codex: 'bin/codex.js' } }));
+  const entry = join(packageRoot, 'bin', 'codex.js');
+  await writeFile(entry, `#!${process.execPath}\n${source}`, { mode: 0o700 });
+  if (process.platform !== 'win32') return entry;
+  const shim = join(directory, 'codex.cmd');
+  await writeFile(shim, '@echo This shell fixture must never run.\r\n@exit /b 91\r\n');
+  return shim;
+}
 async function cliFixture(t, body) {
   const directory = await mkdtemp(join(tmpdir(), 'fde-analysis-test-'));
   const codexHome = join(directory, 'login'); await mkdir(codexHome, { mode: 0o700 });
   const inspection = join(directory, 'inspection.json'), calls = join(directory, 'calls');
-  const codexBin = join(directory, 'fake-codex.mjs');
-  await writeFile(codexBin, `#!${process.execPath}\nimport {writeFile,appendFile} from 'node:fs/promises';
+  const codexBin = await writeTestCli(directory, `import {writeFile,appendFile} from 'node:fs/promises';
 const args=process.argv.slice(2);let input='';for await(const chunk of process.stdin)input+=chunk;
 await appendFile(${JSON.stringify(calls)},'1');
 await writeFile(${JSON.stringify(inspection)},JSON.stringify({args,input,env:process.env,cwd:process.cwd(),pid:process.pid}));
 const output=args[args.indexOf('--output-last-message')+1];
-${body}\n`, { mode: 0o700 });
+${body}\n`);
   t.after(() => rm(directory, { recursive: true, force: true }));
   return { config: { ...CONFIG, provider: 'codex', codexHome, codexBin }, inspection, calls, directory };
 }
@@ -231,7 +243,13 @@ test('API refusal, tool output and missing usage cannot become a successful zero
 
 test('CLI uses the official noninteractive interface, isolates secrets and sums completed-turn usage', async t => {
   const fixture = await cliFixture(t, successCli + `\nconsole.log(JSON.stringify({type:'turn.completed',usage:{input_tokens:30,cached_input_tokens:10,output_tokens:20,reasoning_output_tokens:5}}));`);
-  const response = await runAnalysis(fixture.config, ARTICLE, { env: { PATH: process.env.PATH, OPENAI_API_KEY: 'must-not-leak', CODEX_API_KEY: 'must-not-leak', DATABASE_URL: 'must-not-leak', ADMIN_PASSWORD: 'must-not-leak', NODE_OPTIONS: '--no-warnings' } });
+  const response = await runAnalysis(fixture.config, ARTICLE, {
+    env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, OPENAI_API_KEY: 'must-not-leak', CODEX_API_KEY: 'must-not-leak', DATABASE_URL: 'must-not-leak', ADMIN_PASSWORD: 'must-not-leak', NODE_OPTIONS: '--no-warnings' },
+    spawn(command, args, options) {
+      assert.equal(options.shell, false); assert.equal(options.windowsHide, true);
+      return spawn(command, args, options);
+    },
+  });
   const inspection = JSON.parse(await readFile(fixture.inspection, 'utf8'));
   assert.equal(inspection.env.CODEX_HOME, fixture.config.codexHome);
   for (const secret of ['OPENAI_API_KEY', 'CODEX_API_KEY', 'DATABASE_URL', 'ADMIN_PASSWORD', 'NODE_OPTIONS']) assert.equal(inspection.env[secret], undefined);
@@ -261,11 +279,16 @@ test('CLI authentication failures do not leak stderr or trigger an API fallback'
   assert.equal(await readFile(fixture.calls, 'utf8'), '1');
 });
 
-test('CLI timeout kills a child that ignores SIGTERM and cleans its temporary directory', async t => {
-  const fixture = await cliFixture(t, `process.on('SIGTERM',()=>{});setInterval(()=>{},1000);`);
-  await assert.rejects(runAnalysis({ ...fixture.config, timeoutMs: 100 }, ARTICLE), e => e.code === 'cli_timeout_unknown' && e.mayHaveConsumed);
+test('CLI timeout stops its process tree, escalates SIGTERM and cleans its temporary directory', async t => {
+  const fixture = await cliFixture(t, `import {spawn} from 'node:child_process';
+const nested=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:['ignore','inherit','inherit']});
+await writeFile(process.env.CODEX_HOME+'/nested.pid',String(nested.pid));
+process.on('SIGTERM',()=>{});setInterval(()=>{},1000);`);
+  await assert.rejects(runAnalysis({ ...fixture.config, timeoutMs: CLI_TIMEOUT_TEST_MS }, ARTICLE), e => e.code === 'cli_timeout_unknown' && e.mayHaveConsumed);
   const inspection = JSON.parse(await readFile(fixture.inspection, 'utf8'));
   assert.throws(() => process.kill(inspection.pid, 0), e => e.code === 'ESRCH');
+  const nestedPid = Number(await readFile(join(fixture.config.codexHome, 'nested.pid'), 'utf8'));
+  assert.throws(() => process.kill(nestedPid, 0), e => e.code === 'ESRCH');
   await assert.rejects(access(inspection.cwd));
   assert.equal(await readFile(fixture.calls, 'utf8'), '1');
 });
@@ -278,21 +301,21 @@ test('unexpected CLI tool events abort immediately, before a later result is acc
 
 test('a missing CLI binary is a local failure; valid CLI output without usage remains unknown', async t => {
   const fixture = await cliFixture(t, `await writeFile(output,${JSON.stringify(JSON.stringify(result()))});`);
-  await assert.rejects(runAnalysis({ ...fixture.config, codexBin: join(fixture.directory, 'does-not-exist') }, ARTICLE), e => e.code === 'cli_spawn' && !e.mayHaveConsumed);
+  await assert.rejects(runAnalysis({ ...fixture.config, codexBin: join(fixture.directory, 'does-not-exist.exe') }, ARTICLE), e => e.code === 'cli_spawn' && !e.mayHaveConsumed);
   const response = await runAnalysis(fixture.config, ARTICLE);
   assert.equal(response.costUsd, null);
   assert.deepEqual(response.usage, { inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null });
 });
 
 test('doctor uses only version, help and login-status commands and never returns credential text', async t => {
-  const directory = await mkdtemp(join(tmpdir(), 'fde-doctor-test-')), binary = join(directory, 'fake-codex.mjs'), log = join(directory, 'calls.jsonl');
+  const directory = await mkdtemp(join(tmpdir(), 'fde-doctor-test-')), log = join(directory, 'calls.jsonl');
   t.after(() => rm(directory, { recursive: true, force: true }));
-  await writeFile(binary, `#!${process.execPath}\nimport {appendFile} from 'node:fs/promises';
+  const binary = await writeTestCli(directory, `import {appendFile} from 'node:fs/promises';
 const args=process.argv.slice(2);await appendFile(${JSON.stringify(log)},JSON.stringify(args)+'\\n');
 if(args.includes('--version')) console.log('codex-cli 0.172.0-alpha.2');
 else if(args.includes('--help'))console.log('--ignore-user-config --output-schema --output-last-message --skip-git-repo-check --ephemeral --sandbox --json --no-daemon --ask-for-approval');
 else if(args.includes('status'))console.error('Logged in using ChatGPT (private-account-details)');
-else process.exitCode=90;`, { mode: 0o700 });
+else process.exitCode=90;`);
   const report = await inspectCodex({ provider: 'codex', codexHome: directory, codexBin: binary });
   assert.deepEqual(report, { version: '0.172.0-alpha.2', authenticated: true, supported: true, issues: [] });
   const calls = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse);
@@ -300,4 +323,26 @@ else process.exitCode=90;`, { mode: 0o700 });
   assert.ok(calls.every(args => args.includes('--version') || args.includes('--help') || (args.includes('login') && args.includes('status'))));
   assert.ok(!JSON.stringify(report).includes('private-account-details'));
   assert.ok(calls.find(args => args.includes('login')).includes('forced_login_method="chatgpt"'));
+});
+
+test('invalid executable configuration stays local in analysis and diagnostics', async t => {
+  const fixture = await cliFixture(t, successCli);
+  const config = { ...fixture.config, codexBin: fixture.config.codexBin + '\0invalid' };
+  const deps = { spawn() { assert.fail('invalid command must not spawn'); } };
+  await assert.rejects(runAnalysis(config, ARTICLE, deps), e => e.code === 'cli_config' && !e.mayHaveConsumed);
+  const report = await inspectCodex(config, deps);
+  assert.deepEqual(report.issues, ['cli_config']);
+  await assert.rejects(access(fixture.calls));
+});
+
+test('doctor timeout stops its diagnostic process and does not proceed to another command', async t => {
+  const fixture = await cliFixture(t, `process.on('SIGTERM',()=>{});setInterval(()=>{},1000);`);
+  const report = await inspectCodex(fixture.config, { probeTimeoutMs: CLI_TIMEOUT_TEST_MS });
+  assert.deepEqual(report, { version: null, authenticated: false, supported: false, issues: ['cli_unavailable'] });
+  const inspection = JSON.parse(await readFile(fixture.inspection, 'utf8'));
+  assert.deepEqual(inspection.args, ['--version']);
+  assert.equal(inspection.input, '');
+  assert.throws(() => process.kill(inspection.pid, 0), e => e.code === 'ESRCH');
+  await assert.rejects(access(inspection.cwd));
+  assert.equal(await readFile(fixture.calls, 'utf8'), '1');
 });

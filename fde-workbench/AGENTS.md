@@ -47,6 +47,10 @@
 
 ## 文档与交接
 
+当前 2.1.0 的 T3 取舍见 `docs/T3_DESIGN_REVIEW.md`：只借鉴持久任务、提交后通知与独立进程边界，不引入 T3、Effect、app-server 或新 outbox 框架。Worker 保持单消费者；达到额度或暂停时结束本轮消费，不能 while(nextQueued) 空转。外部收录使用 `intake-client.mjs` 的私有 HTTP 边界，不直接写库；手工正文修订保持 backfill，不能因此自动新增模型消费。
+
+Windows CLI 配置由 `codex-process.mjs` 解析。支持原生 exe 或核验过的官方 npm 包入口；不能用 shell:true 解决 cmd/ps1 启动问题。验证使用假 CLI，不要把 Windows CI 当成用户真实账号或系统沙箱已验收。后续本地部署优先阅读 `docs/WINDOWS_LOCAL.md`。
+
 修改接口、开关、模型参数、预算、信源或部署方式时，同时更新相关文档。每个可交接版本更新根 `CHECKPOINT.md`：基线、完成项、实际验证、未验证项、后续命令。写清测试环境，不把本机资源当成用户 VPS 资源。不在 checkpoint 中记录密钥或认证二维码。
 
 当前 SQLite schema 为 `user_version=1`。后续结构变化需要显式迁移和备份/回滚说明，不能直接删除使用者数据库重建。实现已足够解决问题时，不为“以后可能需要”增加数据库服务、队列、向量库或模型调用。

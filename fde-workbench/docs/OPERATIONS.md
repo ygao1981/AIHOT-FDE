@@ -106,7 +106,11 @@ node --env-file-if-exists=.env scripts/manage.mjs pause
 
 `resume` 不会自动重发结果未知的失败资料。界面的额外用量确认也不会自动解除全局暂停。不要直接改回执状态、清空 attempts 表或删除数据库来解除限额。
 
+2.1.0 中，网页恢复会立即唤醒待处理队列；管理脚本只修改 SQLite，运行中的服务最多等到下一次普通维护检查（约 60 秒）再发现恢复。该检查不调用模型。入队后的连续处理仍遵守单模型并发与上限，暂停时不继续扩大自动队列。
+
 当前管理脚本只有 `status`、`pause`、`resume`、`backup`、`export`，没有 `retry` 命令。命令行导出与备份均不调用模型。
+
+另有独立的 `npm run intake` 客户端用于外部脚本收录和状态查询，见 [EVENT_INTAKE.md](EVENT_INTAKE.md)。它复用私有 HTTP API，不能代替备份管理，也不自动确认未知模型请求的重试。
 
 ## 4. 崩溃后出现运行锁
 

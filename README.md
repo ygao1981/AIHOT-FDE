@@ -4,12 +4,16 @@
 
 **当前推荐入口是 [`fde-workbench/`](fde-workbench/)，运行于 Node.js + SQLite。** 不需要新装 PostgreSQL，也不需要接入已有 MariaDB。官方 API 和 ChatGPT 登录的官方 Codex CLI 显式二选一；默认采集和模型都关闭。
 
+当前个人版为 **2.1.0**：补齐任务入队通知、串行连续消费、Windows CLI 进程适配和外部脚本收录。借鉴 T3 Code 的少量设计，不引入整套 T3；[判断与源码依据](fde-workbench/docs/T3_DESIGN_REVIEW.md)。优先按 [Windows 本机指南](fde-workbench/docs/WINDOWS_LOCAL.md) 试运行。
+
 ## 从这里开始
 
 | 你要做什么 | 阅读入口 |
 |---|---|
 | 看本次实现和未完成验收 | [CHECKPOINT.md](CHECKPOINT.md) |
 | 交给 Codex 安装 | [完整 Codex 提示词](fde-workbench/docs/CODEX_DEPLOY_PROMPT.md) |
+| 交给 Codex 继续开发 | [二次开发提示词](fde-workbench/docs/CODEX_DEVELOPMENT_PROMPT.md) |
+| 接收外部监视脚本提供的资料 | [脚本收录入口](fde-workbench/docs/EVENT_INTAKE.md) |
 | 判断 VPS 还是本机 | [部署与资源预检](fde-workbench/docs/DEPLOYMENT.md) |
 | 理解当前架构 | [架构设计](fde-workbench/docs/ARCHITECTURE.md) |
 | 查看 27 个候选信源的核验 | [来源说明](fde-workbench/docs/SOURCES.md)、[审计记录](fde-workbench/config/source-audit.json) |
