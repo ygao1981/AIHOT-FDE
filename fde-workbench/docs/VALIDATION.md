@@ -18,7 +18,15 @@
 
 假 CLI 采用官方 npm 包目录结构；Windows 的假 `.cmd` 故意返回失败，测试必须绕过它直接执行 JS 才能通过。进程超时用例实际创建父子进程并检查退出。所有模型测试均为假程序或本地 HTTP 服务，**本轮真实模型调用为 0**。
 
-已给 GitHub workflow 增加 `windows-latest` 原生测试 job。首次上传时远端结果尚未确认，之后在本节补精确提交及运行链接。无论 CI 结果如何，用户真实 Windows 的官方 CLI 登录、沙箱、账号额度与一篇真实文章分析仍需目标机验收；用户 VPS 也未连接。
+实现提交 [`2263556`](https://github.com/ygao1981/AIHOT-FDE/commit/2263556c880624627507d00ba8b453250f096306) 的 [FDE CI 44930155298](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44930155298) 已实际通过：
+
+| Job | 实际结果与范围 |
+|---|---|
+| `personal-windows` | Windows 原生、Node 24.22.3；安装、27 文件语法与配置、79 项测试，0 失败、0 跳过；实际执行假 CLI 和子进程树测试 |
+| `personal-workbench` | Linux；79 项测试、审计、DOM 联调和真实 Chromium 页面验收通过 |
+| `personal-docker` | 基础单服务构建、启动、健康检查、容器内 SQLite 备份通过 |
+
+后续仅更新文档的提交不改变此处被测源码、测试或 workflow。没有把跳过的“失败时输出日志”步骤当成跳过测试。真实模型请求仍为 0。用户 Windows 的官方 CLI 登录、沙箱、账号额度与一篇真实文章分析仍需目标机验收；用户 VPS 也未连接。
 
 本轮不修改 UI、来源目录、抓取解析器或旧 AIHOT 业务源码；未在本地重复做新来源采集或旧版数据库验收。既有 workflow 仍会运行其要求的检查。
 

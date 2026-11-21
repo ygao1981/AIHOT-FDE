@@ -2,7 +2,7 @@
 
 当前优先方案是在 Windows 本机原生运行 FDE 研究台。Codex 桌面版用于接手代码与维护；研究台作为独立 Node 进程运行，分析时调用已配置的官方 Codex CLI。仅打开 Codex 桌面版，并不等于研究台已经在后台运行。
 
-本版提供 Windows 路径、官方 npm 启动器、环境和进程树终止适配。最新的自动测试结果见 [VALIDATION](VALIDATION.md)；真实账号、目标电脑的沙箱与登录仍须按本文验收。不要把 Linux 或假 CLI 测试写成真实 Windows 账号通过。
+本版提供 Windows 路径、官方 npm 启动器、环境和进程树终止适配。实现提交 `2263556` 已在 Windows CI 通过 79 项测试，包括真实启动假 CLI 和终止子进程树；精确运行链接见 [VALIDATION](VALIDATION.md)。真实账号、目标电脑的沙箱与登录仍须按本文验收，不把假 CLI 测试写成真实 Windows 账号通过。
 
 ## 1. 先检查本机
 

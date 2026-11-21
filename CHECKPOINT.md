@@ -13,7 +13,7 @@
 - 数据库仍为 `user_version=1`，无需结构迁移；没有新增运行依赖；三个默认开关和 provider=off 均保留。
 - 当前建议：**先 Windows 本机原生试运行**。本机睡眠/关机期间不会采集；VPS 是否能承载需真实预检。
 - 本地验证：Linux x64 / Node 24.22.3，安装成功，27 个文件语法与配置通过，79 项测试通过、0 失败、0 跳过，依赖审计 0 已知漏洞。模型使用假 CLI / 本地假服务，未调用用户账号。
-- 已新增 Windows CI。首次上传时远端结果尚待确认；后续精确提交和运行链接以 [VALIDATION](fde-workbench/docs/VALIDATION.md) 最新节为准。真实 Windows 官方登录、沙箱和一篇分析未在用户机器验证。
+- 本轮实现提交：[`2263556`](https://github.com/ygao1981/AIHOT-FDE/commit/2263556c880624627507d00ba8b453250f096306)。[FDE CI 44930155298](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44930155298) 的 Windows 原生 79 项测试、Linux 79 项测试与真实 Chromium、基础 Docker 均已通过。后续文档提交不改变这些被测运行代码、测试和 workflow。真实 Windows 官方登录、沙箱和一篇分析未在用户机器验证。
 - 本轮不更改来源目录或抓取解析器，不重复宣称旧来源审计是本日重新核验；旧版公开站业务源码也未修改。
 
 接手先读 [WINDOWS_LOCAL](fde-workbench/docs/WINDOWS_LOCAL.md) 与 [CODEX_DEPLOY_PROMPT](fde-workbench/docs/CODEX_DEPLOY_PROMPT.md)。外部程序按 [EVENT_INTAKE](fde-workbench/docs/EVENT_INTAKE.md) 提交资料；二开任务使用 [CODEX_DEVELOPMENT_PROMPT](fde-workbench/docs/CODEX_DEVELOPMENT_PROMPT.md)。下方 2.0 的实现与历史证据继续保留，不能代替 2.1 新代码的验证。
