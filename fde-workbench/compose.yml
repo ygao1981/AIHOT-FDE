@@ -1,0 +1,35 @@
+name: fde-workbench
+services:
+  app:
+    build:
+      context: .
+    image: fde-workbench:2.0.0
+    init: true
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      FDE_HOST: 0.0.0.0
+      FDE_PORT: 3210
+      FDE_DATA_DIR: /app/.data
+    ports:
+      - "127.0.0.1:3210:3210"
+    volumes:
+      - research-data:/app/.data
+    mem_limit: 768m
+    cpus: 1.0
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 6m
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3210/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+volumes:
+  research-data:

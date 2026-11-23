@@ -1,3 +1,5 @@
+> **历史版本文档。** 本文对应旧 PostgreSQL 入口。2026-11-20 的个人 FDE 研究台已改为独立的 `fde-workbench/`；请使用[新版部署提示词](../fde-workbench/docs/CODEX_DEPLOY_PROMPT.md)并先读根 `CHECKPOINT.md`。不要混用两版环境变量和 Compose。
+
 # FDE 实战观察：Ubuntu VPS 部署与验收
 
 本分支基于 AIHOT，保留 React Router + Fastify + PostgreSQL 17 + pg-boss。

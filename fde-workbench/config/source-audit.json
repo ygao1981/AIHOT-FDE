@@ -1,0 +1,1993 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-11-20T13:21:12+00:00",
+  "timeZone": "UTC",
+  "scope": "27 public first-party source entries; native HTTP feed/list plus sample body/date checks. Not a guarantee of continuous availability or an independent audit of claimed business outcomes.",
+  "methodology": {
+    "transport": "Normal public HTTP GET using the environment network egress; no login, cookies, anti-bot bypass, browser rendering or source API keys.",
+    "xml": "ElementTree confirms RSS/Atom structure and counts entries; published and updated are recorded separately.",
+    "html": "Static HTML inspected with lxml; default-source CSS selectors and body/date extraction then verified with the actual application linkedom/Readability parser using the original saved responses.",
+    "bodyChars": "Length of normalized static article/main text where present; otherwise page text excluding script/style/nav/header/footer. A size check alone is not proof of complete article extraction.",
+    "date": "Prefer original page datePublished / article:published_time / visible original date, then publisher feed pubDate. updated is never silently relabeled as publication date. Unknown remains null.",
+    "failedFetches": "Failures are recorded, not replaced by successful search-engine rendering. Only original feed content may be used as a disclosed feed_excerpt fallback.",
+    "privacy": "No credentials, proxy values, tokens or user data are stored in this audit."
+  },
+  "summary": {
+    "auto": 9,
+    "watch": 13,
+    "manual": 3,
+    "disabled": 2,
+    "candidateCount": 27,
+    "enabledCount": 9,
+    "priorityConvention": "5 = highest; 1 = lowest",
+    "defaultSourceKinds": {
+      "rss": 6,
+      "html_list": 3
+    },
+    "nativeDefaultSourcesPassed": 9
+  },
+  "candidates": [
+    {
+      "sourceId": "meituan-engineering",
+      "disposition": "auto",
+      "selectionReason": "国内业务团队的一手工程实践；重点收商家 Agent、评测、业务流程、数据与运行经验。论文合集、模型发布和招聘不自动视为落地案例。",
+      "primaryReferences": [
+        "https://tech.meituan.com/",
+        "https://tech.meituan.com/2026/11/17/Agent-Evaluation-White-Paper-02.html"
+      ],
+      "attempts": [
+        {
+          "auditId": "meituan-atom",
+          "url": "https://tech.meituan.com/atom.xml",
+          "finalUrl": "https://tech.meituan.com/atom.xml",
+          "checkedAt": "2026-11-20T13:10:31.785765+00:00",
+          "httpStatus": 200,
+          "contentType": "application/xml",
+          "responseKind": "xml_feed",
+          "responseBytes": 318538,
+          "sha256": "1fc331ed26fe09731ba96997f154186de750e8284e84143b9232b513aff60d62",
+          "entryCount": 10,
+          "dateFields": {
+            "sampledEntries": 10,
+            "publishedCount": 0,
+            "updatedOnlyCount": 10
+          },
+          "sampleEntries": [
+            {
+              "title": "EMNLP 2026 | 美团技术团队学术论文精选",
+              "url": "https://tech.meituan.com/2026/11/18/Papers-EMNLP-2026.html",
+              "publishedOrUpdated": "2026-11-18T05:00:53.000Z",
+              "contentLength": 12239
+            },
+            {
+              "title": "《Agent评测白皮书》系列02：商家 AI 助手的评测与优化闭环实践",
+              "url": "https://tech.meituan.com/2026/11/17/Agent-Evaluation-White-Paper-02.html",
+              "publishedOrUpdated": "2026-11-17T06:08:06.000Z",
+              "contentLength": 13218
+            },
+            {
+              "title": "美团 LongCat-2.5 正式开源：从看见，到抵达",
+              "url": "https://tech.meituan.com/2026/11/10/Meituan-LongCat-2.5-Open-Source.html",
+              "publishedOrUpdated": "2026-11-10T06:56:54.000Z",
+              "contentLength": 3929
+            }
+          ]
+        },
+        {
+          "auditId": "meituan-practice-sample",
+          "url": "https://tech.meituan.com/2026/11/17/Agent-Evaluation-White-Paper-02.html",
+          "finalUrl": "https://tech.meituan.com/2026/11/17/Agent-Evaluation-White-Paper-02.html",
+          "checkedAt": "2026-11-20T13:10:31.787332+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html;charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 54474,
+          "sha256": "0f7ed3f3549f634e0b6096f9662caeb7c1c1d04bbdc952624b737ab92db35a32",
+          "bodyChars": 9254,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "visible_article_date",
+              "selector": ".vp-post-date",
+              "value": "2026-11-17"
+            }
+          ]
+        },
+        {
+          "auditId": "meituan-list",
+          "url": "https://tech.meituan.com/",
+          "finalUrl": "https://tech.meituan.com/",
+          "checkedAt": "2026-11-20T13:07:49.101304+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html;charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 3500000,
+          "sha256": "2a72a03c09fa3f333615cffd4ad7d9191b244e3daf6b5bbd2d3f5e6721fb6336",
+          "bodyChars": 86372,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "meituan-rss",
+          "url": "https://tech.meituan.com/rss.xml",
+          "finalUrl": "https://tech.meituan.com/rss.xml",
+          "checkedAt": "2026-11-20T13:08:55.997478+00:00",
+          "httpStatus": 200,
+          "contentType": "application/xml",
+          "responseKind": "xml_feed",
+          "responseBytes": 311707,
+          "sha256": "76db0db5d8737290f0417a124dbd6b1c24b41aa99b53a7f7fd18d2dc8e38b1d1",
+          "entryCount": 10,
+          "dateFields": {
+            "sampledEntries": 10,
+            "publishedCount": 0,
+            "updatedOnlyCount": 0
+          },
+          "sampleEntries": [
+            {
+              "title": "EMNLP 2026 | 美团技术团队学术论文精选",
+              "url": "https://tech.meituan.com/2026/11/18/Papers-EMNLP-2026.html",
+              "publishedOrUpdated": null,
+              "contentLength": 12239
+            },
+            {
+              "title": "《Agent评测白皮书》系列02：商家 AI 助手的评测与优化闭环实践",
+              "url": "https://tech.meituan.com/2026/11/17/Agent-Evaluation-White-Paper-02.html",
+              "publishedOrUpdated": null,
+              "contentLength": 13218
+            },
+            {
+              "title": "美团 LongCat-2.5 正式开源：从看见，到抵达",
+              "url": "https://tech.meituan.com/2026/11/10/Meituan-LongCat-2.5-Open-Source.html",
+              "publishedOrUpdated": null,
+              "contentLength": 3929
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sourceId": "microsoft-frontier",
+      "disposition": "auto",
+      "selectionReason": "客户协作、评估、受限环境、工业数据与交付方法。旧 /ise/ 已重定向到 Frontier Engineering；使用新站真实 RSS。",
+      "primaryReferences": [
+        "https://devblogs.microsoft.com/frontier-engineering/",
+        "https://devblogs.microsoft.com/frontier-engineering/btc/",
+        "https://microsoft.github.io/code-with-engineering-playbook/"
+      ],
+      "attempts": [
+        {
+          "auditId": "ms-frontier-feed",
+          "url": "https://devblogs.microsoft.com/frontier-engineering/feed/",
+          "finalUrl": "https://devblogs.microsoft.com/frontier-engineering/feed/",
+          "checkedAt": "2026-11-20T13:10:42.716657+00:00",
+          "httpStatus": 200,
+          "contentType": "application/rss+xml; charset=UTF-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 175616,
+          "sha256": "b07d39e20d9aad32356a21434acb1b1b5b264c8f208938b4ce02c8eaa38c7e9f",
+          "entryCount": 10,
+          "dateFields": {
+            "sampledEntries": 10,
+            "publishedCount": 10,
+            "updatedOnlyCount": 0
+          },
+          "sampleEntries": [
+            {
+              "title": "Documentation Is the New Source Code",
+              "url": "https://devblogs.microsoft.com/frontier-engineering/documentation-is-the-new-source-code/",
+              "publishedOrUpdated": "Thu, 24 Sep 2026 07:00:00 +0000",
+              "contentLength": 29090
+            },
+            {
+              "title": "Building a Japanese LLM Evaluation Pipeline: Lessons from a Two-Day Hackathon",
+              "url": "https://devblogs.microsoft.com/frontier-engineering/japanese-llm-evaluation-pipeline-hackathon/",
+              "publishedOrUpdated": "Mon, 14 Sep 2026 07:00:00 +0000",
+              "contentLength": 16818
+            },
+            {
+              "title": "Teaching a Vision Model to See Like a Human Annotator—and Catching It When It Lies",
+              "url": "https://devblogs.microsoft.com/frontier-engineering/ai-asset-enrichment-pipeline/",
+              "publishedOrUpdated": "Fri, 17 Jul 2026 07:00:00 +0000",
+              "contentLength": 15385
+            }
+          ]
+        },
+        {
+          "auditId": "ms-frontier-sample",
+          "url": "https://devblogs.microsoft.com/frontier-engineering/japanese-llm-evaluation-pipeline-hackathon/",
+          "finalUrl": "https://devblogs.microsoft.com/frontier-engineering/japanese-llm-evaluation-pipeline-hackathon/",
+          "checkedAt": "2026-11-20T13:10:42.717534+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=UTF-8",
+          "responseKind": "html",
+          "responseBytes": 240920,
+          "sha256": "0619bed92e30d1981f7d0cdbd2b374b1afafefd151d7cd9236f1fca3743de6b1",
+          "bodyChars": 29565,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "html_meta",
+              "key": "article:published_time",
+              "value": "2026-09-14T07:00:00+00:00"
+            },
+            {
+              "kind": "published",
+              "method": "json_ld",
+              "key": "datePublished",
+              "value": "2026-09-14T07:00:00+00:00"
+            },
+            {
+              "kind": "published",
+              "method": "json_ld",
+              "key": "datePublished",
+              "value": "2026-09-14T07:00:00+00:00"
+            }
+          ]
+        },
+        {
+          "auditId": "ms-ise-list",
+          "url": "https://devblogs.microsoft.com/ise/",
+          "finalUrl": "https://devblogs.microsoft.com/frontier-engineering/",
+          "checkedAt": "2026-11-20T13:08:28.630160+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=UTF-8",
+          "responseKind": "html",
+          "responseBytes": 237334,
+          "sha256": "d267cb441c9cf3641c32ed6d69fc9a6acd47ad6f845dc8c3c4a5c04c70b4e624",
+          "bodyChars": 6673,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "ms-ise-feed",
+          "url": "https://devblogs.microsoft.com/ise/feed/",
+          "checkedAt": "2026-11-20T13:08:28.919675+00:00",
+          "httpStatus": 404,
+          "responseKind": "http_error",
+          "error": "HTTP Error 404: Not Found"
+        },
+        {
+          "auditId": "ms-ise-sample-classic",
+          "url": "https://devblogs.microsoft.com/ise/lessons-ds-search-ai-production/",
+          "checkedAt": "2026-11-20T13:10:42.718398+00:00",
+          "httpStatus": 404,
+          "responseKind": "http_error",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ]
+    },
+    {
+      "sourceId": "anthropic-engineering",
+      "disposition": "auto",
+      "selectionReason": "关注评估、工具调用、长任务、上下文、权限、成本与失败经验；内部工程与客户方法不能直接当成通用效果保证。",
+      "primaryReferences": [
+        "https://www.anthropic.com/engineering",
+        "https://www.anthropic.com/research/building-effective-agents"
+      ],
+      "attempts": [
+        {
+          "auditId": "anthropic-list",
+          "url": "https://www.anthropic.com/engineering",
+          "finalUrl": "https://www.anthropic.com/engineering",
+          "checkedAt": "2026-11-20T13:07:49.100008+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 331922,
+          "sha256": "493dba40e82439f15aab5b243477bb6839919716eb981d883de675349d0d4787",
+          "bodyChars": 5117,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "anthropic-sample",
+          "url": "https://www.anthropic.com/research/building-strong-safety-evaluations",
+          "finalUrl": "https://www.anthropic.com/research/building-strong-safety-evaluations",
+          "checkedAt": "2026-11-20T13:08:55.998282+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 231560,
+          "sha256": "5cb4a4f2b79562e658e26f39fae873263949491475784af8b7e44c4c075937f8",
+          "bodyChars": 59647,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "html_meta",
+              "key": "article:published_time",
+              "value": "2026-11-13T00:00:00.000Z"
+            },
+            {
+              "kind": "published",
+              "method": "json_ld",
+              "key": "datePublished",
+              "value": "2026-11-13T00:00:00.000Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sourceId": "langchain-customers",
+      "disposition": "auto",
+      "selectionReason": "只采客户页面中的文章卡片，排除视频和 Logo 链接；优先客户工程师署名与可解释交付过程的文章。",
+      "primaryReferences": [
+        "https://www.langchain.com/customers",
+        "https://www.langchain.com/blog/customers-remote",
+        "https://www.langchain.com/blog/rss.xml"
+      ],
+      "attempts": [
+        {
+          "auditId": "langchain-customers",
+          "url": "https://www.langchain.com/customers",
+          "finalUrl": "https://www.langchain.com/customers",
+          "checkedAt": "2026-11-20T13:08:23.606660+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 419859,
+          "sha256": "a9c60bf29f43bf621f1b6566ad07f507d6a14b87a58a1a8cd8a72166a6dd3631",
+          "bodyChars": 7724,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "langchain-list-sample",
+          "url": "https://www.langchain.com/blog/how-orange-business-built-live-intelligence-on-langchain-and-langsmith",
+          "finalUrl": "https://www.langchain.com/blog/how-orange-business-built-live-intelligence-on-langchain-and-langsmith",
+          "checkedAt": "2026-11-20T13:12:01.549537+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 171476,
+          "sha256": "62e32788ebcc16a820ca74d4e201c7118289016a259798954c58e2bc74089927",
+          "bodyChars": 7894,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "json_ld",
+              "key": "datePublished",
+              "value": "2026-10-13T16:50:00.000Z"
+            }
+          ]
+        },
+        {
+          "auditId": "langchain-list",
+          "url": "https://www.langchain.com/blog",
+          "finalUrl": "https://www.langchain.com/blog",
+          "checkedAt": "2026-11-20T13:07:49.100607+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 224494,
+          "sha256": "9b864e2054ec116967cb34d878d1c2234571cf3c5b567438d995c6ec879f31f2",
+          "bodyChars": 2824,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "langchain-new-feed",
+          "url": "https://www.langchain.com/blog/rss.xml",
+          "finalUrl": "https://www.langchain.com/blog/rss.xml",
+          "checkedAt": "2026-11-20T13:09:53.106539+00:00",
+          "httpStatus": 200,
+          "contentType": "application/rss+xml; charset=utf-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 79106,
+          "sha256": "b5bcf004cdfa5e3e41c59e1e82b51782fe1f223c628d5871aeb157b1753ea802",
+          "entryCount": 100,
+          "dateFields": {
+            "sampledEntries": 12,
+            "publishedCount": 12,
+            "updatedOnlyCount": 0
+          },
+          "sampleEntries": [
+            {
+              "title": "Why agent governance starts with observability",
+              "url": "https://www.langchain.com/blog/agent-governance-observability",
+              "publishedOrUpdated": "Fri, 20 Nov 2026 00:57:43 GMT",
+              "contentLength": 37
+            },
+            {
+              "title": "LangChain Raises $300M Series C at $3B Valuation",
+              "url": "https://www.langchain.com/blog/series-c",
+              "publishedOrUpdated": "Thu, 19 Nov 2026 18:24:58 GMT",
+              "contentLength": 159
+            },
+            {
+              "title": "LangSmith Tool Gateway: Secure, governed tool use for agents",
+              "url": "https://www.langchain.com/blog/langsmith-tool-gateway",
+              "publishedOrUpdated": "Thu, 19 Nov 2026 15:51:28 GMT",
+              "contentLength": 150
+            }
+          ]
+        },
+        {
+          "auditId": "langchain-sample",
+          "url": "https://www.langchain.com/blog/customers-remote",
+          "finalUrl": "https://www.langchain.com/blog/customers-remote",
+          "checkedAt": "2026-11-20T13:08:55.999461+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 170839,
+          "sha256": "f76bd6191339201cf91210b03893ed2eea51534aca879c45a107dfdeebcbaee3",
+          "bodyChars": 8432,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "json_ld",
+              "key": "datePublished",
+              "value": "2026-01-19T16:00:07.000Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sourceId": "hamel-evals",
+      "disposition": "auto",
+      "selectionReason": "作者及合作者的实验、客户评测经验与错误分析。重点提取评测集、业务判定、人工校准和成本取舍。",
+      "primaryReferences": [
+        "https://hamel.dev/",
+        "https://hamel.dev/blog/posts/decision-model-evals/",
+        "https://hamel.dev/blog/posts/evals/"
+      ],
+      "attempts": [
+        {
+          "auditId": "hamel-root-feed",
+          "url": "https://hamel.dev/index.xml",
+          "finalUrl": "https://hamel.dev/index.xml",
+          "checkedAt": "2026-11-20T13:09:21.924755+00:00",
+          "httpStatus": 200,
+          "contentType": "application/xml",
+          "responseKind": "xml_feed",
+          "responseBytes": 564546,
+          "sha256": "2c4bea10c93a0542f9b21811da4effa2cd3a0ad4885f8fb85a8405a767707663",
+          "entryCount": 20,
+          "dateFields": {
+            "sampledEntries": 12,
+            "publishedCount": 12,
+            "updatedOnlyCount": 0
+          },
+          "sampleEntries": [
+            {
+              "title": "How To Use Decision Models for Evals",
+              "url": "https://hamel.dev/blog/posts/decision-model-evals/",
+              "publishedOrUpdated": "Tue, 20 Oct 2026 07:00:00 GMT",
+              "contentLength": 43519
+            },
+            {
+              "title": "Claude’s new auto eval tool",
+              "url": "https://hamel.dev/blog/posts/claude-auto-evals/",
+              "publishedOrUpdated": "Wed, 30 Sep 2026 07:00:00 GMT",
+              "contentLength": 9174
+            },
+            {
+              "title": "AI Evals: Everything You Need to Know",
+              "url": "https://hamel.dev/blog/posts/evals-faq/",
+              "publishedOrUpdated": "Fri, 18 Sep 2026 07:00:00 GMT",
+              "contentLength": 183757
+            }
+          ]
+        },
+        {
+          "auditId": "hamel-root-sample",
+          "url": "https://hamel.dev/blog/posts/decision-model-evals/",
+          "finalUrl": "https://hamel.dev/blog/posts/decision-model-evals/",
+          "checkedAt": "2026-11-20T13:09:53.107865+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 78645,
+          "sha256": "4a3b447aacdf6931217ea6acd9230b6d3f2749fba5319d9cb6e6e1994ba6655f",
+          "bodyChars": 47192,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "html_meta",
+              "key": "dcterms.date",
+              "value": "2026-10-20"
+            },
+            {
+              "kind": "published",
+              "method": "json_ld",
+              "key": "datePublished",
+              "value": "2026-10-20"
+            }
+          ]
+        },
+        {
+          "auditId": "hamel-list",
+          "url": "https://hamel.dev/blog/",
+          "finalUrl": "https://hamel.dev/blog/",
+          "checkedAt": "2026-11-20T13:07:49.102211+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 594,
+          "sha256": "8f5bc25bbcd1adc05e567cfa683edc04e566cfddf16cee18ac8019fa92655cb1",
+          "bodyChars": 8,
+          "bodyScope": "whole-page-minus-script-style-nav-header-footer",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "hamel-home",
+          "url": "https://hamel.dev/",
+          "finalUrl": "https://hamel.dev/",
+          "checkedAt": "2026-11-20T13:08:55.996666+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 58635,
+          "sha256": "1d4b05d18e678856ce81a99e545764066b9356edd32c76d446def3bbdbedb14e",
+          "bodyChars": 6879,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "hamel-feed",
+          "url": "https://hamel.dev/blog/index.xml",
+          "checkedAt": "2026-11-20T13:08:23.604133+00:00",
+          "httpStatus": 404,
+          "responseKind": "http_error",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ]
+    },
+    {
+      "sourceId": "eugene-applied-ai",
+      "disposition": "auto",
+      "selectionReason": "应用 AI、检索、评测与工程模式；仅选 /writing/ 文章，排除演讲视频入口，按业务适用性再筛。",
+      "primaryReferences": [
+        "https://eugeneyan.com/",
+        "https://eugeneyan.com/writing/llm-patterns/",
+        "https://eugeneyan.com/writing/cybersecurity-evals"
+      ],
+      "attempts": [
+        {
+          "auditId": "eugene-feed",
+          "url": "https://eugeneyan.com/rss/",
+          "finalUrl": "https://eugeneyan.com/rss/",
+          "checkedAt": "2026-11-20T13:08:23.602747+00:00",
+          "httpStatus": 200,
+          "contentType": "application/xml; charset=utf-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 85378,
+          "sha256": "d24e1443f3f633235fff63f65cb537fb9093a41aee6cd335bf19787d4cd7f087",
+          "entryCount": 214,
+          "dateFields": {
+            "sampledEntries": 12,
+            "publishedCount": 12,
+            "updatedOnlyCount": 0
+          },
+          "sampleEntries": [
+            {
+              "title": "AI Engineer 2026 - Using LLMs to Secure Source Code",
+              "url": "https://eugeneyan.com/speaking/aie-2026",
+              "publishedOrUpdated": "Tue, 30 Jun 2026 00:00:00 +0000",
+              "contentLength": 47
+            },
+            {
+              "title": "Patterns for Building Cybersecurity Evals",
+              "url": "https://eugeneyan.com/writing/cybersecurity-evals",
+              "publishedOrUpdated": "Sun, 21 Jun 2026 00:00:00 +0000",
+              "contentLength": 79
+            },
+            {
+              "title": "Using LLMs to Secure Source Code",
+              "url": "https://eugeneyan.com/writing/secure-source-code",
+              "publishedOrUpdated": "Wed, 27 May 2026 00:00:00 +0000",
+              "contentLength": 74
+            }
+          ]
+        },
+        {
+          "auditId": "eugene-writing-sample",
+          "url": "https://eugeneyan.com/writing/cybersecurity-evals",
+          "finalUrl": "https://eugeneyan.com/writing/cybersecurity-evals",
+          "checkedAt": "2026-11-20T13:09:57.510306+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html",
+          "responseKind": "html",
+          "responseBytes": 64020,
+          "sha256": "94110d4367bdb0d4b91ac9af4bc73bb7022ae07230fe3e9723496ee45bd642fd",
+          "bodyChars": 50183,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "html_meta",
+              "key": "article:published_time",
+              "value": "2026-06-21T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "auditId": "eugene-list",
+          "url": "https://eugeneyan.com/",
+          "finalUrl": "https://eugeneyan.com/",
+          "checkedAt": "2026-11-20T13:07:54.235072+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html",
+          "responseKind": "html",
+          "responseBytes": 32519,
+          "sha256": "30d8008deaa0084465286f43074063b97b9a0965a87c0b85aad60006cd27a3c2",
+          "bodyChars": 2210,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "eugene-sample",
+          "url": "https://eugeneyan.com/speaking/aie-2026",
+          "finalUrl": "https://eugeneyan.com/speaking/aie-2026",
+          "checkedAt": "2026-11-20T13:09:00.321563+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html",
+          "responseKind": "html",
+          "responseBytes": 45523,
+          "sha256": "1b2ad4d5fa07dad5bce8d1ebd584ecceb007e6315717d973945c4851e607e9d5",
+          "bodyChars": 1457,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "html_meta",
+              "key": "article:published_time",
+              "value": "2026-06-30T00:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sourceId": "shopify-engineering",
+      "disposition": "auto",
+      "selectionReason": "实际构建 Sidekick 等业务系统的团队复盘；重点关注 Agent 架构、业务工具、评测、成本与运营。",
+      "primaryReferences": [
+        "https://shopify.engineering/",
+        "https://shopify.engineering/building-production-ready-agentic-systems"
+      ],
+      "attempts": [
+        {
+          "auditId": "shopify-feed",
+          "url": "https://shopify.engineering/blog.atom",
+          "finalUrl": "https://shopify.engineering/blog.atom",
+          "checkedAt": "2026-11-20T13:09:21.923058+00:00",
+          "httpStatus": 200,
+          "contentType": "application/atom+xml; charset=utf-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 252025,
+          "sha256": "973e7e88967c7a14b3819e20e3c855a02d08a9e3d37a5dddb153e2c61ae4e31c",
+          "entryCount": 441,
+          "dateFields": {
+            "sampledEntries": 12,
+            "publishedCount": 12,
+            "updatedOnlyCount": 0
+          },
+          "sampleEntries": [
+            {
+              "title": "Building secure mobile apps in the agentic era",
+              "url": "https://shopify.engineering/secure-agentic-apps",
+              "publishedOrUpdated": "2026-11-18T20:34:30.000Z",
+              "contentLength": 0
+            },
+            {
+              "title": "Cyber Chaos Monkey: Staying ahead of security threats with AI agents",
+              "url": "https://shopify.engineering/cyber-chaos-monkey",
+              "publishedOrUpdated": "2026-11-12T14:57:16.000Z",
+              "contentLength": 0
+            },
+            {
+              "title": "Shopify’s generative discovery model",
+              "url": "https://shopify.engineering/generative-discovery",
+              "publishedOrUpdated": "2026-11-11T18:27:48.000Z",
+              "contentLength": 0
+            }
+          ]
+        },
+        {
+          "auditId": "shopify-sample",
+          "url": "https://shopify.engineering/secure-agentic-apps",
+          "finalUrl": "https://shopify.engineering/secure-agentic-apps",
+          "checkedAt": "2026-11-20T13:09:53.108262+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 256071,
+          "sha256": "13b263d09179a25cc27d6432211dcefd8337f104ffbd96568bfb8e7afc40577c",
+          "bodyChars": 15458,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "html_meta",
+              "key": "datePublished",
+              "value": "2026-11-18T00:00:00.000Z"
+            }
+          ]
+        },
+        {
+          "auditId": "shopify-list",
+          "url": "https://shopify.engineering/",
+          "finalUrl": "https://shopify.engineering/",
+          "checkedAt": "2026-11-20T13:08:39.325586+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 247606,
+          "sha256": "63fbb5acf4ec69288751838cb555643c516ffecb733726cc53c9609ee21013db",
+          "bodyChars": 3397,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        }
+      ]
+    },
+    {
+      "sourceId": "dify-zh",
+      "disposition": "auto",
+      "selectionReason": "中文入口包含中英文文章及海外客户译文；关注私有部署、现有系统集成、知识管理和应用运营。语言不代表项目发生地。",
+      "primaryReferences": [
+        "https://www.dify.ai/zh/blog",
+        "https://www.dify.ai/zh/solutions/manufacturing-and-industrial-technology"
+      ],
+      "attempts": [
+        {
+          "auditId": "dify-list",
+          "url": "https://www.dify.ai/zh/blog",
+          "finalUrl": "https://www.dify.ai/zh/blog",
+          "checkedAt": "2026-11-20T13:07:54.557741+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html",
+          "responseKind": "html",
+          "responseBytes": 423411,
+          "sha256": "c5db9fe53680fea60cf715f25bb41756216198e824a48465c43634c33c1d8818",
+          "bodyChars": 43625,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "dify-sample",
+          "url": "https://www.dify.ai/zh/blog/ai-agent-or-workflow-how-to-choose-the-right-approach",
+          "finalUrl": "https://www.dify.ai/zh/blog/ai-agent-or-workflow-how-to-choose-the-right-approach",
+          "checkedAt": "2026-11-20T13:08:56.000946+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html",
+          "responseKind": "html",
+          "responseBytes": 120299,
+          "sha256": "de2da9ca6c9b97356573d783f9892313f2ac07008c60f8477de1fd1a1bc6e8b2",
+          "bodyChars": 14372,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "html_meta",
+              "key": "article:published_time",
+              "value": "2026-10-16T12:00:00.000Z"
+            },
+            {
+              "kind": "published",
+              "method": "json_ld",
+              "key": "datePublished",
+              "value": "2026-10-16T12:00:00.000Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sourceId": "palantir-delivery",
+      "disposition": "auto",
+      "selectionReason": "关注 Bootcamp、业务工作流、数据和行动的连接；订阅中仍有招聘与观点稿。详情访问受限时仅据原站 feed 正文记录证据范围。",
+      "primaryReferences": [
+        "https://blog.palantir.com/",
+        "https://www.palantir.com/platforms/aip/bootcamp/",
+        "https://www.palantir.com/docs/foundry/ai-fde"
+      ],
+      "attempts": [
+        {
+          "auditId": "palantir-feed",
+          "url": "https://blog.palantir.com/feed",
+          "finalUrl": "https://blog.palantir.com/feed",
+          "checkedAt": "2026-11-20T13:07:49.098590+00:00",
+          "httpStatus": 200,
+          "contentType": "text/xml; charset=UTF-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 202364,
+          "sha256": "9c29c5c071c7639eb6baf6d27a958b54c7d0866e79c0d216db621bea1cf2a5ed",
+          "entryCount": 10,
+          "dateFields": {
+            "sampledEntries": 10,
+            "publishedCount": 10,
+            "updatedOnlyCount": 0
+          },
+          "sampleEntries": [
+            {
+              "title": "Early Talent Hiring at Palantir",
+              "url": "https://blog.palantir.com/early-talent-hiring-at-palantir-c7388f1fdab7?source=rss----3c87dc14372f---4",
+              "publishedOrUpdated": "Fri, 02 Oct 2026 20:28:41 GMT",
+              "contentLength": 15014
+            },
+            {
+              "title": "Securing Software at the Speed of AI",
+              "url": "https://blog.palantir.com/securing-software-at-the-speed-of-ai-0b1d7ddd2bf0?source=rss----3c87dc14372f---4",
+              "publishedOrUpdated": "Thu, 20 Aug 2026 18:44:40 GMT",
+              "contentLength": 25670
+            },
+            {
+              "title": "AI Sovereignty is Your Alpha",
+              "url": "https://blog.palantir.com/ai-sovereignty-is-your-alpha-how-to-avoid-transferring-your-alpha-to-a-hosted-model-provider-774a1b35bf98?source=rss----3c87dc14372f---4",
+              "publishedOrUpdated": "Mon, 27 Jul 2026 12:51:42 GMT",
+              "contentLength": 22770
+            }
+          ]
+        },
+        {
+          "auditId": "palantir-sample",
+          "url": "https://blog.palantir.com/securing-software-at-the-speed-of-ai-0b1d7ddd2bf0?source=rss----3c87dc14372f---4",
+          "checkedAt": "2026-11-20T13:09:00.566832+00:00",
+          "httpStatus": 403,
+          "responseKind": "http_error",
+          "error": "HTTP Error 403: Forbidden"
+        }
+      ]
+    },
+    {
+      "sourceId": "datawhale-hello-agents",
+      "disposition": "watch",
+      "selectionReason": "官方中文 Agent 教程与代码。正文手动按章节阅读；版本订阅只提示教材更新，不能替代实战案例。",
+      "primaryReferences": [
+        "https://github.com/datawhalechina/hello-agents",
+        "https://hello-agents.datawhale.cc/"
+      ],
+      "attempts": [
+        {
+          "auditId": "hello-agents-feed",
+          "url": "https://github.com/datawhalechina/hello-agents/releases.atom",
+          "finalUrl": "https://github.com/datawhalechina/hello-agents/releases.atom",
+          "checkedAt": "2026-11-20T13:07:49.099411+00:00",
+          "httpStatus": 200,
+          "contentType": "application/atom+xml; charset=utf-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 7252,
+          "sha256": "714e6053938e18b489324371ae1061b51a6b182155e630e722b4cf094ed9eee9",
+          "entryCount": 3,
+          "dateFields": {
+            "sampledEntries": 3,
+            "publishedCount": 0,
+            "updatedOnlyCount": 3
+          },
+          "sampleEntries": [
+            {
+              "title": "Hello-Agents V1.0.3 20260717",
+              "url": "https://github.com/datawhalechina/hello-agents/releases/tag/V1.0.3",
+              "publishedOrUpdated": "2026-07-17T09:29:47Z",
+              "contentLength": 1371
+            },
+            {
+              "title": "Hello-agents V1.0.2 20260210",
+              "url": "https://github.com/datawhalechina/hello-agents/releases/tag/V1.0.2",
+              "publishedOrUpdated": "2026-02-10T08:51:26Z",
+              "contentLength": 1066
+            },
+            {
+              "title": "Hello-agents V1.0.0 20251103",
+              "url": "https://github.com/datawhalechina/hello-agents/releases/tag/V1.0.0",
+              "publishedOrUpdated": "2025-11-04T07:05:42Z",
+              "contentLength": 1023
+            }
+          ]
+        },
+        {
+          "auditId": "hello-agents-sample",
+          "url": "https://github.com/datawhalechina/hello-agents/releases/tag/V1.0.3",
+          "finalUrl": "https://github.com/datawhalechina/hello-agents/releases/tag/V1.0.3",
+          "checkedAt": "2026-11-20T13:08:56.000065+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 161542,
+          "sha256": "c787e022c18c0355e9871a468a3dfcf565be3e88920aa01b85973afdada358c4",
+          "bodyChars": 2154,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        }
+      ]
+    },
+    {
+      "sourceId": "datawhale-all-in-rag",
+      "disposition": "manual",
+      "selectionReason": "官方 RAG 教程、文档处理、检索、评估与项目代码；建立方法库，按需要手动选章导入。",
+      "primaryReferences": [
+        "https://github.com/datawhalechina/all-in-rag",
+        "https://datawhalechina.github.io/all-in-rag/"
+      ],
+      "attempts": [
+        {
+          "auditId": "all-in-rag-home",
+          "url": "https://github.com/datawhalechina/all-in-rag",
+          "finalUrl": "https://github.com/datawhalechina/all-in-rag",
+          "checkedAt": "2026-11-20T13:09:21.926205+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 337005,
+          "sha256": "d5fd64975afa1b87bb973584cd0d85a5cb5e123e9efbc6cd10c176202e6d59cc",
+          "bodyChars": 6155,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "all-in-rag-feed",
+          "url": "https://github.com/datawhalechina/all-in-rag/releases.atom",
+          "finalUrl": "https://github.com/datawhalechina/all-in-rag/releases.atom",
+          "checkedAt": "2026-11-20T13:08:34.635376+00:00",
+          "httpStatus": 200,
+          "contentType": "application/atom+xml; charset=utf-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 544,
+          "sha256": "47ef0b91c9ca6e8fbe7789f35d2abe9c9405facefc461e16fc5629e007959695",
+          "entryCount": 0,
+          "dateFields": {
+            "sampledEntries": 0,
+            "publishedCount": 0,
+            "updatedOnlyCount": 0
+          },
+          "sampleEntries": []
+        }
+      ]
+    },
+    {
+      "sourceId": "datawhale-fde100",
+      "disposition": "manual",
+      "selectionReason": "FDE 案例汇集入口，人工发现选题后追溯案例作者、原始资料与结果口径。当前不自动抓全文。",
+      "primaryReferences": [
+        "https://fde100.datawhale.cn/"
+      ],
+      "attempts": [
+        {
+          "auditId": "fde100-list",
+          "url": "https://fde100.datawhale.cn/",
+          "finalUrl": "https://fde100.datawhale.cn/",
+          "checkedAt": "2026-11-20T13:08:34.636139+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html",
+          "responseKind": "html",
+          "responseBytes": 2011,
+          "sha256": "c1f2617bae0dba68b69402e3ea3a76cb2c79f497df93057411956262e4e8b316",
+          "bodyChars": 24,
+          "bodyScope": "whole-page-minus-script-style-nav-header-footer",
+          "publishedDateEvidence": []
+        }
+      ]
+    },
+    {
+      "sourceId": "alibaba-agentscope",
+      "disposition": "watch",
+      "selectionReason": "阿里通义团队相关开源 Agent 框架；关注代码示例、编排与运行约束，版本更新只作为工具观察。",
+      "primaryReferences": [
+        "https://github.com/agentscope-ai/agentscope",
+        "https://github.com/agentscope-ai/agentscope/blob/main/pyproject.toml"
+      ],
+      "attempts": [
+        {
+          "auditId": "agentscope-feed",
+          "url": "https://github.com/agentscope-ai/agentscope/releases.atom",
+          "finalUrl": "https://github.com/agentscope-ai/agentscope/releases.atom",
+          "checkedAt": "2026-11-20T13:08:34.636661+00:00",
+          "httpStatus": 200,
+          "contentType": "application/atom+xml; charset=utf-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 688947,
+          "sha256": "7f51111c1f791f07adce4784ad285666b263722deffa87e97911411d681918fa",
+          "entryCount": 10,
+          "dateFields": {
+            "sampledEntries": 10,
+            "publishedCount": 0,
+            "updatedOnlyCount": 10
+          },
+          "sampleEntries": [
+            {
+              "title": "v2.0.12",
+              "url": "https://github.com/agentscope-ai/agentscope/releases/tag/v2.0.12",
+              "publishedOrUpdated": "2026-11-16T07:00:31Z",
+              "contentLength": 142013
+            },
+            {
+              "title": "v2.0.11",
+              "url": "https://github.com/agentscope-ai/agentscope/releases/tag/v2.0.11",
+              "publishedOrUpdated": "2026-10-27T02:54:04Z",
+              "contentLength": 50313
+            },
+            {
+              "title": "v2.0.10",
+              "url": "https://github.com/agentscope-ai/agentscope/releases/tag/v2.0.10",
+              "publishedOrUpdated": "2026-10-12T08:15:09Z",
+              "contentLength": 63885
+            }
+          ]
+        },
+        {
+          "auditId": "agentscope-sample",
+          "url": "https://github.com/agentscope-ai/agentscope/releases/tag/v2.0.12",
+          "finalUrl": "https://github.com/agentscope-ai/agentscope/releases/tag/v2.0.12",
+          "checkedAt": "2026-11-20T13:12:01.545049+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 331910,
+          "sha256": "592a1372f8cf1dabdb2c954bdc6edfacafd287ea82f4942a99a01dedca94e16b",
+          "bodyChars": 16857,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "agentscope-home",
+          "url": "https://github.com/agentscope-ai/agentscope",
+          "finalUrl": "https://github.com/agentscope-ai/agentscope",
+          "checkedAt": "2026-11-20T13:09:26.910608+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 329437,
+          "sha256": "8383a4b8b25c9ede0e5444c47ddfbb138cc8764d44780e79f2403c1f8f1697e3",
+          "bodyChars": 15157,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        }
+      ]
+    },
+    {
+      "sourceId": "alibaba-spring-ai",
+      "disposition": "watch",
+      "selectionReason": "Java 技术栈的 AI 应用框架与集成示例；按实际项目选用，不把升级日志当 FDE 经验。",
+      "primaryReferences": [
+        "https://github.com/alibaba/spring-ai-alibaba",
+        "https://sca.aliyun.com/en/docs/ai/overview/"
+      ],
+      "attempts": [
+        {
+          "auditId": "spring-alibaba-feed",
+          "url": "https://github.com/alibaba/spring-ai-alibaba/releases.atom",
+          "finalUrl": "https://github.com/alibaba/spring-ai-alibaba/releases.atom",
+          "checkedAt": "2026-11-20T13:08:34.637255+00:00",
+          "httpStatus": 200,
+          "contentType": "application/atom+xml; charset=utf-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 46327,
+          "sha256": "1d77bf2857a6b94b3fd3df3c7f11b2f244a644723d1a33e1469f6a35df69eed0",
+          "entryCount": 10,
+          "dateFields": {
+            "sampledEntries": 10,
+            "publishedCount": 0,
+            "updatedOnlyCount": 10
+          },
+          "sampleEntries": [
+            {
+              "title": "v2.0.0-M1.1",
+              "url": "https://github.com/alibaba/spring-ai-alibaba/releases/tag/v2.0.0-M1.1",
+              "publishedOrUpdated": "2026-06-25T05:46:04Z",
+              "contentLength": 451
+            },
+            {
+              "title": "v1.1.2.2",
+              "url": "https://github.com/alibaba/spring-ai-alibaba/releases/tag/v1.1.2.2",
+              "publishedOrUpdated": "2026-03-10T09:36:48Z",
+              "contentLength": 4647
+            },
+            {
+              "title": "v1.1.2.1",
+              "url": "https://github.com/alibaba/spring-ai-alibaba/releases/tag/v1.1.2.1",
+              "publishedOrUpdated": "2026-03-10T09:34:08Z",
+              "contentLength": 145
+            }
+          ]
+        },
+        {
+          "auditId": "spring-alibaba-sample",
+          "url": "https://github.com/alibaba/spring-ai-alibaba/releases/tag/v2.0.0-M1.1",
+          "finalUrl": "https://github.com/alibaba/spring-ai-alibaba/releases/tag/v2.0.0-M1.1",
+          "checkedAt": "2026-11-20T13:12:01.546046+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 150449,
+          "sha256": "2ce8c7d2109785fb74f67a1ca299ba8891122e2e9b35df01ad6b3f8eca89d26a",
+          "bodyChars": 1095,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "spring-ai-home",
+          "url": "https://github.com/alibaba/spring-ai-alibaba",
+          "finalUrl": "https://github.com/alibaba/spring-ai-alibaba",
+          "checkedAt": "2026-11-20T13:09:27.135219+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 357547,
+          "sha256": "fee2200a539faed9f7c66934f008d85e702b775eb8626d7068ff429fb9a45d41",
+          "bodyChars": 14388,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        }
+      ]
+    },
+    {
+      "sourceId": "alibaba-cloud-practices",
+      "disposition": "watch",
+      "selectionReason": "官方站的中文实践资料；可读 Spring AI Alibaba 代码助手教程，但栏目也含普通云原生迁移。",
+      "primaryReferences": [
+        "https://sca.aliyun.com/blog/case/",
+        "https://sca.aliyun.com/blog/sca-gvr7dx_awbbpb_zvckkyzhmfqhgql4/"
+      ],
+      "attempts": [
+        {
+          "auditId": "spring-list",
+          "url": "https://sca.aliyun.com/blog/case/",
+          "finalUrl": "https://sca.aliyun.com/blog/case/",
+          "checkedAt": "2026-11-20T13:08:23.605597+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 58961,
+          "sha256": "bdedd7a898dbdfd91213638b8fc614ed654366e4f676597112a209db965c1d68",
+          "bodyChars": 2465,
+          "bodyScope": "whole-page-minus-script-style-nav-header-footer",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "spring-practice-sample",
+          "url": "https://sca.aliyun.com/blog/sca-gvr7dx_awbbpb_zvckkyzhmfqhgql4/?source=blog/",
+          "finalUrl": "https://sca.aliyun.com/blog/sca-gvr7dx_awbbpb_zvckkyzhmfqhgql4/?source=blog/",
+          "checkedAt": "2026-11-20T13:10:31.786763+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 70821,
+          "sha256": "0a53057426362c51c4de97d8aa858fa83b2c6d8ab04cf0344be7b277683bc2cc",
+          "bodyChars": 3206,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        }
+      ]
+    },
+    {
+      "sourceId": "baidu-appbuilder",
+      "disposition": "watch",
+      "selectionReason": "百度官方 SDK 和企业知识问答、文档组件、端云工具调用示例，适合实施参考；运行云服务另需平台凭据。",
+      "primaryReferences": [
+        "https://github.com/baidubce/app-builder"
+      ],
+      "attempts": [
+        {
+          "auditId": "baidu-appbuilder-feed",
+          "url": "https://github.com/baidubce/app-builder/releases.atom",
+          "finalUrl": "https://github.com/baidubce/app-builder/releases.atom",
+          "checkedAt": "2026-11-20T13:08:34.638127+00:00",
+          "httpStatus": 200,
+          "contentType": "application/atom+xml; charset=utf-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 16846,
+          "sha256": "4a4d1c55c57e90af60e071cc33cbbbfb8be96dd8ae3b8623d8b57d5d418d82e3",
+          "entryCount": 10,
+          "dateFields": {
+            "sampledEntries": 10,
+            "publishedCount": 0,
+            "updatedOnlyCount": 10
+          },
+          "sampleEntries": [
+            {
+              "title": "go/appbuilder/v1.1.4: fix：知识库DescribeDocuments方法返回字段更新 (#929)",
+              "url": "https://github.com/baidubce/app-builder/releases/tag/go%2Fappbuilder%2Fv1.1.4",
+              "publishedOrUpdated": "2026-04-26T04:57:09Z",
+              "contentLength": 139
+            },
+            {
+              "title": "go/appbuilder/v1.1.3: Merge pull request #923 from zhangairku/master",
+              "url": "https://github.com/baidubce/app-builder/releases/tag/go%2Fappbuilder%2Fv1.1.3",
+              "publishedOrUpdated": "2026-01-25T04:13:09Z",
+              "contentLength": 27
+            },
+            {
+              "title": "1.1.4: Merge pull request #915 from zhangairku/add_component_header",
+              "url": "https://github.com/baidubce/app-builder/releases/tag/1.1.4",
+              "publishedOrUpdated": "2025-12-12T11:07:30Z",
+              "contentLength": 34
+            }
+          ]
+        },
+        {
+          "auditId": "baidu-appbuilder-sample",
+          "url": "https://github.com/baidubce/app-builder/releases/tag/go%2Fappbuilder%2Fv1.1.4",
+          "finalUrl": "https://github.com/baidubce/app-builder/releases/tag/go%2Fappbuilder%2Fv1.1.4",
+          "checkedAt": "2026-11-20T13:12:01.546634+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 167143,
+          "sha256": "90fc63461576c73d0ed597ce423a3268b6dfbb85bec5411875cd7d1606bee175",
+          "bodyChars": 1082,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "baidu-appbuilder-home",
+          "url": "https://github.com/baidubce/app-builder",
+          "finalUrl": "https://github.com/baidubce/app-builder",
+          "checkedAt": "2026-11-20T13:09:27.141874+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 381422,
+          "sha256": "6edc6c49151f1f4b2c9a10c1ecd860b927fe0b92790c335b24046ed0526a79cf",
+          "bodyChars": 14259,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        }
+      ]
+    },
+    {
+      "sourceId": "baidu-paddleocr",
+      "disposition": "watch",
+      "selectionReason": "文档解析、复杂 PDF 和表格结构化是企业 RAG 的基础环节；从官方实现和升级说明学习，不做模型发布快讯。",
+      "primaryReferences": [
+        "https://github.com/PaddlePaddle/PaddleOCR",
+        "https://github.com/PaddlePaddle/PaddleOCR/blob/main/docs/quick_start.md"
+      ],
+      "attempts": [
+        {
+          "auditId": "paddleocr-feed",
+          "url": "https://github.com/PaddlePaddle/PaddleOCR/releases.atom",
+          "finalUrl": "https://github.com/PaddlePaddle/PaddleOCR/releases.atom",
+          "checkedAt": "2026-11-20T13:08:34.638790+00:00",
+          "httpStatus": 200,
+          "contentType": "application/atom+xml; charset=utf-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 39260,
+          "sha256": "519e168e6980b814da475f12fb40aa21554433df13fe6543d57e066a1682972f",
+          "entryCount": 10,
+          "dateFields": {
+            "sampledEntries": 10,
+            "publishedCount": 0,
+            "updatedOnlyCount": 10
+          },
+          "sampleEntries": [
+            {
+              "title": "v3.7.0",
+              "url": "https://github.com/PaddlePaddle/PaddleOCR/releases/tag/v3.7.0",
+              "publishedOrUpdated": "2026-06-11T12:09:14Z",
+              "contentLength": 1630
+            },
+            {
+              "title": "api_sdk/go/v0.2.0: [Feat] Support PP-OCRv6 (#18104)",
+              "url": "https://github.com/PaddlePaddle/PaddleOCR/releases/tag/api_sdk%2Fgo%2Fv0.2.0",
+              "publishedOrUpdated": "2026-06-11T11:27:04Z",
+              "contentLength": 2847
+            },
+            {
+              "title": "v3.6.0",
+              "url": "https://github.com/PaddlePaddle/PaddleOCR/releases/tag/v3.6.0",
+              "publishedOrUpdated": "2026-05-28T11:42:29Z",
+              "contentLength": 2671
+            }
+          ]
+        },
+        {
+          "auditId": "paddleocr-sample",
+          "url": "https://github.com/PaddlePaddle/PaddleOCR/releases/tag/v3.7.0",
+          "finalUrl": "https://github.com/PaddlePaddle/PaddleOCR/releases/tag/v3.7.0",
+          "checkedAt": "2026-11-20T13:12:01.547430+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 156566,
+          "sha256": "6b3fcb98eb99c85e0cbb39748fb2b95ea6845e209643cffe04123e3c95f8b55d",
+          "bodyChars": 2044,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "paddleocr-home",
+          "url": "https://github.com/PaddlePaddle/PaddleOCR",
+          "finalUrl": "https://github.com/PaddlePaddle/PaddleOCR",
+          "checkedAt": "2026-11-20T13:09:27.774911+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 431482,
+          "sha256": "2f1e31100941a815f807d87f4842416d93ac5eab0f5af96342b3ffb041a274b8",
+          "bodyChars": 33099,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        }
+      ]
+    },
+    {
+      "sourceId": "tencent-weknora",
+      "disposition": "watch",
+      "selectionReason": "腾讯官方开源知识库系统，适合研究文档接入、检索、权限、工具调用与部署；通过实际项目代码核对能力。",
+      "primaryReferences": [
+        "https://github.com/Tencent/WeKnora",
+        "https://github.com/Tencent/WeKnora/blob/main/README_CN.md"
+      ],
+      "attempts": [
+        {
+          "auditId": "tencent-weknora-feed",
+          "url": "https://github.com/Tencent/WeKnora/releases.atom",
+          "finalUrl": "https://github.com/Tencent/WeKnora/releases.atom",
+          "checkedAt": "2026-11-20T13:08:39.086444+00:00",
+          "httpStatus": 200,
+          "contentType": "application/atom+xml; charset=utf-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 1414074,
+          "sha256": "25470c40431e17720edb6f1027f4350a31b3f670a2be6a6a1c025883771f3ba9",
+          "entryCount": 10,
+          "dateFields": {
+            "sampledEntries": 10,
+            "publishedCount": 0,
+            "updatedOnlyCount": 10
+          },
+          "sampleEntries": [
+            {
+              "title": "v0.9.0",
+              "url": "https://github.com/Tencent/WeKnora/releases/tag/v0.9.0",
+              "publishedOrUpdated": "2026-10-29T06:59:12Z",
+              "contentLength": 235545
+            },
+            {
+              "title": "v0.8.3",
+              "url": "https://github.com/Tencent/WeKnora/releases/tag/v0.8.3",
+              "publishedOrUpdated": "2026-10-14T07:53:24Z",
+              "contentLength": 218310
+            },
+            {
+              "title": "v0.8.2",
+              "url": "https://github.com/Tencent/WeKnora/releases/tag/v0.8.2",
+              "publishedOrUpdated": "2026-09-24T06:43:43Z",
+              "contentLength": 202385
+            }
+          ]
+        },
+        {
+          "auditId": "tencent-weknora-sample",
+          "url": "https://github.com/Tencent/WeKnora/releases/tag/v0.9.0",
+          "finalUrl": "https://github.com/Tencent/WeKnora/releases/tag/v0.9.0",
+          "checkedAt": "2026-11-20T13:12:01.547932+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 430858,
+          "sha256": "e02ad9bf34dd0e3903b7973ae27e4c1e63979ad7c5d6e3a1e22d5e623ce70c7b",
+          "bodyChars": 29012,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "tencent-weknora-home",
+          "url": "https://github.com/Tencent/WeKnora",
+          "finalUrl": "https://github.com/Tencent/WeKnora",
+          "checkedAt": "2026-11-20T13:09:27.951574+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 505984,
+          "sha256": "21633e0fbaae54c26fa4cec5e609351802c3d48e37c16aebde1a3de7efb98c2f",
+          "bodyChars": 49032,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        }
+      ]
+    },
+    {
+      "sourceId": "microsoft-playbook",
+      "disposition": "manual",
+      "selectionReason": "用来建立需求发现、完成标准、测试、交付与运维检查表。是持续维护的手册，不是新闻订阅。",
+      "primaryReferences": [
+        "https://microsoft.github.io/code-with-engineering-playbook/"
+      ],
+      "attempts": [
+        {
+          "auditId": "ms-playbook",
+          "url": "https://microsoft.github.io/code-with-engineering-playbook/",
+          "finalUrl": "https://microsoft.github.io/code-with-engineering-playbook/",
+          "checkedAt": "2026-11-20T13:08:44.246429+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 128052,
+          "sha256": "3f2d4656bc43272d3a326b3efb236c32a3b54d44702394b561c6e5f3e6e3ec73",
+          "bodyChars": 3797,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        }
+      ]
+    },
+    {
+      "sourceId": "aws-manufacturing",
+      "disposition": "disabled",
+      "selectionReason": "制造业客户联合文章适合知识传承、设备、数据接入和工业系统选题；当前普通 HTTP 列表被拒绝，默认关闭。",
+      "primaryReferences": [
+        "https://aws.amazon.com/blogs/industries/category/industries/manufacturing/",
+        "https://aws.amazon.com/blogs/industries/bridging-the-knowledge-gap-using-generative-ai-on-aws-to-preserve-critical-expertise/"
+      ],
+      "attempts": [
+        {
+          "auditId": "aws-industry-list",
+          "url": "https://aws.amazon.com/blogs/industries/category/industries/manufacturing/",
+          "checkedAt": "2026-11-20T13:08:28.561764+00:00",
+          "httpStatus": 403,
+          "responseKind": "http_error",
+          "error": "HTTP Error 403: Forbidden"
+        }
+      ]
+    },
+    {
+      "sourceId": "aws-machine-learning",
+      "disposition": "disabled",
+      "selectionReason": "广泛机器学习工程与客户方案，主题噪声比制造业专栏更高；当前 feed 403，不默认启用。",
+      "primaryReferences": [
+        "https://aws.amazon.com/blogs/machine-learning/"
+      ],
+      "attempts": [
+        {
+          "auditId": "aws-ml-feed",
+          "url": "https://aws.amazon.com/blogs/machine-learning/feed/",
+          "checkedAt": "2026-11-20T13:08:44.426002+00:00",
+          "httpStatus": 403,
+          "responseKind": "http_error",
+          "error": "HTTP Error 403: Forbidden"
+        }
+      ]
+    },
+    {
+      "sourceId": "chip-huyen",
+      "disposition": "watch",
+      "selectionReason": "系统设计、从原型到生产、模型与应用取舍；更适合作为低频方法库。",
+      "primaryReferences": [
+        "https://huyenchip.com/",
+        "https://huyenchip.com/2025/01/16/ai-engineering-pitfalls.html"
+      ],
+      "attempts": [
+        {
+          "auditId": "chip-feed",
+          "url": "https://huyenchip.com/feed.xml",
+          "finalUrl": "https://huyenchip.com/feed.xml",
+          "checkedAt": "2026-11-20T13:08:23.603511+00:00",
+          "httpStatus": 200,
+          "contentType": "application/xml",
+          "responseKind": "xml_feed",
+          "responseBytes": 340690,
+          "sha256": "d6f73f746c2c1eeb7139d260c30e8482a32fa825b1aa19a1ed28009eff133f04",
+          "entryCount": 10,
+          "dateFields": {
+            "sampledEntries": 10,
+            "publishedCount": 10,
+            "updatedOnlyCount": 0
+          },
+          "sampleEntries": [
+            {
+              "title": "Common pitfalls when building generative AI applications",
+              "url": "https://huyenchip.com//2025/01/16/ai-engineering-pitfalls.html",
+              "publishedOrUpdated": "Thu, 16 Jan 2025 00:00:00 +0000",
+              "contentLength": 13636
+            },
+            {
+              "title": "Agents",
+              "url": "https://huyenchip.com//2025/01/07/agents.html",
+              "publishedOrUpdated": "Tue, 07 Jan 2025 00:00:00 +0000",
+              "contentLength": 59077
+            },
+            {
+              "title": "Building A Generative AI Platform",
+              "url": "https://huyenchip.com//2024/07/25/genai-platform.html",
+              "publishedOrUpdated": "Thu, 25 Jul 2024 00:00:00 +0000",
+              "contentLength": 61587
+            }
+          ]
+        },
+        {
+          "auditId": "chip-sample",
+          "url": "https://huyenchip.com//2025/01/16/ai-engineering-pitfalls.html",
+          "finalUrl": "https://huyenchip.com//2025/01/16/ai-engineering-pitfalls.html",
+          "checkedAt": "2026-11-20T13:09:00.534049+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 42258,
+          "sha256": "b5f1c020c7d46bdd30fa135cb2dd855f4020532ea71d9b869b1cdded36c4551f",
+          "bodyChars": 23360,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "html_meta",
+              "key": "article:published_time",
+              "value": "2025-01-16T00:00:00+00:00"
+            },
+            {
+              "kind": "published",
+              "method": "json_ld",
+              "key": "datePublished",
+              "value": "2025-01-16T00:00:00+00:00"
+            }
+          ]
+        },
+        {
+          "auditId": "chip-list",
+          "url": "https://huyenchip.com/",
+          "finalUrl": "https://huyenchip.com/",
+          "checkedAt": "2026-11-20T13:07:54.411366+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 24967,
+          "sha256": "afc9b569f7539fadf1814ac499c803534b9f0f5ff8921f9118b3a4ce9ba37184",
+          "bodyChars": 2529,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        }
+      ]
+    },
+    {
+      "sourceId": "airbnb-engineering",
+      "disposition": "watch",
+      "selectionReason": "实际业务中的 AI 数据、生产评测、隐私处理和成本取舍。质量较高，先作为扩展候选控制默认数量。",
+      "primaryReferences": [
+        "https://airbnb.tech/"
+      ],
+      "attempts": [
+        {
+          "auditId": "airbnb-feed",
+          "url": "https://airbnb.tech/feed/",
+          "finalUrl": "https://airbnb.tech/feed/",
+          "checkedAt": "2026-11-20T13:09:21.923810+00:00",
+          "httpStatus": 200,
+          "contentType": "application/rss+xml; charset=UTF-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 179960,
+          "sha256": "f101af9041aed96fd73f682c9beed130a1441f14bed0b4e019fe0e166788dbd1",
+          "entryCount": 10,
+          "dateFields": {
+            "sampledEntries": 10,
+            "publishedCount": 10,
+            "updatedOnlyCount": 0
+          },
+          "sampleEntries": [
+            {
+              "title": "De-identifying text at scale: How Airbnb protects personal data in AI training",
+              "url": "https://airbnb.tech/infrastructure/de-identifying-text-at-scale-how-airbnb-protects-personal-data-in-ai-training/",
+              "publishedOrUpdated": "Wed, 18 Nov 2026 16:33:01 +0000",
+              "contentLength": 25230
+            },
+            {
+              "title": "Skipper, Airbnb’s embedded workflow engine, is now open source",
+              "url": "https://airbnb.tech/open-source/skipper-airbnbs-embedded-workflow-engine-is-now-open-source/",
+              "publishedOrUpdated": "Tue, 10 Nov 2026 18:08:34 +0000",
+              "contentLength": 11814
+            },
+            {
+              "title": "Frontier quality at 1% of the cost: a production benchmark of LLM classifiers",
+              "url": "https://airbnb.tech/ai-ml/frontier-quality-at-1-of-the-cost-a-production-benchmark-of-llm-classifiers/",
+              "publishedOrUpdated": "Tue, 03 Nov 2026 22:31:31 +0000",
+              "contentLength": 17106
+            }
+          ]
+        },
+        {
+          "auditId": "airbnb-sample",
+          "url": "https://airbnb.tech/infrastructure/de-identifying-text-at-scale-how-airbnb-protects-personal-data-in-ai-training/",
+          "finalUrl": "https://airbnb.tech/infrastructure/de-identifying-text-at-scale-how-airbnb-protects-personal-data-in-ai-training/",
+          "checkedAt": "2026-11-20T13:09:53.108987+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=UTF-8",
+          "responseKind": "html",
+          "responseBytes": 64547,
+          "sha256": "04940b4a269394514b89982a7c87839e8a0a347ed3544785c85d480523160bc2",
+          "bodyChars": 31536,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "airbnb-list",
+          "url": "https://airbnb.tech/",
+          "finalUrl": "https://airbnb.tech/",
+          "checkedAt": "2026-11-20T13:08:39.333949+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=UTF-8",
+          "responseKind": "html",
+          "responseBytes": 32580,
+          "sha256": "55697f31d97e6f0d31b27d80d241c6babebbda7f15fc49ef9c520cf026324841",
+          "bodyChars": 3211,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        }
+      ]
+    },
+    {
+      "sourceId": "netflix-engineering",
+      "disposition": "watch",
+      "selectionReason": "生产内容处理、搜索、推荐与生成式 AI 系统复盘；仅作扩展源，控制大型平台基础设施噪声。",
+      "primaryReferences": [
+        "https://netflixtechblog.com/"
+      ],
+      "attempts": [
+        {
+          "auditId": "netflix-feed",
+          "url": "https://netflixtechblog.com/feed",
+          "finalUrl": "https://netflixtechblog.com/feed",
+          "checkedAt": "2026-11-20T13:08:39.938229+00:00",
+          "httpStatus": 200,
+          "contentType": "text/xml; charset=UTF-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 207768,
+          "sha256": "1ccf2e92aff6486b98d358e1cbdc95f67093ddee20dd511d474aa5d6370adf1a",
+          "entryCount": 10,
+          "dateFields": {
+            "sampledEntries": 10,
+            "publishedCount": 10,
+            "updatedOnlyCount": 0
+          },
+          "sampleEntries": [
+            {
+              "title": "Engineering AI Discover",
+              "url": "https://netflixtechblog.com/engineering-ai-discover-e244944cdc38?source=rss----2615bd06b42e---4",
+              "publishedOrUpdated": "Tue, 17 Nov 2026 17:01:02 GMT",
+              "contentLength": 18808
+            },
+            {
+              "title": "Fact-Checking at Scale: Building a More Accurate and Efficient Synopsis Factuality System",
+              "url": "https://netflixtechblog.com/fact-checking-at-scale-building-a-more-accurate-and-efficient-synopsis-factuality-system-d7d85859d808?source=rss----2615bd06b42e---4",
+              "publishedOrUpdated": "Mon, 09 Nov 2026 17:01:02 GMT",
+              "contentLength": 18706
+            },
+            {
+              "title": "Making Failure Diagnosis Reliable with Pensive AI",
+              "url": "https://netflixtechblog.com/making-failure-diagnosis-reliable-with-pensive-ai-6b0811a1c015?source=rss----2615bd06b42e---4",
+              "publishedOrUpdated": "Mon, 26 Oct 2026 17:04:57 GMT",
+              "contentLength": 24974
+            }
+          ]
+        },
+        {
+          "auditId": "netflix-sample",
+          "url": "https://netflixtechblog.com/engineering-ai-discover-e244944cdc38?source=rss----2615bd06b42e---4",
+          "checkedAt": "2026-11-20T13:09:53.110333+00:00",
+          "httpStatus": 403,
+          "responseKind": "http_error",
+          "error": "HTTP Error 403: Forbidden"
+        }
+      ]
+    },
+    {
+      "sourceId": "doordash-engineering",
+      "disposition": "watch",
+      "selectionReason": "内部支持 Agent、业务成本与线上工程改进的具名团队复盘。网站虽含招聘，本源限定工程文章路径。",
+      "primaryReferences": [
+        "https://careersatdoordash.com/engineering-blog/",
+        "https://careersatdoordash.com/blog/building-an-automated-improvement-harness-for-an-ai-support-agent/"
+      ],
+      "attempts": [
+        {
+          "auditId": "doordash-list",
+          "url": "https://careersatdoordash.com/engineering-blog/",
+          "finalUrl": "https://careersatdoordash.com/engineering-blog/",
+          "checkedAt": "2026-11-20T13:08:39.341143+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=UTF-8",
+          "responseKind": "html",
+          "responseBytes": 88735,
+          "sha256": "05847c081e1335cace962a4052ba65a682cef3a95841744b5690fb7bfb324099",
+          "bodyChars": 1848,
+          "bodyScope": "whole-page-minus-script-style-nav-header-footer",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "doordash-sample",
+          "url": "https://careersatdoordash.com/blog/building-an-automated-improvement-harness-for-an-ai-support-agent/",
+          "finalUrl": "https://careersatdoordash.com/blog/building-an-automated-improvement-harness-for-an-ai-support-agent/",
+          "checkedAt": "2026-11-20T13:12:06.274667+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=UTF-8",
+          "responseKind": "html",
+          "responseBytes": 103908,
+          "sha256": "2e0d1179fef7ea56b9c6e2b5b8d100e18efee60f088f9ca92f1ec59f0c01181f",
+          "bodyChars": 25761,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "html_meta",
+              "key": "article:published_time",
+              "value": "2026-11-10T12:53:19+00:00"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sourceId": "stripe-engineering",
+      "disposition": "watch",
+      "selectionReason": "支付系统、Agent 工具接入与工程取舍；工程页面可发现文章，但 feed 覆盖全开发者博客，默认只观察。",
+      "primaryReferences": [
+        "https://stripe.dev/blog/topic/engineering",
+        "https://stripe.dev/blog/claimable-sandboxes-frictionless-stripe-accounts-for-agents"
+      ],
+      "attempts": [
+        {
+          "auditId": "stripe-current-feed",
+          "url": "https://stripe.dev/blog/feed",
+          "finalUrl": "https://stripe.dev/blog/feed",
+          "checkedAt": "2026-11-20T13:12:24.970338+00:00",
+          "httpStatus": 200,
+          "contentType": "text/xml",
+          "responseKind": "xml_feed",
+          "responseBytes": 417970,
+          "sha256": "f6f0773ae3032ec0f63b329bc31bc41a5aa0716571c683b73e751ff531d750e6",
+          "entryCount": 131,
+          "dateFields": {
+            "sampledEntries": 12,
+            "publishedCount": 12,
+            "updatedOnlyCount": 0
+          },
+          "sampleEntries": [
+            {
+              "title": "Learning from explanations",
+              "url": "https://stripe.dev/blog/learning-from-explanations",
+              "publishedOrUpdated": "Thu, 19 Nov 2026 00:00:00 GMT",
+              "contentLength": 18694
+            },
+            {
+              "title": "Stripe evals: Measuring real-world coding agent performance",
+              "url": "https://stripe.dev/blog/stripe-integration-evals-methodology",
+              "publishedOrUpdated": "Thu, 19 Nov 2026 00:00:00 GMT",
+              "contentLength": 50318
+            },
+            {
+              "title": "Billing customizations: change how discounts are applied",
+              "url": "https://stripe.dev/blog/billing-customizations-change-how-discounts-are-applied",
+              "publishedOrUpdated": "Tue, 17 Nov 2026 00:00:00 GMT",
+              "contentLength": 14302
+            }
+          ]
+        },
+        {
+          "auditId": "stripe-sample",
+          "url": "https://stripe.dev/blog/claimable-sandboxes-frictionless-stripe-accounts-for-agents",
+          "finalUrl": "https://stripe.dev/blog/claimable-sandboxes-frictionless-stripe-accounts-for-agents",
+          "checkedAt": "2026-11-20T13:12:06.296431+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 92333,
+          "sha256": "ab381ecefccd7b8e5a1c3ee7f11304e74a45f4dbbd6690cf9681b92aad39e365",
+          "bodyChars": 11904,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "json_ld",
+              "key": "datePublished",
+              "value": "2026-11-02"
+            }
+          ]
+        },
+        {
+          "auditId": "stripe-list",
+          "url": "https://stripe.com/blog/engineering",
+          "finalUrl": "https://stripe.dev/blog/topic/engineering",
+          "checkedAt": "2026-11-20T13:08:43.909774+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 246106,
+          "sha256": "699b009d2e890823cfc09885daff3c84db2500fd057235da31561676596198a6",
+          "bodyChars": 11238,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        },
+        {
+          "auditId": "stripe-feed",
+          "url": "https://stripe.com/blog/feed",
+          "checkedAt": "2026-11-20T13:09:21.924330+00:00",
+          "httpStatus": 404,
+          "responseKind": "http_error",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ]
+    },
+    {
+      "sourceId": "intercom-engineering",
+      "disposition": "watch",
+      "selectionReason": "客服 Agent 的知识维护、工具、审批与运营；有原始工程叙述，但整个博客销售与产品传播较多。",
+      "primaryReferences": [
+        "https://www.intercom.com/blog/",
+        "https://www.intercom.com/blog/operator-a-look-under-the-hood"
+      ],
+      "attempts": [
+        {
+          "auditId": "intercom-feed",
+          "url": "https://www.intercom.com/blog/feed",
+          "finalUrl": "https://www.intercom.com/blog/feed",
+          "checkedAt": "2026-11-20T13:12:24.969598+00:00",
+          "httpStatus": 200,
+          "contentType": "application/rss+xml; charset=utf-8",
+          "responseKind": "xml_feed",
+          "responseBytes": 12567,
+          "sha256": "865f2f307644e077363800cffe02749056c6c99d3c6ccfc2e2361acc22b63382",
+          "entryCount": 20,
+          "dateFields": {
+            "sampledEntries": 12,
+            "publishedCount": 11,
+            "updatedOnlyCount": 0
+          },
+          "sampleEntries": [
+            {
+              "title": "Announcing Workforce Management: Forecast, schedule, and plan teammate cover in the Intercom helpdesk",
+              "url": "https://www.intercom.com/blog/announcing-workforce-management",
+              "publishedOrUpdated": null,
+              "contentLength": 243
+            },
+            {
+              "title": "Introducing Fin 4: Customer Agent, Operator, and major upgrades to the Intercom helpdesk",
+              "url": "https://www.intercom.com/blog/fin-4-customer-agent-operator-and-major-upgrades-to-the-intercom-helpdesk",
+              "publishedOrUpdated": "Wed, 07 Oct 2026 00:00:00 +0000",
+              "contentLength": 94
+            },
+            {
+              "title": "Announcing the 2026 AI Sentiment Report: How end users feel about AI Agents",
+              "url": "https://www.intercom.com/blog/the-2026-ai-sentiment-report",
+              "publishedOrUpdated": "Wed, 09 Sep 2026 00:00:00 +0000",
+              "contentLength": 163
+            }
+          ]
+        },
+        {
+          "auditId": "intercom-sample",
+          "url": "https://www.intercom.com/blog/operator-a-look-under-the-hood",
+          "finalUrl": "https://www.intercom.com/blog/operator-a-look-under-the-hood",
+          "checkedAt": "2026-11-20T13:12:06.321447+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 1110456,
+          "sha256": "169fc105457a25c76d2c1b8f9e51bf79c90c88cb82f63d19c5b8f1f208e6ba73",
+          "bodyChars": 11794,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": [
+            {
+              "kind": "published",
+              "method": "html_meta",
+              "key": "article:published_time",
+              "value": "2026-05-15"
+            },
+            {
+              "kind": "published",
+              "method": "json_ld",
+              "key": "datePublished",
+              "value": "2026-05-15"
+            },
+            {
+              "kind": "published",
+              "method": "json_ld",
+              "key": "datePublished",
+              "value": "2026-05-15"
+            }
+          ]
+        },
+        {
+          "auditId": "intercom-list",
+          "url": "https://www.intercom.com/blog/engineering/",
+          "checkedAt": "2026-11-20T13:08:40.908478+00:00",
+          "httpStatus": 404,
+          "responseKind": "http_error",
+          "error": "HTTP Error 404: Not Found"
+        },
+        {
+          "auditId": "intercom-home",
+          "url": "https://www.intercom.com/blog/",
+          "finalUrl": "https://www.intercom.com/blog",
+          "checkedAt": "2026-11-20T13:09:21.925195+00:00",
+          "httpStatus": 200,
+          "contentType": "text/html; charset=utf-8",
+          "responseKind": "html",
+          "responseBytes": 1129291,
+          "sha256": "ce56691bc3aa525d73419b7d39dc59ff1e50cbeccaa74d9a2aac4e0956bd74dc",
+          "bodyChars": 4038,
+          "bodyScope": "article/main",
+          "publishedDateEvidence": []
+        }
+      ]
+    }
+  ],
+  "nativeParserVerification": {
+    "checkedAt": "2026-11-20T13:21:35.123Z",
+    "method": "Application parseFeed/parseList/extractArticle against saved original HTTP responses; no model calls or database writes.",
+    "results": [
+      {
+        "sourceId": "meituan-engineering",
+        "listCountWithConfiguredCap": 8,
+        "firstTitle": "EMNLP 2026 | 美团技术团队学术论文精选",
+        "sampleUrl": "https://tech.meituan.com/2026/11/17/Agent-Evaluation-White-Paper-02.html",
+        "sampleBodyChars": 8721,
+        "samplePublishedAt": "2026-11-17"
+      },
+      {
+        "sourceId": "microsoft-frontier",
+        "listCountWithConfiguredCap": 8,
+        "firstTitle": "Documentation Is the New Source Code",
+        "sampleUrl": "https://devblogs.microsoft.com/frontier-engineering/japanese-llm-evaluation-pipeline-hackathon/",
+        "sampleBodyChars": 13200,
+        "samplePublishedAt": "2026-09-14T07:00:00.000Z"
+      },
+      {
+        "sourceId": "anthropic-engineering",
+        "listCountWithConfiguredCap": 8,
+        "firstTitle": "Building strong safety evaluations",
+        "sampleUrl": "https://www.anthropic.com/research/building-strong-safety-evaluations",
+        "sampleBodyChars": 27861,
+        "samplePublishedAt": "2026-11-13T00:00:00.000Z"
+      },
+      {
+        "sourceId": "langchain-customers",
+        "listCountWithConfiguredCap": 8,
+        "firstTitle": "How Orange Business built live intelligence on LangChain and LangSmith",
+        "sampleUrl": "https://www.langchain.com/blog/how-orange-business-built-live-intelligence-on-langchain-and-langsmith",
+        "sampleBodyChars": 6964,
+        "samplePublishedAt": "2026-10-13T16:50:00.000Z"
+      },
+      {
+        "sourceId": "hamel-evals",
+        "listCountWithConfiguredCap": 8,
+        "firstTitle": "How To Use Decision Models for Evals",
+        "sampleUrl": "https://hamel.dev/blog/posts/decision-model-evals/",
+        "sampleBodyChars": 23583,
+        "samplePublishedAt": "2026-10-20"
+      },
+      {
+        "sourceId": "eugene-applied-ai",
+        "listCountWithConfiguredCap": 8,
+        "firstTitle": "Patterns for Building Cybersecurity Evals",
+        "sampleUrl": "https://eugeneyan.com/writing/cybersecurity-evals",
+        "sampleBodyChars": 25091,
+        "samplePublishedAt": "2026-06-21T00:00:00.000Z"
+      },
+      {
+        "sourceId": "shopify-engineering",
+        "listCountWithConfiguredCap": 8,
+        "firstTitle": "Building secure mobile apps in the agentic era",
+        "sampleUrl": "https://shopify.engineering/secure-agentic-apps",
+        "sampleBodyChars": 6919,
+        "samplePublishedAt": "2026-11-18T00:00:00.000Z"
+      },
+      {
+        "sourceId": "dify-zh",
+        "listCountWithConfiguredCap": 8,
+        "firstTitle": "Dify Recognized in Gartner®’s First Magic Quadrant™ for AI Agent Management Platforms. What It Means to Us.",
+        "sampleUrl": "https://www.dify.ai/zh/blog/ai-agent-or-workflow-how-to-choose-the-right-approach",
+        "sampleBodyChars": 6266,
+        "samplePublishedAt": "2026-10-16T12:00:00.000Z",
+        "dateLeakRegression": {
+          "first": "2026-11-05T12:00:00.000Z",
+          "second": "2026-08-27T12:00:00.000Z"
+        }
+      },
+      {
+        "sourceId": "palantir-delivery",
+        "listCountWithConfiguredCap": 8,
+        "firstTitle": "Early Talent Hiring at Palantir",
+        "sampleUrl": "https://blog.palantir.com/securing-software-at-the-speed-of-ai-0b1d7ddd2bf0?source=rss----3c87dc14372f---4",
+        "sampleBodyChars": 23943,
+        "samplePublishedAt": "2026-08-20T18:44:40.000Z",
+        "bodyKind": "feed_excerpt"
+      }
+    ]
+  }
+}

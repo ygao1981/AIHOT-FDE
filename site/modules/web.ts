@@ -1,6 +1,4 @@
-// What the site's modules add to the web pages (site/modules/index.ts).
-import type { WebModule } from "@aihot/web/modules";
-
-import { fdeReadingWeb } from "../../modules/fde-reading/web.tsx";
-
-export const WEB_MODULES: readonly WebModule[] = [fdeReadingWeb];
+import type { WebModule } from '@aihot/web/modules';
+import { fdeReadingWeb } from '../../modules/fde-reading/web.tsx';
+import { fdeResearchWeb } from '../../modules/fde-research/web.tsx';
+export const WEB_MODULES:readonly WebModule[]=[fdeReadingWeb,fdeResearchWeb];

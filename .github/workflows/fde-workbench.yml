@@ -1,0 +1,123 @@
+name: FDE workbench
+
+on:
+  push:
+    branches: [main]
+    paths: ["fde-workbench/**", ".github/workflows/fde-workbench.yml"]
+  pull_request:
+    paths: ["fde-workbench/**", ".github/workflows/fde-workbench.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fde-workbench-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  personal-windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: fde-workbench
+    env:
+      FDE_COLLECT_ENABLED: "false"
+      FDE_ANALYSIS_ENABLED: "false"
+      FDE_AUTO_ANALYZE: "false"
+      FDE_MODEL_PROVIDER: "off"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.22.3
+          package-manager-cache: false
+      - name: Install the independent package
+        run: npm ci --ignore-scripts --no-fund
+      - name: Syntax and configuration
+        run: npm run check
+      - name: Windows process, queue, intake and backup behavior
+        run: npm test
+
+  personal-workbench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: fde-workbench
+    env:
+      FDE_COLLECT_ENABLED: "false"
+      FDE_ANALYSIS_ENABLED: "false"
+      FDE_AUTO_ANALYZE: "false"
+      FDE_MODEL_PROVIDER: "off"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.22.3
+          package-manager-cache: false
+      - name: Install the independent package
+        run: npm ci --ignore-scripts --no-fund
+      - name: Syntax and configuration
+        run: npm run check
+      - name: Behavior, budget and backup tests
+        run: npm test
+      - name: Dependency audit
+        run: npm audit --omit=dev
+      - name: Isolated browser acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          fde_qa_tools="$RUNNER_TEMP/fde-qa-tools"
+          export PLAYWRIGHT_BROWSERS_PATH="$RUNNER_TEMP/fde-qa-browsers"
+          export FDE_QA_OUTPUT_DIR="$RUNNER_TEMP/fde-qa-output"
+          npm install --prefix "$fde_qa_tools" --no-save --package-lock=false playwright@1.65.1
+          export FDE_QA_PLAYWRIGHT_PATH="$fde_qa_tools/node_modules/playwright/index.mjs"
+          node "$fde_qa_tools/node_modules/playwright/cli.js" install --with-deps chromium
+          export FDE_QA_BROWSER_PATH="$(node --input-type=module -e 'const { chromium } = await import(process.env.FDE_QA_PLAYWRIGHT_PATH); process.stdout.write(chromium.executablePath());')"
+          node qa/verify-dom.mjs
+          node qa/verify-ui.mjs
+      - name: Save synthetic-data QA reports and screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: fde-workbench-qa
+          path: ${{ runner.temp }}/fde-qa-output/
+          if-no-files-found: warn
+          retention-days: 7
+
+  personal-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: fde-workbench
+    env:
+      FDE_COLLECT_ENABLED: "false"
+      FDE_ANALYSIS_ENABLED: "false"
+      FDE_AUTO_ANALYZE: "false"
+      FDE_MODEL_PROVIDER: "off"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.22.3
+          package-manager-cache: false
+      - name: Configure a disposable personal workbench
+        run: |
+          node scripts/init.mjs
+          docker compose config --quiet
+      - name: Build and start the SQLite entry
+        run: docker compose up -d --build --wait --wait-timeout 60
+      - name: Health and in-container backup
+        run: |
+          curl --fail --silent http://127.0.0.1:3210/api/health
+          docker compose exec -T app node scripts/manage.mjs status
+          docker compose exec -T app node scripts/manage.mjs backup
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose logs --tail 60
+      - name: Remove this CI-only container and volume
+        if: always()
+        run: docker compose down --volumes
