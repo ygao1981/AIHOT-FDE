@@ -5,6 +5,8 @@ import { resolve } from 'node:path';
 import { AppError, ROOT } from './config.mjs';
 import { importArticle } from './collect.mjs';
 import { toMarkdown } from './analysis.mjs';
+import { EDITORIAL_PROFILE, validateEditorial } from './editorial.mjs';
+import { renderEditorial } from './editorial-render.mjs';
 
 function equal(a,b) { const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&timingSafeEqual(x,y); }
 function send(res,status,data) {res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));}
@@ -34,7 +36,7 @@ export function createApp(store,worker,config,{importer=importArticle}={}) {
     res.setHeader('X-Content-Type-Options','nosniff');
     res.setHeader('Referrer-Policy','no-referrer');
     res.setHeader('X-Frame-Options','DENY');
-    res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+    res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
     try{
       if(!allowedHosts.has(req.headers.host))throw new AppError('invalid_host','访问地址不匹配，请检查运行配置。',403);
       const url=new URL(req.url,config.baseUrl),path=url.pathname,method=req.method;
@@ -45,8 +47,8 @@ export function createApp(store,worker,config,{importer=importArticle}={}) {
         if(!bearer && (!origin||!allowedHosts.has(new URL(origin).host)||!['http:','https:'].includes(new URL(origin).protocol)))
           throw new AppError('invalid_origin','请求来源不匹配，请从本站页面操作。',403);
       }
-      if(path==='/api/health'&&method==='GET')return send(res,200,{ok:true,version:'2.1.0'});
-      const assets={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/style.css':'style.css'};
+      if(path==='/api/health'&&method==='GET')return send(res,200,{ok:true,version:'2.2.0'});
+      const assets={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/style.css':'style.css','/editorial.html':'editorial.html','/editorial.js':'editorial.js','/editorial.css':'editorial.css','/editorial-assets.js':'editorial-assets.js'};
       if(assets[path]&&method==='GET') {
         const data=await readFile(resolve(ROOT,'public',assets[path]));
         res.writeHead(200,{'Content-Type':path.endsWith('.js')?'text/javascript; charset=utf-8':path.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8'});return res.end(data);
@@ -68,6 +70,42 @@ export function createApp(store,worker,config,{importer=importArticle}={}) {
       if(!authenticated(req))throw new AppError('login_required','请先登录个人研究台。',401);
       if(path==='/api/logout'&&method==='POST'){res.setHeader('Set-Cookie','fde_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(res,200,{ok:true});}
       if(path==='/api/overview'&&method==='GET')return send(res,200,store.overview(config));
+      if(path==='/api/editorial'&&method==='GET')return send(res,200,{items:store.listEditorial(),profile:EDITORIAL_PROFILE});
+      if(path==='/api/editorial'&&method==='POST') {
+        const result=await worker.createEditorial(await readJson(req));
+        if(result.draft.status==='queued')void worker.wake();
+        return send(res,result.draft.status==='queued'?202:200,result);
+      }
+      const draftMatch=/^\/api\/editorial\/([a-z0-9-]+)(?:\/(retry|render|preview))?$/.exec(path);
+      if(draftMatch) {
+        const [,id,action]=draftMatch,draft=store.getEditorial(id);
+        if(!draft)throw new AppError('not_found','没有找到这份公众号草稿。',404);
+        if(!action&&method==='GET')return send(res,200,{draft});
+        if(!action&&method==='PATCH') {
+          const body=await readJson(req);
+          if(!Number.isSafeInteger(body.revision)||body.revision<1)throw new AppError('invalid_revision','草稿版本无效，请重新打开草稿后保存。');
+          const result=validateEditorial(body.result,draft);
+          return send(res,200,{draft:store.editEditorial(id,result,body.revision)});
+        }
+        if(action==='retry'&&method==='POST') {
+          const body=await readJson(req);
+          if(body.acceptExtraUsage!==true)throw new AppError('retry_confirmation','上次写作可能已消耗额度，请确认用量后再重试。',409);
+          const result=await worker.retryEditorial(id);
+          if(result.draft.status==='queued')void worker.wake();
+          return send(res,202,result);
+        }
+        if(['render','preview'].includes(action)&&method==='GET') {
+          const variant=url.searchParams.get('variant')||'text',theme=url.searchParams.get('theme')||'paper';
+          if(!['text','illustrated'].includes(variant)||!['paper','ink'].includes(theme))throw new AppError('invalid_layout','请选择页面提供的版式和主题。');
+          if(draft.status!=='ready'||!draft.result)throw new AppError('draft_not_ready','草稿还未完成，请等待处理结果。',409);
+          const rendered=renderEditorial(draft,{variant,theme});
+          if(action==='render')return send(res,200,rendered);
+          // Only this inert, authenticated document permits generated inline styles.
+          res.setHeader('X-Frame-Options','SAMEORIGIN');
+          res.setHeader('Content-Security-Policy',"default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'none'; connect-src 'none'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'; sandbox");
+          res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});return res.end(rendered.previewHtml);
+        }
+      }
       if(path==='/api/articles'&&method==='GET')return send(res,200,store.listArticles(Object.fromEntries(url.searchParams)));
       if(path==='/api/sources'&&method==='GET')return send(res,200,{items:store.sources()});
       const sourceMatch=/^\/api\/sources\/([a-z0-9-]+)$/.exec(path);

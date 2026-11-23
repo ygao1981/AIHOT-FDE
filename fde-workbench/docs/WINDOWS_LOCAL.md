@@ -1,6 +1,8 @@
 # Windows 本机部署与验收
 
-> **2026-11-23 最新用户授权（覆盖旧的一篇/每天一次试运行要求）：** Windows 本机真实测试上限改为 `FDE_DAILY_LIMIT=5`，表示滚动 24 小时内**最多五次真实分析尝试**，失败和 unknown 同样计入。旧美团 unknown 回执必须保留且如仍在 24 小时内已占一次。修复验证、备份和安全核对后允许恢复暂停、逐篇测试，无须每篇重复请求授权；不得自动重试未知请求或超出总次数。先手动测试，成功且稳定后可在剩余次数内短暂开启自动分析，结束后关闭。完整操作见 [5 次真实测试接手提示词](fde-workbench/docs/CODEX_TEST_5_PER_DAY_PROMPT.md)。
+> **2.2.0 已有用户升级：** 先按 [公众号升级提示词](CODEX_WECHAT_PROMPT.md) 用旧代码备份，再切换新代码；数据库升级到 schema 2。分析和写作共享滚动24小时5次上限，失败/unknown计入；旧的一次试运行限制不再适用。
+
+> **2026-11-23 最新用户授权（覆盖旧的一篇/每天一次试运行要求）：** Windows 本机真实测试上限改为 `FDE_DAILY_LIMIT=5`，表示滚动 24 小时内**最多五次真实分析尝试**，失败和 unknown 同样计入。旧美团 unknown 回执必须保留且如仍在 24 小时内已占一次。修复验证、备份和安全核对后允许恢复暂停、逐篇测试，无须每篇重复请求授权；不得自动重试未知请求或超出总次数。先手动测试，成功且稳定后可在剩余次数内短暂开启自动分析，结束后关闭。完整操作见 [5 次真实测试接手提示词](CODEX_TEST_5_PER_DAY_PROMPT.md)。
 
 当前优先方案是在 Windows 本机原生运行 FDE 研究台。Codex 桌面版用于接手代码与维护；研究台作为独立 Node 进程运行，分析时调用已配置的官方 Codex CLI。仅打开 Codex 桌面版，并不等于研究台已经在后台运行。
 
@@ -27,7 +29,7 @@ npm.cmd --version
 ## 2. 安装研究台，保持模型关闭
 
 ```powershell
-git clone --branch codex/fde-workbench-v2 --single-branch https://github.com/ygao1981/AIHOT-FDE.git
+git clone --branch codex/fde-editorial-workbench --single-branch https://github.com/ygao1981/AIHOT-FDE.git
 Set-Location AIHOT-FDE/fde-workbench
 npm.cmd ci --ignore-scripts
 npm.cmd run init
@@ -95,14 +97,14 @@ FDE_CODEX_BIN="C:/Users/实际用户名/AppData/Roaming/npm/codex.cmd"
 FDE_CODEX_HOME="C:/Users/实际用户名/AppData/Local/FDEHot/codex-home"
 FDE_ANALYSIS_ENABLED=false
 FDE_AUTO_ANALYZE=false
-FDE_DAILY_LIMIT=1
+FDE_DAILY_LIMIT=5
 ```
 
 执行 `npm.cmd run doctor -- --codex`。它只运行版本、帮助及登录状态检查。参数不兼容或沙箱设置未完成时，按官方文档修复，不通过 `shell:true`、关闭系统沙箱或危险权限模式强行通过。Windows 沙箱参考 [官方说明](https://developers.openai.com/codex/windows/)。
 
 ## 4. 仅验收一篇分析
 
-本人登录完成、非模型诊断通过后，开启分析，保持自动分析关闭和每日一次。重启研究台，在页面选择一篇真实资料，核对引文与实际账户用量；同一输入重复操作应命中缓存。
+本人登录完成、非模型诊断通过后，开启分析，保持自动分析关闭和滚动 24 小时合计最多五次。重启研究台，在页面选择一篇真实资料，核对引文与实际账户用量；同一输入重复操作应命中缓存。
 
 确认后可用 `npm.cmd run intake -- --file material.json --analyze` 接入其他脚本；不带该参数默认只收录。详情见 [EVENT_INTAKE](EVENT_INTAKE.md)。不要为了测试失败或重试再耗真实额度，自动测试已使用假 CLI 覆盖这些行为。
 

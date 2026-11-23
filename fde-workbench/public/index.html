@@ -58,12 +58,12 @@
         <button id="tab-sources" type="button" role="tab" aria-selected="false" aria-controls="view-sources" tabindex="-1" data-view="sources"><svg class="icon" aria-hidden="true"><use href="#i-sources"/></svg>信源</button>
         <button id="tab-usage" type="button" role="tab" aria-selected="false" aria-controls="view-usage" tabindex="-1" data-view="usage"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>用量</button>
       </nav>
-      <div class="header-actions"><button id="open-import" type="button" class="button primary"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>导入资料</button><button id="logout" type="button" class="button text-button">退出</button></div>
+      <div class="header-actions"><a class="button small" href="/editorial.html">公众号草稿</a><button id="open-import" type="button" class="button primary"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>导入资料</button><button id="logout" type="button" class="button text-button">退出</button></div>
     </header>
 
     <main id="main-content" class="main-content" tabindex="-1">
       <div id="workspace-error" class="notice error" role="alert" hidden><p id="workspace-error-text"></p><button id="retry-workspace" class="button small" type="button">重新加载</button></div>
-      <div id="pause-banner" class="notice warning" hidden><div><strong>分析已暂停</strong><p id="pause-reason"></p></div><button id="resume-banner" type="button" class="button small">恢复处理</button></div>
+      <div id="pause-banner" class="notice warning" hidden><div><strong>模型任务已暂停</strong><p id="pause-reason"></p></div><button id="resume-banner" type="button" class="button small">恢复处理</button></div>
 
       <section id="view-library" class="view" role="tabpanel" aria-labelledby="tab-library">
         <div class="page-heading"><div><p class="eyebrow">资料 · 证据 · 选题</p><h1>研究库</h1><p class="page-lead">优先看业务问题、实施方法和可复用经验。</p></div><div class="page-actions"><button id="refresh-library" class="button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>刷新</button><button id="export-all" class="button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>导出研究资料</button></div></div>

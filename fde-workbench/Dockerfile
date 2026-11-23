@@ -8,6 +8,7 @@ RUN if [ -n "$CODEX_VERSION" ]; then npm install -g --ignore-scripts --no-audit 
 COPY --chown=node:node src ./src
 COPY --chown=node:node public ./public
 COPY --chown=node:node config ./config
+COPY --chown=node:node prompts ./prompts
 COPY --chown=node:node scripts ./scripts
 RUN mkdir -p /app/.data && chown node:node /app/.data
 USER node

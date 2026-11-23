@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="robots" content="noindex, nofollow">
+  <title>公众号草稿 · FDE 研究台</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/editorial.css">
+  <script type="module" src="/editorial.js"></script>
+</head>
+<body class="editorial-page">
+  <div id="startup" class="startup" role="status">正在打开公众号草稿…</div>
+  <main id="login-screen" class="editorial-login" hidden>
+    <a class="brand" href="/">FDE 研究台</a>
+    <section class="panel">
+      <p class="eyebrow">私人写作区</p><h1>进入公众号草稿</h1>
+      <p>输入研究台的访问口令。不要输入模型 API Key。</p>
+      <form id="login-form">
+        <div class="form-field"><label for="login-token">访问口令</label><input id="login-token" type="password" autocomplete="current-password" required></div>
+        <p id="login-error" class="form-error" role="alert" hidden></p>
+        <button id="login-submit" type="submit" class="button primary">进入写作区</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="editorial-workspace" hidden>
+    <a class="skip-link" href="#editorial-main">跳到写作区</a>
+    <header class="app-header editorial-header">
+      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">F</span><span>FDE 研究台<small>研究之后，把判断写清楚</small></span></a>
+      <nav class="editorial-nav" aria-label="工作区导航"><a href="/">研究库</a><a href="/editorial.html" aria-current="page">公众号草稿</a></nav>
+      <div class="header-actions"><button id="refresh-all" type="button" class="button small">刷新状态</button><a class="button small" href="/#usage">查看用量</a></div>
+    </header>
+    <main id="editorial-main" class="editorial-main" tabindex="-1">
+      <div class="page-heading"><div><p class="eyebrow" id="editorial-brand">半理性半烟火</p><h1>把研究变成自己的文章</h1><p class="page-lead">选资料、确定角度、写一份正文。文字版和图文版共用内容，排版不再调用模型。</p></div></div>
+      <div class="editorial-budget"><div><strong id="budget-count">正在读取用量</strong><p id="budget-detail">研究分析与公众号写作共用滚动 24 小时上限。</p></div><span class="badge outline">预览 · 修改 · 排版 · 导出不调用模型</span></div>
+      <div id="workspace-error" class="notice error" role="alert" hidden><p id="workspace-error-text"></p></div>
+      <div id="pause-notice" class="notice warning" hidden><p id="pause-text"></p><a class="button small" href="/#usage">检查运行状态</a></div>
+
+      <div class="editorial-layout">
+        <aside class="editorial-sidebar" aria-label="资料与草稿">
+          <section class="panel source-picker">
+            <p class="eyebrow">01 · 选题素材</p><h2>选择 1–3 篇已分析资料</h2>
+            <p class="form-hint">仅使用研究结果和原文证据。私人笔记不会自动带入写作。</p>
+            <form id="source-search-form" class="editorial-search"><label for="source-search" class="sr-only">搜索已分析资料</label><input id="source-search" type="search" placeholder="搜索标题或研究内容" maxlength="200"><button type="submit" class="button small">搜索</button></form>
+            <div id="selected-sources" class="selected-sources" aria-live="polite"></div>
+            <div id="source-choices" aria-busy="true"></div>
+            <div class="source-pagination"><button id="source-prev" type="button" class="button small" disabled>上一页</button><span id="source-count"></span><button id="source-next" type="button" class="button small" disabled>下一页</button></div>
+            <div class="form-field"><label for="draft-angle">这次想讲清楚什么？</label><textarea id="draft-angle" rows="3" maxlength="800" placeholder="例如：企业客服 Agent 上线前，哪些环节必须由人确认？"></textarea></div>
+            <div class="form-field"><label for="draft-format">文章长度</label><select id="draft-format"><option value="article">完整文章</option><option value="brief">简短观察</option></select></div>
+            <div class="create-actions"><button id="create-model" type="button" class="button primary" disabled>AI 写作 · 最多 1 次任务</button><button id="create-template" type="button" class="button" disabled>整理素材稿 · 0 次任务</button></div>
+            <p id="creation-hint" class="form-hint">素材稿按已有研究卡整理，供你继续写作；不会冒充完成稿。</p>
+          </section>
+          <section class="panel draft-library"><div class="panel-heading"><h2>已保存草稿</h2><span id="draft-count" class="badge outline">0</span></div><div id="draft-list" aria-live="polite"></div></section>
+        </aside>
+
+        <section class="draft-workspace" aria-label="草稿编辑与预览">
+          <div id="draft-empty" class="empty-state"><p class="eyebrow">02 · 写作与排版</p><h2>从已有证据开始写</h2><p>在左侧选择资料，填写写作角度。也可以先打开一份已保存草稿。</p><p>图文版自动生成封面与要点卡，不使用额外的图片模型。</p></div>
+          <div id="active-draft" hidden>
+            <section class="panel draft-heading">
+              <div class="panel-heading"><div><p class="eyebrow">02 · 写作与排版</p><h2 id="draft-heading-title">公众号草稿</h2></div><span id="draft-status" class="badge"></span></div>
+              <p id="draft-meta" class="form-hint"></p>
+              <div id="draft-notice" class="notice warning" hidden><p id="draft-notice-text"></p></div>
+              <button id="retry-draft" type="button" class="button small" hidden>确认用量后重试写作</button>
+              <details class="draft-evidence"><summary>核对这份草稿的素材与引文</summary><div id="draft-evidence"></div></details>
+            </section>
+            <div id="draft-content" hidden>
+              <div class="editor-preview-layout">
+                <section class="panel draft-editor" aria-label="编辑正文">
+                  <div class="panel-heading"><h2>编辑正文</h2><span id="edit-state" class="form-hint" role="status">已保存</span></div>
+                  <p class="form-hint">事实段保留来源；自己的判断标为解读或建议。保存与手工编辑不调用模型。</p>
+                  <form id="draft-edit-form"><div id="editor-fields"></div><div class="save-actions"><button id="save-draft" type="submit" class="button primary" disabled>保存并更新预览</button><button id="reload-draft" type="button" class="button small">重新载入已保存稿</button></div></form>
+                </section>
+                <section class="panel preview-panel" aria-label="公众号排版预览">
+                  <div class="panel-heading"><h2>排版预览</h2><span class="badge outline">使用已保存正文</span></div>
+                  <div class="preview-controls"><div><label for="preview-variant">版本</label><select id="preview-variant"><option value="text">纯文字版</option><option value="illustrated">图文版</option></select></div><div><label for="preview-theme">主题</label><select id="preview-theme"><option value="paper">清爽白纸</option><option value="ink">深色卡片</option></select></div></div>
+                  <iframe id="draft-preview" title="公众号草稿排版预览" sandbox referrerpolicy="no-referrer"></iframe>
+                  <div class="export-actions"><button id="copy-draft" type="button" class="button" disabled>复制文字版排版</button><button id="download-draft" type="button" class="button primary" disabled>下载两版素材包</button></div>
+                  <p class="form-hint">图文包包含正文、排版文件和 PNG 图片。请在公众号编辑器上传图片，再手机预览核对。本预览尚未经你的微信后台实测；不会自动上传或发布。</p>
+                </section>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+      <footer class="workspace-footer"><span>半理性半烟火 · 基于证据，保留自己的判断</span><p>公众号稿为待人工核对的本地草稿，来源声明会随正文导出。</p></footer>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <noscript><div class="noscript">请启用 JavaScript 后使用公众号草稿。</div></noscript>
+</body>
+</html>

@@ -332,7 +332,7 @@ function renderDetail() {
     node('div', { class: 'article-meta' }, statusBadge(article.status), a ? badge(CATEGORY[a.category] || '研究资料', 'outline') : null, a ? badge(STAGE[a.stage] || '阶段未披露', a.stage === 'production' ? 'success' : 'outline') : null),
     node('h1', { id: 'detail-title', text: text(a?.title, text(article.title, '未命名资料')) }),
     node('p', { text: `${text(article.sourceName, '手动收录')} · ${language(article.language)} · ${date(article.publishedAt)}` }),
-    node('div', { class: 'detail-actions' }, externalLink('阅读原文', article.url, 'button small'), action('导出 Markdown', event => exportResearch(article.id, event.currentTarget), { class: 'small', icon: 'download', disabled: !a, title: !a ? '完成分析后可导出研究结果。' : undefined }), queueButton(article), article.status !== 'needs_body' ? action('补充正文', () => openImport(article), { class: 'small text-button' }) : null));
+    node('div', { class: 'detail-actions' }, externalLink('阅读原文', article.url, 'button small'), action('导出 Markdown', event => exportResearch(article.id, event.currentTarget), { class: 'small', icon: 'download', disabled: !a, title: !a ? '完成分析后可导出研究结果。' : undefined }), queueButton(article), a?.relevance === 'relevant' && article.status === 'analyzed' && article.editorialStatus !== 'archived' ? node('a', { href: `/editorial.html?article=${encodeURIComponent(article.id)}`, class: 'button small' }, '写公众号') : null, article.status !== 'needs_body' ? action('补充正文', () => openImport(article), { class: 'small text-button' }) : null));
   const select = node('select', { id: 'detail-editorial', onChange: event => updateEditorial(event.currentTarget) }, Object.entries(EDITORIAL).map(([value, label]) => node('option', { value, text: label })));
   select.value = article.editorialStatus || 'new';
   const editorial = node('div', { class: 'detail-status' }, node('div', { class: 'select-field' }, node('label', { for: 'detail-editorial', text: '选题进度' }), select), node('p', { class: 'form-hint', text: '只记录个人进度，不会向外部平台发布。' }));
@@ -469,30 +469,30 @@ function renderUsage() {
   const costKnown = usage.costKnown === true;
   const mode = config.provider === 'api' ? 'API 模式' : config.provider === 'codex' ? '本机 Codex 模式' : '暂未接入模型';
   const cards = node('div', { class: 'usage-grid' },
-    usageCard('过去 24 小时分析尝试', `${count(usage.attempts24h)} 次`, `上限 ${count(config.dailyLimit)} 次。失败或中断的尝试也可能计入。`),
+    usageCard('过去 24 小时模型任务', `${count(usage.attempts24h)} 次`, `研究分析与公众号写作共用 ${count(config.dailyLimit)} 次上限，失败和未知回执也计入。`),
     usageCard('本月已记录输入 / 输出', `${count(usage.inputTokens)} / ${count(usage.outputTokens)}`, '单位为 token。未返回完整用量的请求，不代表没有消耗。', true),
     usageCard(costKnown ? '本月 API 估算费用' : '当前接入的费用', costKnown ? money(usage.monthCostUsd) : '金额未知', costKnown ? '单位为美元，按配置单价估算；不含 Codex 账号中无法折算的消耗。' : config.provider === 'codex' ? '本机工具不提供可可靠换算的美元账单。尝试次数不是费用。' : '尚未接入 API 费用统计。', true));
   const settings = [
-    ['接入方式', mode], ['分析模型', config.provider === 'off' ? '未启用' : text(config.model, config.provider === 'codex' ? '使用账号默认模型' : '未设置')],
-    ['资料采集', config.collectEnabled ? '已启用' : '未启用'], ['模型分析', config.analysisEnabled ? '已启用' : '未启用'],
+    ['接入方式', mode], ['任务模型', config.provider === 'off' ? '未启用' : text(config.model, config.provider === 'codex' ? '使用账号默认模型' : '未设置')],
+    ['资料采集', config.collectEnabled ? '已启用' : '未启用'], ['模型任务', config.analysisEnabled ? '已启用' : '未启用'],
     ['自动分析', config.autoAnalyze && config.analysisEnabled ? '已启用' : '未启用，手动选择'],
     ['当前处理', paused ? '已暂停' : config.analysisEnabled ? '按队列处理' : '等待启用分析'],
   ];
-  const running = node('section', { class: 'panel' }, node('h2', { text: '当前运行方式' }), node('dl', { class: 'settings-list' }, settings.map(([label, value]) => node('div', {}, node('dt', { text: label }), node('dd', { text: value })))), node('div', { class: 'panel-actions' }, action(paused ? '恢复分析' : '暂停分析', event => controlAnalysis(paused ? 'resume' : 'pause', event.currentTarget), { disabled: !config.analysisEnabled, class: paused ? 'primary' : '' }), node('p', { text: '暂停阻止新任务启动，已发出的请求可能继续完成。' })));
+  const running = node('section', { class: 'panel' }, node('h2', { text: '当前运行方式' }), node('dl', { class: 'settings-list' }, settings.map(([label, value]) => node('div', {}, node('dt', { text: label }), node('dd', { text: value })))), node('div', { class: 'panel-actions' }, action(paused ? '恢复模型任务' : '暂停模型任务', event => controlAnalysis(paused ? 'resume' : 'pause', event.currentTarget), { disabled: !config.analysisEnabled, class: paused ? 'primary' : '' }), node('p', { text: '暂停阻止新任务启动，已发出的请求可能继续完成。' })));
   let budget;
   if (costKnown) {
     const spent = number(usage.monthCostUsd), reserved = number(usage.monthReservedUsd), cap = number(config.monthlyBudgetUsd);
     const used = spent === null || reserved === null ? null : spent + reserved;
-    budget = node('section', { class: 'panel' }, node('h2', { text: '本月 API 预算' }), node('p', { text: '开始每次分析前会预留预算。结果不明确的请求会保留预留金额，避免把未知消耗算成零。' }), node('div', { class: 'budget-label' }, node('span', { text: '已估算 + 预留' }), node('strong', { text: `${money(used)} / ${money(cap)}` })), cap !== null && cap > 0 && used !== null ? node('progress', { value: Math.min(used, cap), max: cap, 'aria-label': '本月 API 预算使用情况', 'aria-valuetext': `已估算与预留合计 ${money(used)}，预算 ${money(cap)} 美元` }) : null, node('dl', { class: 'settings-list' }, node('div', {}, node('dt', { text: '已估算费用' }), node('dd', { text: `${money(spent)} USD` })), node('div', {}, node('dt', { text: '尚未结算的预留' }), node('dd', { text: `${money(reserved)} USD` }))), node('p', { text: `预算是本地保护线，不是服务商账单。本月 Codex 尝试 ${count(usage.cliAttemptsMonth)} 次，无法折算的消耗不包含在上述 API 金额内。最终费用请以服务商的用量页为准。` }));
+    budget = node('section', { class: 'panel' }, node('h2', { text: '本月 API 预算' }), node('p', { text: '开始每次模型任务前会预留预算。结果不明确的请求会保留预留金额，避免把未知消耗算成零。' }), node('div', { class: 'budget-label' }, node('span', { text: '已估算 + 预留' }), node('strong', { text: `${money(used)} / ${money(cap)}` })), cap !== null && cap > 0 && used !== null ? node('progress', { value: Math.min(used, cap), max: cap, 'aria-label': '本月 API 预算使用情况', 'aria-valuetext': `已估算与预留合计 ${money(used)}，预算 ${money(cap)} 美元` }) : null, node('dl', { class: 'settings-list' }, node('div', {}, node('dt', { text: '已估算费用' }), node('dd', { text: `${money(spent)} USD` })), node('div', {}, node('dt', { text: '尚未结算的预留' }), node('dd', { text: `${money(reserved)} USD` }))), node('p', { text: `预算是本地保护线，不是服务商账单。本月 Codex 尝试 ${count(usage.cliAttemptsMonth)} 次，无法折算的消耗不包含在上述 API 金额内。最终费用请以服务商的用量页为准。` }));
   } else {
-    budget = node('section', { class: 'panel' }, node('h2', { text: '怎样理解当前用量' }), node('p', { text: config.provider === 'codex' ? '当前通过本机 Codex 工具处理资料。研究台记录分析尝试次数和工具返回的 token，用于观察处理规模；这些数字不能换算成可靠的美元费用。' : '当前模型未接入。你可以先收集资料、阅读原文和保存笔记，之后再决定使用哪种分析方式。' }), node('p', { text: config.provider === 'codex' ? '额度与费用请以你所用账号的实际规则为准。API 月预算不会约束本机工具的订阅额度。' : '启用 API 模式后，才会显示按配置单价计算的估算费用和月预算。' }), node('p', { text: `本月 Codex 分析尝试 ${count(usage.cliAttemptsMonth)} 次；这些次数不代表美元金额。` }), (number(usage.monthCostUsd) > 0 || number(usage.monthReservedUsd) > 0) ? node('p', { text: `本月另有 API 估算费用 ${money(usage.monthCostUsd)} USD、预留 ${money(usage.monthReservedUsd)} USD，仅对应 API 请求，不含 Codex 消耗。` }) : null, node('p', { text: '重试可能重复消耗额度。出现失败或中断时，先查看账号用量，再决定是否重新分析。' }));
+    budget = node('section', { class: 'panel' }, node('h2', { text: '怎样理解当前用量' }), node('p', { text: config.provider === 'codex' ? '当前通过本机 Codex 工具处理资料。研究台记录研究与写作的任务次数和工具返回的 token，用于观察处理规模；这些数字不能换算成可靠的美元费用。' : '当前模型未接入。你可以先收集资料、阅读原文和保存笔记，之后再决定使用哪种分析方式。' }), node('p', { text: config.provider === 'codex' ? '额度与费用请以你所用账号的实际规则为准。API 月预算不会约束本机工具的订阅额度。' : '启用 API 模式后，才会显示按配置单价计算的估算费用和月预算。' }), node('p', { text: `本月 Codex 模型任务 ${count(usage.cliAttemptsMonth)} 次；这些次数不代表美元金额。` }), (number(usage.monthCostUsd) > 0 || number(usage.monthReservedUsd) > 0) ? node('p', { text: `本月另有 API 估算费用 ${money(usage.monthCostUsd)} USD、预留 ${money(usage.monthReservedUsd)} USD，仅对应 API 请求，不含 Codex 消耗。` }) : null, node('p', { text: '重试可能重复消耗额度。出现失败或中断时，先查看账号用量，再决定是否重新分析。' }));
   }
   target.replaceChildren(cards, node('div', { class: 'usage-columns' }, running, budget), node('p', { class: 'usage-footnote', text: '本月统计按服务端 UTC 月份计算。采集只读取网页与订阅源；自动分析关闭时，点击检查信源不会调用分析模型。此处不包含 VPS、网络或其他第三方服务的费用。' }));
   target.setAttribute('aria-busy', 'false');
 }
 async function controlAnalysis(actionName, button) {
   busyButton(button, true, '正在更新…');
-  try { await api('/api/control', { method: 'POST', body: { action: actionName } }); await loadOverview(); toast(actionName === 'pause' ? '已暂停启动新的分析任务。' : '已恢复处理分析队列。'); }
+  try { await api('/api/control', { method: 'POST', body: { action: actionName } }); await loadOverview(); toast(actionName === 'pause' ? '已暂停启动新的研究分析和写作任务。' : '已恢复处理模型任务队列。'); }
   catch (error) { if (state.authenticated) toast(message(error)); }
   finally { if (button?.isConnected) busyButton(button, false); }
 }

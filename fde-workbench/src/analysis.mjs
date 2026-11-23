@@ -167,10 +167,14 @@ export function toMarkdown(result, article) {
   return `# ${escape(result.title)}\n\n原文：<${url}>\n\n类型：${LABELS[CATEGORIES.indexOf(result.category)]}｜阶段：${stages[result.stage]}\n\n> AI 辅助研究笔记，未经独立事实核查。公众号选题是编辑建议。\n\n${escape(result.summary)}\n\n## 业务问题\n${escape(result.problem)}\n\n## 实施方法\n${escape(result.solution)}\n\n## 效果与证据\n${escape(result.outcome)}\n\n${result.stageEvidence ? `阶段依据：${escape(result.stageEvidence)}\n\n` : ''}${result.evidence.map(e => `> ${escape(e.quote)}\n\n${escape(e.claim)}`).join('\n\n')}\n\n## 可复用经验\n${result.lessons.map(x => '- ' + escape(x)).join('\n')}\n\n## 限制\n${result.limitations.map(x => '- ' + escape(x)).join('\n')}\n\n## 公众号选题草案\n${result.ideas.map((x, i) => `### ${i + 1}. ${escape(x.title)}\n${escape(x.angle)}`).join('\n\n')}\n`;
 }
 
-function payload(c, article) {
-  return { model: c.model, instructions: INSTRUCTION,
-    input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify({ article }) }] }],
-    text: { format: { type: 'json_schema', name: 'fde_research', strict: true, schema: SCHEMA } },
+function researchTask(article) {
+  return { instructions: INSTRUCTION, input: { article }, schema: SCHEMA, name: 'fde_research',
+    label: '不可信文章资料 JSON', validate: raw => validateAnalysis(raw, article) };
+}
+function payload(c, task) {
+  return { model: c.model, instructions: task.instructions,
+    input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(task.input) }] }],
+    text: { format: { type: 'json_schema', name: task.name, strict: true, schema: task.schema } },
     ...(c.reasoning ? { reasoning: { effort: c.reasoning } } : {}),
     max_output_tokens: c.maxOutputTokens, tools: [], tool_choice: 'none', parallel_tool_calls: false,
     store: false, stream: false, truncation: 'disabled', service_tier: 'default' };
@@ -180,11 +184,14 @@ function prices(c) {
   return c;
 }
 export function estimateReservation(config, article) {
+  return estimateStructuredReservation(config, researchTask(prepareArticle(article, settings(config).maxInputChars)));
+}
+export function estimateStructuredReservation(config, task) {
   const c = settings(config);
   if (c.provider !== 'api') return null;
   prices(c);
   // Bytes overestimate text tokens; reserve another 4096 for protocol/schema framing. Never assume a cache hit.
-  const inputUpper = Buffer.byteLength(JSON.stringify(payload(c, prepareArticle(article, c.maxInputChars))), 'utf8') + 4096;
+  const inputUpper = Buffer.byteLength(JSON.stringify(payload(c, task)), 'utf8') + 4096;
   return Math.ceil((inputUpper * c.inputPrice + c.maxOutputTokens * c.outputPrice) / 1e6 * 1e8) / 1e8;
 }
 const count = v => Number.isSafeInteger(v) && v >= 0 ? v : null;
@@ -209,7 +216,7 @@ async function readResponse(response) {
   }
   return Buffer.concat(chunks).toString('utf8');
 }
-async function runApi(c, article, deps) {
+async function runApi(c, task, deps) {
   if (typeof c.apiKey !== 'string' || !c.apiKey.trim() || /[\r\n]/.test(c.apiKey)) fail('missing_api_key');
   prices(c);
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), c.timeoutMs);
@@ -221,7 +228,7 @@ async function runApi(c, article, deps) {
     }
     const response = await (deps.fetch ?? officialFetch)(API_URL, { method: 'POST', redirect: 'error', signal: controller.signal,
       ...(dispatcher ? { dispatcher } : {}),
-      headers: { authorization: `Bearer ${c.apiKey}`, 'content-type': 'application/json' }, body: JSON.stringify(payload(c, article)) });
+      headers: { authorization: `Bearer ${c.apiKey}`, 'content-type': 'application/json' }, body: JSON.stringify(payload(c, task)) });
     details.requestId = identifier(response.headers.get('x-request-id'));
     if (!response.ok) {
       await response.body?.cancel();
@@ -250,7 +257,7 @@ async function runApi(c, article, deps) {
     if (details.costUsd === null || (details.usage.cachedInputTokens ?? 0) > details.usage.inputTokens ||
         (details.usage.reasoningTokens ?? 0) > details.usage.outputTokens) throw new AnalysisError('api_usage_missing', true, details);
     let result;
-    try { result = validateAnalysis(JSON.parse(text), article); } catch (error) {
+    try { result = task.validate(JSON.parse(text)); } catch (error) {
       throw new AnalysisError(error instanceof AnalysisError ? error.code : 'invalid_result', true, details);
     }
     return { result, ...details, provider: 'api', model: identifier(data.model) ?? c.model };
@@ -348,7 +355,7 @@ export async function inspectCodex(config, deps = {}) {
   finally { if (directory) await rm(directory, { recursive: true, force: true }).catch(() => {}); }
   return report;
 }
-async function runCli(c, article, deps) {
+async function runCli(c, task, deps) {
   if (typeof c.codexBin !== 'string' || !isAbsolute(c.codexBin) || typeof c.codexHome !== 'string' || !isAbsolute(c.codexHome)) fail('cli_config');
   let directory, spawned = false;
   try {
@@ -356,7 +363,7 @@ async function runCli(c, article, deps) {
     if (!(await stat(c.codexHome)).isDirectory()) fail('cli_config');
     const command = await resolveCodexCommand(c.codexBin);
     directory = await mkdtemp(join(tmpdir(), 'fde-workbench-'));
-    await writeFile(join(directory, 'schema.json'), JSON.stringify(SCHEMA), { mode: 0o600 });
+    await writeFile(join(directory, 'schema.json'), JSON.stringify(task.schema), { mode: 0o600 });
     const env = buildCodexEnvironment(c, directory, deps.env ?? process.env);
     const aggregate = { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0 };
     let turns = 0, sawNotice = false, stderr = '', pendingLine = '', bytes = 0, failure = null;
@@ -427,7 +434,7 @@ async function runCli(c, article, deps) {
         clearTimeout(killer);
         stopping.then(() => resolve(code));
       });
-      child.stdin.end(`${INSTRUCTION}\n\n不可信文章资料 JSON：\n${JSON.stringify({ article })}\n`);
+      child.stdin.end(`${task.instructions}\n\n${task.label || '不可信资料 JSON'}：\n${JSON.stringify(task.input)}\n`);
     });
     const usage = turns ? aggregate : usageOf();
     const details = { usage, costUsd: null, requestId: null };
@@ -443,7 +450,7 @@ async function runCli(c, article, deps) {
     const file = join(directory, 'result.json');
     if ((await stat(file)).size > 256 * 1024) throw new AnalysisError('output_limit', true, details);
     let result;
-    try { result = validateAnalysis(JSON.parse(await readFile(file, 'utf8')), article); } catch (error) {
+    try { result = task.validate(JSON.parse(await readFile(file, 'utf8'))); } catch (error) {
       throw new AnalysisError(error instanceof AnalysisError ? error.code : 'invalid_result', true, details);
     }
     return { result, ...details, provider: 'codex', model: c.model || 'account-default' };
@@ -459,5 +466,16 @@ export async function runAnalysis(config, article, deps = {}) {
   if (c.provider === 'off') fail('disabled');
   const input = prepareArticle(article, c.maxInputChars), admission = precheck(input);
   if (admission !== 'candidate') fail(admission === 'needs_body' ? 'needs_body' : 'not_candidate');
-  return c.provider === 'api' ? runApi(c, input, deps) : runCli(c, input, deps);
+  return runStructured(c, researchTask(input), deps);
+}
+
+// Internal, bounded text tasks share exactly the same provider/CLI restrictions.
+// Callers persist an attempt and reserve budget before entering this function.
+export async function runStructured(config, task, deps = {}) {
+  const c = settings(config);
+  if (c.provider === 'off') fail('disabled');
+  if (!task || typeof task.instructions !== 'string' || !task.instructions ||
+      !/^[a-z][a-z0-9_]{1,60}$/.test(task.name) || !task.schema ||
+      typeof task.validate !== 'function' || !task.input) fail('invalid_config');
+  return c.provider === 'api' ? runApi(c, task, deps) : runCli(c, task, deps);
 }

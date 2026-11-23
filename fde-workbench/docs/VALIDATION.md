@@ -1,5 +1,37 @@
 # 验证记录
 
+## 2.2.0 — 2026-11-23 公众号草稿
+
+基线 `8d0df45`（PR #5），功能分支 `codex/fde-editorial-workbench`，交付 [草稿 PR #6](https://github.com/ygao1981/AIHOT-FDE/pull/6)。功能与回归提交为 [`8a36611`](https://github.com/ygao1981/AIHOT-FDE/commit/8a36611d6bb60935814dcd5b57a2ffa1922e7f17)，后续验证文档提交不改变被测运行代码。本轮只扩展草稿、写作和排版，没有修改采集器或使用用户模型账号。既有 Windows / 真实信源验收是下方历史证据，不替代本轮新写作验收。
+
+| 项目 | 实际结果 |
+| --- | --- |
+| Linux x64 / Node 24.22.3 锁文件安装 | `npm ci --ignore-scripts` 通过 |
+| 语法、配置 | 37个脚本通过 |
+| 行为测试 | 124项通过，0失败，0跳过 |
+| 生产依赖审计 | 0个已知漏洞；未新增依赖 |
+| 既有DOM行为 | 6组通过 |
+| 新HTTP / 延迟UI响应 / revision冲突 | 自动测试通过；不将DOM模拟称为真实浏览器 |
+| schema1→2 | 虚构5回执、3研究卡、笔记与设置保留；共享5次/预算/并发/unknown回归通过 |
+| 真实模型请求 | 0；所有模型路径使用本地假CLI/API |
+| 当前环境 Chromium | 启动前被socket权限拒绝，没有绕过环境限制；未完成页面验收 |
+| 新Windows CI | 124项通过，0失败、0跳过；假CLI与隔离数据库，不是用户本机真实账号 |
+| 新真实Chromium CI | 已通过：旧研究页面、素材选择/保存/冲突、最终主题预览、两版ZIP、真实PNG、富文本剪贴板、375/390px窄屏；模型请求0 |
+| 新Docker CI | 独立SQLite入口已通过；旧版根目录Docker也通过 |
+| 用户Windows真实写作与微信公众号 | 尚未运行；按CODEX_WECHAT_PROMPT接手 |
+
+新增浏览器脚本：`qa/verify-editorial-assets.mjs` 验证PNG尺寸与签名、两版ZIP、富文本剪贴板和配图；`qa/verify-editorial.mjs` 验证旧资料选择、草稿保存/冲突、两种预览、下载、375px与零模型请求。它们已加入CI。正式HTML使用内联样式，但在微信公众号实际粘贴、上传PNG并手机预览仍是独立验收。
+
+本提交的 [FDE workbench CI 45168134888](https://github.com/ygao1981/AIHOT-FDE/actions/runs/45168134888) 已全部通过：Windows与Linux各124项测试，Linux真实浏览器及独立SQLite Docker入口成功。[旧版 Check 45168134824](https://github.com/ygao1981/AIHOT-FDE/actions/runs/45168134824) 验证保留的旧版工程，不能把它和独立入口的结果混为一谈。
+
+已下载该run的 `fde-workbench-qa` artifact（ID `14816290438`），核对 `editorial-results.json` 的 `status=passed`、`browserValidationCompleted=true`、`modelRequests=0`，并实际查看桌面内嵌预览、手机视口、两主题排版与中文PNG。截图中的资料均为虚构测试样本。产物保留7天，过期后可由同一QA脚本重建。
+
+交叉检查发现并修复了延迟打开/重试响应覆盖新输入，以及合法多换行要点导致配图过高无法下载的问题。首轮CI的Windows失败来自DOM测试夹具只匹配LF；已统一换行并用CRLF内容实际启动界面、修改保存作回归。截图检查还修复了中文句尾标点孤行。124项测试包含这些回归，没有删除失败断言。
+
+浏览器预览验收要求实际URL、主题、修订号和标题匹配，等待字体与图片解码，检查可见尺寸，再输出独立页面及视口截图。完整页面截图中的跨进程iframe可能为空白，不能单独拿它证明预览成功。验收脚本曾在预览加载阶段停滞；已移除无脚本预览内的动画回调等待，并从Node侧为各阶段设置15秒总期限，保留生产CSP、内容和可见性检查。最新浏览器报告与截图已通过。
+
+升级前备份须在旧代码执行；不要先切新版再把其自动迁移后的备份当成旧版回滚点。真实库没有在本环境打开或迁移。
+
 ## 2026-11-23 Windows Fake-IP 采集验收
 
 [RUN] 以 PR #4 的 `a5b18b1` 为基线，在 Windows、Node 24.22.3 上验收。此次关闭模型分析与自动分析，采集只在验收期间开启。SQLite 用量账本逐字段比对一致，保留原有 5 条回执，其中 2 条 `unknown`。
@@ -18,7 +50,15 @@
 
 [READ] 采用应用级的本机代理设置，让可信代理为已审核域名解析，保留源站 HTTPS 证书检查。系统 DNS、代理、路由与 TUN 设置保持原状。应用没有采用双公共 DNS、Fake-IP 全量放行或禁用 TLS 校验。代理最终解析的 IP 由代理管理。全局 DNS 防泄露效果本轮未重新验证。 [架构说明](ARCHITECTURE.md) · [部署配置](WINDOWS_LOCAL.md#检查本机采集代理)
 
-## 2026-11-23 CLI 事件适配器修复（尚未进行用户真实重试）\n\nWindows 用户报告：授权和 CLI 参数诊断通过，但一次真实美团文章分析返回 `unexpected_tool`，保存 1 条 `unknown` 回执并暂停。CLI 官方协议允许 `todo_list` 作为非工具计划事件；原代码只允许两种 item，存在误判。**无法根据现场回执证明本次具体 item 类型就是 `todo_list`。**\n\n本版仅将 `todo_list` 纳入非工具白名单，实际命令、文件、MCP、网页等工具事件和未知 item 继续失败关闭，并以受限类型名记录未来的拒绝原因。不修改用户已有回执、不自动重试、不增加模型调用。新增假 CLI 测试覆盖计划事件和工具事件。完整处置见 [INCIDENT_20261123_CODEX_EVENT.md](INCIDENT_20261123_CODEX_EVENT.md)。修复提交 [`046a7cb`](https://github.com/ygao1981/AIHOT-FDE/commit/046a7cbc7afbdad191cfabd3a069defc3a9f23ef) 的 [FDE workbench CI 45135209199](https://github.com/ygao1981/AIHOT-FDE/actions/runs/45135209199) 已通过：Windows 82 项、Linux 82 项测试（均为 0 失败）、真实 Chromium 页面验收和基础 Docker 检查通过。所有模型相关用例使用模拟 CLI，没有消耗用户真实模型额度。用户真实账号仍未复验。\n\n---\n\n
+## 2026-11-23 CLI 事件适配器修复（尚未进行用户真实重试）
+
+Windows 用户报告：授权和 CLI 参数诊断通过，但一次真实美团文章分析返回 `unexpected_tool`，保存 1 条 `unknown` 回执并暂停。CLI 官方协议允许 `todo_list` 作为非工具计划事件；原代码只允许两种 item，存在误判。**无法根据现场回执证明本次具体 item 类型就是 `todo_list`。**
+
+本版仅将 `todo_list` 纳入非工具白名单，实际命令、文件、MCP、网页等工具事件和未知 item 继续失败关闭，并以受限类型名记录未来的拒绝原因。不修改用户已有回执、不自动重试、不增加模型调用。新增假 CLI 测试覆盖计划事件和工具事件。完整处置见 [INCIDENT_20261123_CODEX_EVENT.md](INCIDENT_20261123_CODEX_EVENT.md)。修复提交 [`046a7cb`](https://github.com/ygao1981/AIHOT-FDE/commit/046a7cbc7afbdad191cfabd3a069defc3a9f23ef) 的 [FDE workbench CI 45135209199](https://github.com/ygao1981/AIHOT-FDE/actions/runs/45135209199) 已通过：Windows 82 项、Linux 82 项测试（均为 0 失败）、真实 Chromium 页面验收和基础 Docker 检查通过。所有模型相关用例使用模拟 CLI，没有消耗用户真实模型额度。用户真实账号仍未复验。
+
+---
+
+
 ## 2.1.0 — 2026-11-22
 
 本轮为 T3 设计取舍后的最小改造。开始基线 `57d5a49910398e85254b5497624ad7743fd44b9d`；源码仍在 `codex/fde-workbench-v2`，数据 schema=1。下方 2026-11-20 的浏览器、Docker、来源与旧版回归属于 2.0 历史证据，不替代本轮验证。
