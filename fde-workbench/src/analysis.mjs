@@ -381,7 +381,17 @@ async function runCli(c, article, deps) {
       function eventLine(line) {
         let event; try { event = JSON.parse(line); } catch { return; }
         if (['turn.failed', 'error'].includes(event.type)) abort(cliErrorCode(JSON.stringify(event)));
-        if (/^item\./.test(event.type) && event.item?.type && !['agent_message', 'reasoning'].includes(event.item.type)) abort('unexpected_tool');
+        if (/^item\./.test(event.type) && event.item?.type) {
+          const kind = event.item.type;
+          // Codex exec emits todo_list for a plan; it is metadata, not a tool invocation.
+          if (kind === 'error') abort('cli_execution');
+          else if (!['agent_message', 'reasoning', 'todo_list'].includes(kind)) {
+            // Log only a bounded event *type* for diagnosis. Never log article text, commands, output or auth.
+            const safeKind = typeof kind === 'string' && /^[a-z][a-z0-9_]{0,40}$/.test(kind) ? kind : 'unrecognized';
+            console.warn(`FDE Codex blocked item type: ${safeKind}`);
+            abort('unexpected_tool');
+          }
+        }
         if (event.type === 'turn.completed') {
           turns++; const next = usageOf(event.usage);
           for (const key of Object.keys(aggregate)) aggregate[key] = aggregate[key] === null || next[key] === null ? null : aggregate[key] + next[key];

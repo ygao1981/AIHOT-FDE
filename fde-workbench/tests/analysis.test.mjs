@@ -293,6 +293,34 @@ process.on('SIGTERM',()=>{});setInterval(()=>{},1000);`);
   assert.equal(await readFile(fixture.calls, 'utf8'), '1');
 });
 
+test('normal Codex todo_list start/update/complete events are non-tool metadata', async t => {
+  const fixture = await cliFixture(t, `for (const type of ['item.started','item.updated','item.completed'])
+  console.log(JSON.stringify({type,item:{type:'todo_list',items:[{text:'Read and summarize this article',completed:type==='item.completed'}]}}));
+  ${successCli}`);
+  const response = await runAnalysis(fixture.config, ARTICLE);
+  assert.equal(response.result.title, result().title);
+  assert.deepEqual(response.usage, { inputTokens: 100, cachedInputTokens: 20, outputTokens: 40, reasoningTokens: 10 });
+  assert.equal(await readFile(fixture.calls, 'utf8'), '1');
+});
+
+test('official tool events and unknown items still fail closed', async t => {
+  for (const kind of ['command_execution','file_change','mcp_tool_call','web_search','collab_tool_call','unexpected_new_item']) {
+    const fixture = await cliFixture(t, `console.log(JSON.stringify({type:'item.started',item:{type:${JSON.stringify(kind)}}}));setTimeout(()=>{},1000);`);
+    await assert.rejects(runAnalysis(fixture.config, ARTICLE), e => e.code === 'unexpected_tool' && e.mayHaveConsumed);
+    assert.equal(await readFile(fixture.calls, 'utf8'), '1');
+  }
+});
+
+test('Codex error item rejects an incomplete analysis without treating it as a tool', async t => {
+  const fixture = await cliFixture(t, `console.log(JSON.stringify({type:'item.completed',item:{type:'error',message:'private unexpected details'}}));setTimeout(()=>{},1000);`);
+  await assert.rejects(runAnalysis(fixture.config, ARTICLE), e => {
+    assert.equal(e.code, 'cli_execution');
+    assert.equal(e.mayHaveConsumed, true);
+    assert.ok(!e.message.includes('private unexpected details'));
+    return true;
+  });
+});
+
 test('unexpected CLI tool events abort immediately, before a later result is accepted', async t => {
   const fixture = await cliFixture(t, `console.log(JSON.stringify({type:'item.started',item:{type:'command_execution',command:'do not run'}}));setTimeout(async()=>{await writeFile(output,'{}');},300);`);
   await assert.rejects(runAnalysis(fixture.config, ARTICLE), e => e.code === 'unexpected_tool' && e.mayHaveConsumed);
