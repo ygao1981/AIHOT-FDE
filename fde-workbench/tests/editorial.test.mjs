@@ -52,6 +52,7 @@ test('material drafts stay local and source references are checked without prete
   const draft = templateEditorial(value);
   assert.match(draft.caveats.join(' '), /素材稿|事实核查/);
   assert.equal(draft.sections[0].paragraphs[0].sources[0], 1);
+  assert.deepEqual(draft.sections.map(s => s.heading), ['问题与实施方法', '效果与适用边界']);
   for (const mutate of [
     d => { d.lead.sources = []; }, d => { d.lead.sources = [2]; }, d => { d.sections = []; },
     d => { d.sections[0].paragraphs[0].extra = 'raw html'; },
@@ -60,6 +61,21 @@ test('material drafts stay local and source references are checked without prete
     const copy = structuredClone(draft); mutate(copy);
     assert.throws(() => validateEditorial(copy, value), e => e.code === 'invalid_editorial' && e.status === 400);
   }
+});
+
+test('material template represents all three long summaries and punctuates original limitations', () => {
+  const articles = ['首', '次', '末'].map((prefix, index) => {
+    const item = article(`long-${index}`);
+    item.analysis.summary = prefix + '这是实际研究摘要。'.repeat(39);
+    item.analysis.limitations = ['只涉及两个团队。', '未披露试点数据'];
+    return item;
+  });
+  const draft = templateEditorial(prepareEditorial(articles, { mode: 'template' }, config));
+  const summaries = draft.lead.text.split('\n\n');
+  assert.deepEqual(summaries.map(text => text[0]), ['首', '次', '末']);
+  assert.ok(draft.lead.text.length <= 800);
+  assert.deepEqual(draft.lead.sources, [1, 2, 3]);
+  assert.match(draft.sections[1].paragraphs[1].text, /只涉及两个团队。\n未披露试点数据。$/u);
 });
 
 test('one writing request uses the existing restricted API transport and records real returned usage', async () => {

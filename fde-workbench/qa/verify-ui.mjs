@@ -44,7 +44,9 @@ try {
   const fixture = store.upsertArticle({url:'https://example.org/fde-ui-fixture',title:'界面样例：售后知识检索试点',sourceName:'界面验收样例（虚构）',language:'zh',publishedAt:'2026-11-01',body:sampleBody,status:'analyzed'}).article;
   const analysis = {relevance:'relevant',category:'case',score:72,stage:'pilot',stageEvidence:'团队先做了小范围试点。',title:'界面样例：售后知识检索试点',summary:'本条是界面验收的虚构资料，不是真实客户案例。样例展示售后知识检索从授权文档整理到小范围试点的研究结构，便于核对原文入口、阶段证据和个人笔记。没有生产上线证据，也没有量化效果。',problem:'售后员工查找授权文档中的信息需要多个步骤。此为界面样例。',solution:'整理授权文档，通过 RAG 检索辅助查找，再由员工核对原文。',outcome:'仅描述小范围试点；原文未披露量化成效。',lessons:['先明确可用文档与权限，再验证检索和人工复核流程。'],limitations:['这是虚构界面样例，不能作为真实客户实施证据。'],evidence:[{quote:'团队先做了小范围试点。',claim:'样例只支持试点阶段，不能推断生产上线。'}],ideas:[{title:'从售后知识检索看试点前的准备工作',angle:'以文档权限、原文追溯和人工验收为提纲；写作前需要真实案例补证。'}]};
   store.db.prepare("UPDATE articles SET analysis_json=?,editorial_status='shortlisted' WHERE id=?").run(JSON.stringify(analysis),fixture.id);
-  store.upsertArticle({url:'https://example.org/fde-ui-pending',title:'界面样例：待研究的 AI 交付教程',sourceName:'界面验收样例（虚构）',language:'en',body:sampleBody,status:'candidate'});
+  const pendingTitle='界面样例：待研究的 AI 交付教程';
+  const pending=store.upsertArticle({url:'https://example.org/fde-ui-pending',title:pendingTitle,sourceName:'界面验收样例（虚构）',language:'en',
+    body:'The fictional AI delivery pilot gave the support team a local search tool. Reviewers checked output against the authorized source before using it. This sample has no measured outcomes.',status:'candidate'}).article;
   worker = new Worker(store, config);
   report.cleanup.workerStopped = false;
   server = createApp(store, worker, config);
@@ -138,6 +140,22 @@ try {
   assert.match(await page.locator('#article-list').innerText(),/没有符合条件/);
   await afterArticleAction(() => page.locator('#clear-filters').click(), { count: 2, caption: '共 2 篇资料' });
   checked('无结果筛选有清晰空状态并能重置');
+  await afterArticleAction(() => page.locator('#filter-status').selectOption('candidate'), { status:'candidate', count:1, caption:'找到 1 篇资料' });
+  const articleList=page.locator('#article-list');
+  assert.equal(await articleList.getByRole('button',{name:'AI 分析',exact:true}).isDisabled(),true);
+  await articleList.getByRole('button',{name:pendingTitle,exact:true}).click();
+  await page.getByText('查看中文译文',{exact:true}).click();
+  const translation=page.getByRole('button',{name:'AI 翻译成中文',exact:true});
+  await translation.waitFor({state:'visible'});
+  assert.equal(await translation.isDisabled(),true);
+  await page.locator('#close-detail').click();
+  await afterArticleAction(() => page.locator('#filter-editorial').selectOption('new'), { status:'candidate', editorialStatus:'new', count:1, caption:'找到 1 篇资料' });
+  await afterArticleAction(() => articleList.getByRole('button',{name:'标为已整理',exact:true}).click(), { status:'candidate', editorialStatus:'new', count:0, caption:'找到 0 篇资料' });
+  await afterArticleAction(() => page.locator('#filter-editorial').selectOption('organized'), { status:'candidate', editorialStatus:'organized', count:1, caption:'找到 1 篇资料' });
+  assert.equal(store.getArticle(pending.id).editorialStatus,'organized');
+  assert.equal(store.getArticle(pending.id).status,'candidate');
+  await afterArticleAction(() => page.locator('#clear-filters').click(), { count:2, caption:'共 2 篇资料' });
+  checked('待分析与待整理可独立筛选，标为已整理不会分析，模型关闭时英文只可查询译文状态');
   await page.locator('#open-import').click();
   await page.locator('#import-url').fill('https://example.org/fde-ui-import');
   await page.locator('#import-heading').fill('界面样例：手动导入的实施经验');

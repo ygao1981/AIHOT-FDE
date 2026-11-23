@@ -101,15 +101,24 @@ export function templateEditorial(input) {
   const { sources } = input;
   const sectionFor = source => {
     const a = source.analysis, paragraph = text => ({ text, kind: 'source', sources: [source.id] });
+    const prefix = sources.length > 1 ? `资料 [${source.id}]：` : '';
+    const boundaries = [`研究卡记录的实施阶段：${stages[a.stage]}。`,
+      ...a.limitations.map(text => /[。！？.!?…]$/u.test(text) ? text : `${text}。`)];
+    if (!a.limitations.length) boundaries.push('适用条件仍需结合原文核对。');
     return [
-      { heading: short(`${source.id}. ${a.title}：问题与方法`, 80), paragraphs: [paragraph(a.problem), paragraph(a.solution)] },
-      { heading: short(`${source.id}. 效果与适用边界`, 80), paragraphs: [paragraph(a.outcome),
-        paragraph(`研究卡记录的实施阶段：${stages[a.stage]}。${a.limitations.length ? a.limitations.join('；') : '适用条件仍需结合原文核对。'}`)] },
+      { heading: `${prefix}问题与实施方法`, paragraphs: [paragraph(a.problem), paragraph(a.solution)] },
+      { heading: `${prefix}效果与适用边界`, paragraphs: [paragraph(a.outcome), paragraph(boundaries.join('\n'))] },
     ];
   };
+  const summaries = sources.map(s => normalized(s.analysis.summary));
+  let lead = summaries.join('\n\n');
+  if (length(lead) > 800) {
+    const max = Math.floor((800 - 2 * (sources.length - 1)) / sources.length);
+    lead = summaries.map(summary => length(summary) > max ? `${short(summary, max - 1)}…` : summary).join('\n\n');
+  }
   return validateEditorial({
     title: short(sources.length === 1 ? sources[0].analysis.title : '企业 AI 落地：几份案例的研究素材', 80),
-    lead: { text: short(sources.map(s => s.analysis.summary).join('\n\n'), 800), kind: 'source', sources: sources.map(s => s.id) },
+    lead: { text: lead, kind: 'source', sources: sources.map(s => s.id) },
     sections: sources.flatMap(sectionFor),
     takeaways: sources.map(s => ({ text: short(s.analysis.lessons[0] || s.analysis.summary, 180), sources: [s.id] })),
     caveats: ['这是程序整理的素材稿，尚未完成公众号文章写作。',

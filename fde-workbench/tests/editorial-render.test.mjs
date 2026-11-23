@@ -8,7 +8,7 @@ import { EDITORIAL_PROFILE, validateEditorial } from '../src/editorial.mjs';
 function draft() {
   return {
     id: 'fixture-draft', revision: 2, fingerprint: 'fixture-fingerprint', status: 'ready', spec: { mode: 'model', profileVersion: 'fixture-style', promptHash: 'fixture-prompt' },
-    sources: [{ id: 1, articleId: 'fixture-article', title: '虚构测试资料', sourceName: '测试来源', publishedAt: '2026-01-01', url: 'https://example.com/test?a=1&b=2', bodyHash: 'fixture-hash', analysisKey: 'fixture-analysis' }],
+    sources: [{ id: 1, articleId: 'fixture-article', title: '虚构测试资料', sourceName: '测试来源', publishedAt: '2026-01-01T00:00:00.000Z', url: 'https://example.com/test?a=1&b=2', bodyHash: 'fixture-hash', analysisKey: 'fixture-analysis' }],
     result: {
       title: '先把业务确认留在流程里',
       lead: { text: '测试案例保留了人工确认。', kind: 'source', sources: [1] },
@@ -36,6 +36,9 @@ test('editorial views preserve the same sourced article and only illustrated vie
   assert.match(text.plainText, /编辑判断：这提醒我们关注审核边界。 \[1\]/);
   assert.match(text.plainText, /实践建议：可以先准备自己的验收清单。/);
   assert.match(text.plainText, /https:\/\/example.com\/test\?a=1&b=2/);
+  assert.match(text.plainText, /测试来源 · 2026-01-01\n/u);
+  assert.equal(text.manifest.sources[0].publishedAt, source.sources[0].publishedAt);
+  assert.doesNotMatch(images.html, /2026-01-01T00:00/u);
   assert.equal(JSON.stringify(source), before);
 });
 
