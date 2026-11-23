@@ -81,6 +81,12 @@ sudo systemctl show fde-workbench.service -p ActiveState -p SubState -p MainPID
 
 应确认服务已经停止，`MainPID=0`。前台运行 `npm start` 时，在原终端按 Ctrl+C。程序会等待当前处理结束、关闭数据库并释放自己持有的锁。已经发往模型的请求可能继续完成，不要通过删锁或启动第二个实例来催促退出。
 
+### 采集网络故障
+
+`blocked_url` 表示目标或 DNS 地址不符合安全校验，可能由 Fake-IP 引起。先核对活动代理，再通过 `npm run sources:check -- --id=meituan-engineering` 验证正式采集路径。Windows 使用 `npm.cmd`。该命令无需打开资料库，也不会排队分析。
+
+`source_proxy_failed` 时核对 `FDE_SOURCE_PROXY_URL` 指向的本地代理进程和端口。`source_tls_failed` 时核对信源证书和部署环境的信任根。专用代理失败会保留错误状态。停用专用代理时清空这一项并正常重启，资料和尝试账本不受影响。 [代理配置与诊断](WINDOWS_LOCAL.md#检查本机采集代理) · [网络边界](ARCHITECTURE.md)
+
 ## 3. 暂停、恢复与明确重试
 
 暂停后仍可阅读原文、查看已有分析、修改个人笔记和导出：

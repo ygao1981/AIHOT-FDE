@@ -1,5 +1,12 @@
 # CHECKPOINT — FDE 研究台 v2.1
 
+## 2026-11-23 Windows Fake-IP 采集兼容
+
+- [READ] 本轮分支 `codex/fde-proxy-dns-compat` 基于 PR #4 的 `a5b18b1`，保留已有 CLI 事件兼容修复。本轮只验收网页采集。
+- [RUN] Windows 默认 DNS 为三个实测信源返回 Fake-IP，直连采集器正确拒绝。已用 `FDE_SOURCE_PROXY_URL` 接入现有本机 HTTP CONNECT 代理。已审核的 HTTPS 信源委托代理解析，逐跳守域名白名单和证书校验。直连固定已校验的公网地址。 [架构与网络边界](fde-workbench/docs/ARCHITECTURE.md)
+- [RUN] 美团、Shopify、Anthropic 共收录 19 篇完整且有原始日期的资料。重复采集新增 0 篇。重启后保留资料和信源状态。分析、自动分析和采集恢复为关闭，五条既有回执逐字段一致。
+- [RUN] Windows 检查和 90 项自动测试通过，生产依赖审计报告 0 个漏洞。三家信源的真实验收走同一条专用代理路径。DNS 防泄露配置保持不变，全局防泄露效果未重新验证。 [验收记录](fde-workbench/docs/VALIDATION.md#2026-11-23-windows-fake-ip-采集验收)
+
 > **2026-11-23 最新用户授权（覆盖旧的一篇/每天一次试运行要求）：** Windows 本机真实测试上限改为 `FDE_DAILY_LIMIT=5`，表示滚动 24 小时内**最多五次真实分析尝试**，失败和 unknown 同样计入。旧美团 unknown 回执必须保留且如仍在 24 小时内已占一次。修复验证、备份和安全核对后允许恢复暂停、逐篇测试，无须每篇重复请求授权；不得自动重试未知请求或超出总次数。先手动测试，成功且稳定后可在剩余次数内短暂开启自动分析，结束后关闭。完整操作见 [5 次真实测试接手提示词](fde-workbench/docs/CODEX_TEST_5_PER_DAY_PROMPT.md)。
 
 > **2026-11-23 Codex CLI 事件兼容修复：** Windows 单篇真实分析曾返回 `unexpected_tool` 并保留 1 条 `unknown` 回执，暂停状态不可自行清除。官方 CLI 的正常 `todo_list` 事件可能被旧白名单误拒；修复只放行此非工具事件，实际触发类型仍未知。详见 [事件处置说明](fde-workbench/docs/INCIDENT_20261123_CODEX_EVENT.md)。本机已有未提交现场 CHECKPOINT 时，合并而非覆盖。修复提交 [`046a7cb`](https://github.com/ygao1981/AIHOT-FDE/commit/046a7cbc7afbdad191cfabd3a069defc3a9f23ef) 已通过 [FDE CI 45135209199](https://github.com/ygao1981/AIHOT-FDE/actions/runs/45135209199)：Windows、Linux 各 82 项测试通过，Linux 浏览器验收及基础 Docker 检查通过；真实账号尚未复测。\n\n
