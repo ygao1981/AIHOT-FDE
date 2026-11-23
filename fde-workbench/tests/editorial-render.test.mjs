@@ -153,3 +153,22 @@ test('legal newline-heavy cards stay within raster limits without dropping their
   }
   assert.ok(output.plainText.includes(source.result.takeaways[0].text));
 });
+
+test('card wrapping keeps Chinese closing punctuation with preceding text instead of orphaning it', () => {
+  const cases = ['把原文、适用范围和人工确认放在同一次验收里。',
+    ...Array.from('。，、；：！？）》】').map((mark) => '字'.repeat(21) + mark + '继续核对。'),
+    '字'.repeat(21) + '。）》】'];
+  for (const text of cases) {
+    const source = draft();
+    source.result.title = '标题'.repeat(7) + '。';
+    source.result.takeaways[0].text = text;
+    const output = renderEditorial(source, { variant: 'illustrated' });
+    for (const asset of output.assets) {
+      const xml = new DOMParser().parseFromString(asset.svg, 'image/svg+xml');
+      const lines = [...xml.querySelectorAll('text')].map((node) => node.textContent);
+      assert.ok(lines.every((line) => !/^[。，、；：！？）》】]/u.test(line)), 'closing punctuation must not start a card line');
+      assert.ok(lines.join('').includes(asset.id === 'cover' ? source.result.title : text), 'all original text and punctuation stay in order');
+    }
+    assert.ok(output.plainText.includes(text), 'layout does not rewrite the exported article');
+  }
+});

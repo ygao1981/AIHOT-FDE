@@ -9,6 +9,7 @@ const THEMES = {
   ink: { accent: '#BE623C', panel: '#202B36', panelText: '#FFF9EF', muted: '#D5DCE2', line: '#46535E' },
 };
 const KIND_LABELS = { source: '', interpretation: '编辑判断', suggestion: '实践建议' };
+const CLOSING_PUNCTUATION = new Set('。，、；：！？）》】」』〕〉”’…,.!?;:)]}');
 const escape = (value) => String(value ?? '').toWellFormed().replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 const refs = (paragraph) => paragraph.sources?.length ? ` [${paragraph.sources.join('、')}]` : '';
@@ -40,11 +41,19 @@ function wrapText(value, width, fontSize) {
   const segmenter = new Intl.Segmenter('zh', { granularity: 'grapheme' });
   for (const paragraph of [String(value).replace(/\s+/gu, ' ').trim()]) {
     let line = '', used = 0;
-    for (const { segment } of segmenter.segment(paragraph)) {
+    const segments = [...segmenter.segment(paragraph)].map(({ segment }) => {
       const units = /^\s+$/u.test(segment) ? 0.4 : /^[ilI.,:;'!|]$/.test(segment) ? 0.5
         : /^[MWmw@%#&]$/.test(segment) ? 1.15 : /^[A-Za-z0-9_-]$/.test(segment) ? 0.85 : 1.15;
-      const next = units * fontSize;
-      if (line && used + next > width) { lines.push(line); line = ''; used = 0; }
+      return { segment, width: units * fontSize };
+    });
+    for (let index = 0; index < segments.length; index++) {
+      const { segment, width: next } = segments[index];
+      let closingWidth = 0;
+      for (let look = index + 1; look < segments.length && CLOSING_PUNCTUATION.has(segments[look].segment); look++)
+        closingWidth += segments[look].width;
+      // Keep closing punctuation with the preceding text, without exceeding the card width.
+      const reserve = next + closingWidth <= width ? closingWidth : 0;
+      if (line && used + next + reserve > width) { lines.push(line); line = ''; used = 0; }
       line += segment; used += next;
     }
     lines.push(line);

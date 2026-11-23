@@ -10,7 +10,7 @@ function sample(id='draft-one',status='ready') {
     spec:{mode:'template',format:'article',angle:'测试写作角度'},sources:[{id:1,articleId:'article-old',title:'虚构素材',url:'https://example.org/source',sourceName:'测试',analysis:{evidence:[{quote:'虚构引文'}],limitations:[]}}],
     result:status==='ready'?{title:'虚构稿件 <img src=x onerror=bad()>',lead:{text:'虚构开篇。',kind:'source',sources:[1]},sections:[{heading:'虚构小节',paragraphs:[{text:'虚构分析。',kind:'interpretation',sources:[1]}]}],takeaways:[{text:'测试要点',sources:[1]}],caveats:[]}:null};
 }
-async function ui(t,{initial='draft-one',drafts=[sample()]}={}) {
+async function ui(t,{initial='draft-one',drafts=[sample()],sourceText}={}) {
   const {window,document}=parseHTML(readFileSync(new URL('../public/editorial.html',import.meta.url),'utf8'));
   Object.defineProperty(window.HTMLSelectElement.prototype,'value',{configurable:true,get(){return this.querySelector('option[selected]')?.value||this.querySelector('option')?.value||'';},set(value){for(const option of this.querySelectorAll('option'))option.toggleAttribute('selected',option.value===value);}});
   window.confirm=()=>true;
@@ -40,7 +40,9 @@ async function ui(t,{initial='draft-one',drafts=[sample()]}={}) {
     setTimeout(callback,delay){const timer=setTimeout(()=>{timers.delete(timer);callback();},delay);timer.unref();timers.add(timer);return timer;},clearTimeout(timer){clearTimeout(timer);timers.delete(timer);},setInterval(){},
     downloadEditorialPackage:async(...items)=>{ctx.downloads.push(items);return {files:6};},copyEditorialText:async item=>{ctx.copied.push(item);return {format:'html'};}});
   t.after(()=>{for(const timer of timers)clearTimeout(timer);});
-  const source=readFileSync(new URL('../public/editorial.js',import.meta.url),'utf8').replace(/^import .*?;\n/,'').replace(/await boot\(\);\s*$/,'boot();');
+  // Git may check the browser module out with CRLF on Windows. Normalize before adapting it for this DOM-only VM.
+  const source=(sourceText??readFileSync(new URL('../public/editorial.js',import.meta.url),'utf8'))
+    .replace(/\r\n?/g,'\n').replace(/^import .*?;\n/,'').replace(/await boot\(\);\s*$/,'boot();');
   await runInContext(source,context);ctx.run=code=>runInContext(code,context);
   ctx.input=value=>{const element=document.getElementById('edit-title');element.value=value;element.dispatchEvent(new window.Event('input'));};
   ctx.delay=(target,method='GET')=>{let release;const pending=new Promise(resolve=>{release=resolve;});ctx.gate=async(path,m)=>{if(path===target&&m===method)await pending;};return()=>{ctx.gate=null;release();};};
@@ -92,4 +94,14 @@ test('copy requests text layout and a package requests both layouts without a mo
   assert.equal(ctx.copied[0].variant,'text');
   assert.deepEqual(ctx.downloads[0].map(item=>item.variant),['illustrated','text']);
   assert.ok(ctx.requests.slice(before).every(request=>request.method==='GET'));
+});
+test('a Windows CRLF checkout boots the editorial UI and saves an edit without model requests',async t=>{
+  const sourceText=readFileSync(new URL('../public/editorial.js',import.meta.url),'utf8').replace(/\r\n?/g,'\n').replace(/\n/g,'\r\n');
+  const ctx=await ui(t,{sourceText});
+  assert.equal(ctx.document.getElementById('editorial-workspace').hidden,false);
+  assert.equal(ctx.run('state.current.id'),'draft-one');
+  ctx.input('Windows 换行下保存的虚构草稿');await ctx.run('saveDraft()');
+  assert.equal(ctx.server.get('draft-one').result.title,'Windows 换行下保存的虚构草稿');
+  assert.equal(ctx.run('state.dirty'),false);
+  assert.deepEqual(ctx.requests.filter(request=>request.method!=='GET'),[{path:'/api/editorial/draft-one',method:'PATCH'}]);
 });

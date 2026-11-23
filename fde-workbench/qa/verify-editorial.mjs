@@ -32,6 +32,30 @@ function zipEntries(bytes) {
   }
   return files;
 }
+async function previewReady(frame,expectedUrl,expectedTitle) {
+  await frame.waitForURL(expectedUrl);
+  const heading=frame.locator('h1');await heading.waitFor({state:'visible'});
+  assert.equal(await heading.innerText(),expectedTitle);
+  await heading.scrollIntoViewIfNeeded();
+  const evidence=await frame.evaluate(async()=>{
+    await document.fonts.ready;
+    await Promise.all([...document.images].map(image=>image.decode()));
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    const bounds=element=>{const {x,y,width,height}=element.getBoundingClientRect();return {x,y,width,height};};
+    return {url:location.href,title:document.querySelector('h1')?.innerText,fonts:document.fonts.status,
+      viewport:{width:innerWidth,height:innerHeight},heading:bounds(document.querySelector('h1')),
+      images:[...document.images].map(image=>({complete:image.complete,naturalWidth:image.naturalWidth,naturalHeight:image.naturalHeight,
+        bounds:bounds(image),display:getComputedStyle(image).display,visibility:getComputedStyle(image).visibility,opacity:getComputedStyle(image).opacity}))};
+  });
+  assert.equal(evidence.url,expectedUrl);assert.equal(evidence.title,expectedTitle);assert.equal(evidence.fonts,'loaded');
+  assert.ok(evidence.heading.width>0&&evidence.heading.height>0&&evidence.heading.y>=-1&&evidence.heading.y<evidence.viewport.height);
+  assert.ok(evidence.images.length>=2);
+  for(const image of evidence.images){
+    assert.ok(image.complete&&image.naturalWidth>0&&image.naturalHeight>0&&image.bounds.width>0&&image.bounds.height>0);
+    assert.ok(image.display!=='none'&&image.visibility==='visible'&&Number(image.opacity)>0);
+  }
+  return evidence;
+}
 try{
   const modulePath=process.env.FDE_QA_PLAYWRIGHT_PATH;
   if(!modulePath||!isAbsolute(modulePath))throw new Error('请设置开发用 FDE_QA_PLAYWRIGHT_PATH，参见 qa/README.md。');
@@ -102,10 +126,28 @@ try{
   await page.waitForFunction(()=>document.getElementById('edit-state').textContent==='已保存'&&document.getElementById('save-draft').disabled);
   assert.equal(store.getEditorial(draft.id).result.title,'FDE 交付观察：先把试点边界说清楚');
   checked('刷新不覆盖未保存输入；版本冲突保留编辑；空白内容给中文错误；修订保存成功');
-  await page.locator('#preview-variant').selectOption('illustrated');await page.locator('#preview-theme').selectOption('ink');
-  const frame=page.frameLocator('#draft-preview');await frame.locator('img').first().waitFor();
-  assert.ok(await frame.locator('img').count()>=2);assert.equal(await frame.locator('script').count(),0);
+  const previewUrl=`${config.baseUrl}/api/editorial/${draft.id}/preview?${new URLSearchParams({variant:'illustrated',theme:'ink',revision:String(store.getEditorial(draft.id).revision)})}`;
+  await page.locator('#preview-variant').selectOption('illustrated');
+  const [previewFrame,previewResponse]=await Promise.all([
+    page.waitForEvent('framenavigated',{predicate:frame=>frame.parentFrame()===page.mainFrame()&&frame.url()===previewUrl}),
+    page.waitForResponse(response=>response.url()===previewUrl&&response.request().method()==='GET'),
+    page.locator('#preview-theme').selectOption('ink'),
+  ]);
+  assert.equal(previewResponse.status(),200);await previewResponse.finished();
+  assert.equal(await page.locator('#draft-preview').getAttribute('src'),new URL(previewUrl).pathname+new URL(previewUrl).search);
+  await page.locator('#draft-preview').scrollIntoViewIfNeeded();
+  report.previewEvidence={embedded:await previewReady(previewFrame,previewUrl,'FDE 交付观察：先把试点边界说清楚')};
+  assert.equal(await previewFrame.locator('script').count(),0);
   await page.screenshot({path:join(outputDir,'desktop-editorial.png'),fullPage:true});
+  await page.screenshot({path:join(outputDir,'desktop-editorial-viewport.png'),fullPage:false});
+  // A top-level capture avoids depending on full-page capture of an out-of-process iframe.
+  const standalonePreview=await context.newPage();standalonePreview.on('pageerror',error=>pageErrors.push(error.message));
+  await standalonePreview.setViewportSize({width:760,height:1000});
+  await standalonePreview.goto(previewUrl,{waitUntil:'load'});
+  report.previewEvidence.standalone=await previewReady(standalonePreview.mainFrame(),previewUrl,'FDE 交付观察：先把试点边界说清楚');
+  await standalonePreview.screenshot({path:join(outputDir,'desktop-preview.png'),fullPage:true});
+  await standalonePreview.close();
+  report.previewEvidence.screenshots=['desktop-editorial-viewport.png','desktop-preview.png'];
   await page.locator('#copy-draft').click();
   await page.waitForFunction(()=>document.getElementById('toast').textContent.includes('已复制'));
   assert.match(await page.evaluate(()=>navigator.clipboard.readText()),/FDE 交付观察/);
@@ -122,6 +164,9 @@ try{
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   const bounds=await page.locator('#draft-preview').boundingBox();assert.ok(bounds.width<=375&&bounds.x>=-1&&bounds.x+bounds.width<=376);
   await page.screenshot({path:join(outputDir,'mobile-editorial.png'),fullPage:true});
+  await page.locator('#draft-preview').scrollIntoViewIfNeeded();
+  report.previewEvidence.mobile=await previewReady(previewFrame,previewUrl,'FDE 交付观察：先把试点边界说清楚');
+  await page.screenshot({path:join(outputDir,'mobile-preview-viewport.png'),fullPage:false});
   await page.reload();await page.locator('#edit-title').waitFor();
   assert.equal(await page.locator('#edit-title').inputValue(),'FDE 交付观察：先把试点边界说清楚');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
