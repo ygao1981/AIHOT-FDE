@@ -1,6 +1,6 @@
 # 验证记录
 
-## 2026-11-23 CLI 事件适配器修复（尚未进行用户真实重试）\n\nWindows 用户报告：授权和 CLI 参数诊断通过，但一次真实美团文章分析返回 `unexpected_tool`，保存 1 条 `unknown` 回执并暂停。CLI 官方协议允许 `todo_list` 作为非工具计划事件；原代码只允许两种 item，存在误判。**无法根据现场回执证明本次具体 item 类型就是 `todo_list`。**\n\n本版仅将 `todo_list` 纳入非工具白名单，实际命令、文件、MCP、网页等工具事件和未知 item 继续失败关闭，并以受限类型名记录未来的拒绝原因。不修改用户已有回执、不自动重试、不增加模型调用。新增假 CLI 测试覆盖计划事件和工具事件。完整处置见 [INCIDENT_20261123_CODEX_EVENT.md](INCIDENT_20261123_CODEX_EVENT.md)。相关 CI 结果以本修复提交的工作流状态为准，用户真实账号仍未复验。\n\n---\n\n
+## 2026-11-23 CLI 事件适配器修复（尚未进行用户真实重试）\n\nWindows 用户报告：授权和 CLI 参数诊断通过，但一次真实美团文章分析返回 `unexpected_tool`，保存 1 条 `unknown` 回执并暂停。CLI 官方协议允许 `todo_list` 作为非工具计划事件；原代码只允许两种 item，存在误判。**无法根据现场回执证明本次具体 item 类型就是 `todo_list`。**\n\n本版仅将 `todo_list` 纳入非工具白名单，实际命令、文件、MCP、网页等工具事件和未知 item 继续失败关闭，并以受限类型名记录未来的拒绝原因。不修改用户已有回执、不自动重试、不增加模型调用。新增假 CLI 测试覆盖计划事件和工具事件。完整处置见 [INCIDENT_20261123_CODEX_EVENT.md](INCIDENT_20261123_CODEX_EVENT.md)。修复提交 [`046a7cb`](https://github.com/ygao1981/AIHOT-FDE/commit/046a7cbc7afbdad191cfabd3a069defc3a9f23ef) 的 [FDE workbench CI 45135209199](https://github.com/ygao1981/AIHOT-FDE/actions/runs/45135209199) 已通过：Windows 82 项、Linux 82 项测试（均为 0 失败）、真实 Chromium 页面验收和基础 Docker 检查通过。所有模型相关用例使用模拟 CLI，没有消耗用户真实模型额度。用户真实账号仍未复验。\n\n---\n\n
 ## 2.1.0 — 2026-11-22
 
 本轮为 T3 设计取舍后的最小改造。开始基线 `57d5a49910398e85254b5497624ad7743fd44b9d`；源码仍在 `codex/fde-workbench-v2`，数据 schema=1。下方 2026-11-20 的浏览器、Docker、来源与旧版回归属于 2.0 历史证据，不替代本轮验证。

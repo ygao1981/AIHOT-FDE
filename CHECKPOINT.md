@@ -1,6 +1,6 @@
 # CHECKPOINT — FDE 研究台 v2.1
 
-> **2026-11-23 Codex CLI 事件兼容修复：** Windows 单篇真实分析曾返回 `unexpected_tool` 并保留 1 条 `unknown` 回执，暂停状态不可自行清除。官方 CLI 的正常 `todo_list` 事件可能被旧白名单误拒；修复只放行此非工具事件，实际触发类型仍未知。详见 [事件处置说明](fde-workbench/docs/INCIDENT_20261123_CODEX_EVENT.md)。本机已有未提交现场 CHECKPOINT 时，合并而非覆盖。\n\n
+> **2026-11-23 Codex CLI 事件兼容修复：** Windows 单篇真实分析曾返回 `unexpected_tool` 并保留 1 条 `unknown` 回执，暂停状态不可自行清除。官方 CLI 的正常 `todo_list` 事件可能被旧白名单误拒；修复只放行此非工具事件，实际触发类型仍未知。详见 [事件处置说明](fde-workbench/docs/INCIDENT_20261123_CODEX_EVENT.md)。本机已有未提交现场 CHECKPOINT 时，合并而非覆盖。修复提交 [`046a7cb`](https://github.com/ygao1981/AIHOT-FDE/commit/046a7cbc7afbdad191cfabd3a069defc3a9f23ef) 已通过 [FDE CI 45135209199](https://github.com/ygao1981/AIHOT-FDE/actions/runs/45135209199)：Windows、Linux 各 82 项测试通过，Linux 浏览器验收及基础 Docker 检查通过；真实账号尚未复测。\n\n
 更新日期：2026-11-22（Asia/Singapore）。此文件是后续 Codex 接手的起点，不包含账号或运行数据。
 
 ## 最新交接：2.1.0

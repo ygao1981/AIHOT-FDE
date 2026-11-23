@@ -1,5 +1,7 @@
 # Codex CLI 事件拦截：2026-11-23 现场验收记录与处置
 
+实现提交 [`046a7cb`](https://github.com/ygao1981/AIHOT-FDE/commit/046a7cbc7afbdad191cfabd3a069defc3a9f23ef) 已通过 [FDE CI 45135209199](https://github.com/ygao1981/AIHOT-FDE/actions/runs/45135209199)：Windows、Linux 82 项自动测试均通过，Linux 浏览器和基础 Docker 检查通过；**实际账号的第 2 次分析尚未执行**。注意此前唯一真实分析的 `unknown` 回执没有被修改。
+
 ## 已确认事实（用户本机报告，不是我们远程实测）
 
 - 本机 Windows、研究台 2.1.0，Codex ChatGPT 登录与 CLI 参数诊断通过。
