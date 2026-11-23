@@ -147,7 +147,7 @@ try {
   await page.waitForFunction(()=>document.getElementById('detail-title')?.textContent==='界面样例：手动导入的实施经验');
   await waitForArticleList({ count: 3, caption: '共 3 篇资料' });
   assert.equal(store.findUrl('https://example.org/fde-ui-import').body,sampleBody);
-  assert.equal(await page.locator('#detail-dialog').getByRole('button',{name:'加入分析队列',exact:true}).isDisabled(),true);
+  assert.equal(await page.locator('#detail-dialog').getByRole('button',{name:'AI 分析',exact:true}).isDisabled(),true);
   assert.equal(await page.getByRole('button',{name:'导出 Markdown',exact:true}).isDisabled(),true);
   assert.equal(store.db.prepare('SELECT count(*) n FROM attempts').get().n,0);
   checked('粘贴正文可手动入库，模型关闭时不触发请求且未分析导出禁用');

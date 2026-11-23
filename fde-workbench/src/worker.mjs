@@ -1,11 +1,13 @@
 import { collectSource } from './collect.mjs';
-import { prepareArticle, precheck, analysisKey, estimateReservation, runAnalysis } from './analysis.mjs';
+import { prepareArticle, precheck, analysisKey, estimateReservation, runAnalysis, estimateStructuredReservation, runStructured } from './analysis.mjs';
 import { prepareEditorial, templateEditorial, editorialFingerprint, estimateEditorialReservation, runEditorial } from './editorial.mjs';
+import { translationTask } from './translation.mjs';
 import { AppError } from './config.mjs';
 
 export class Worker {
-  constructor(store,config,{analyzer=runAnalysis,editor=runEditorial,collector=collectSource}={}) {
+  constructor(store,config,{analyzer=runAnalysis,editor=runEditorial,translator=runStructured,collector=collectSource}={}) {
     this.store=store;this.config=config;this.analyzer=analyzer;this.editor=editor;this.collector=collector;
+    this.translator=translator;
     this.busy=false;this.collecting=false;this.stopped=false;this.started=false;
     this.timer=null;this.retainedAt=0;this.analysisTask=null;this.wakeRequested=false;
   }
@@ -38,6 +40,35 @@ export class Worker {
     const draft=this.store.queueEditorialRetry(id);
     if(this.started)void this.wake();
     return {draft,cached:false,message:'已安排明确确认后的写作重试。新请求仍受共享次数、预算和暂停状态限制。'};
+  }
+  translationInput(id) {
+    const article=this.store.getArticle(id);
+    if(!article)throw new AppError('not_found','没有找到这篇资料。',404);
+    return translationTask(article,this.config);
+  }
+  translationStatus(id) {
+    const task=this.translationInput(id);
+    return this.store.translationStatus(id,task.fingerprint);
+  }
+  translate(id,retry=false) {
+    const task=this.translationInput(id);
+    const current=this.store.translationStatus(id,task.fingerprint);
+    if(['completed','running'].includes(current.status))return current;
+    if(!this.config.analysisEnabled||this.config.provider==='off')throw new AppError('analysis_disabled','模型尚未开启，请先检查部署配置。',409);
+    if(this.stopped||this.busy||this.analysisTask)throw new AppError('busy','已有模型任务正在处理，请稍后再翻译。',409);
+    const attempt=this.store.beginTranslation(id,task.fingerprint,this.config,estimateStructuredReservation(this.config,task),retry);
+    if(!attempt)return this.store.translationStatus(id,task.fingerprint);
+    this.busy=true;
+    this.analysisTask=Promise.resolve().then(async()=>{
+      try{this.store.completeAttempt(attempt,await this.translator(this.config,task));}
+      catch(error){this.store.failAttempt(attempt,error);}
+    }).catch(()=>{
+      this.store.setSetting('analysis_pause','任务需要人工检查，请查看设置和研究记录。');
+    }).finally(()=>{
+      this.busy=false;this.analysisTask=null;
+      if(!this.stopped&&(this.started||this.wakeRequested))void this.wake();
+    });
+    return {status:'running',result:null};
   }
   async analyzeOne() {
     if(this.busy||this.stopped||!this.config.analysisEnabled||this.config.provider==='off'||this.store.setting('analysis_pause'))return 'blocked';

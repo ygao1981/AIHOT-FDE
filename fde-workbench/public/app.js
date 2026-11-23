@@ -9,7 +9,7 @@ const state = {
   drafts: new Map(), queueing: new Set(), refreshing: false, toastTimer: null, searchTimer: null,
 };
 const STATUS = { candidate: '待分析', queued: '排队中', analyzing: '分析中', analyzed: '已分析', skipped: '已跳过', failed: '分析未完成', needs_body: '待补正文' };
-const EDITORIAL = { new: '待整理', shortlisted: '已选题', drafting: '写作中', published: '已发布', archived: '已归档' };
+const EDITORIAL = { new: '待整理', organized: '已整理', shortlisted: '已选题', drafting: '写作中', published: '已发布', archived: '已归档' };
 const CATEGORY = { case: '落地案例', architecture: '工程方案', tutorial: '实操教程', delivery: '交付方法', roi: '成本效果', retrospective: '项目复盘' };
 const STAGE = { proposal: '方案阶段', demo: '演示阶段', pilot: '试点阶段', production: '生产使用', not_disclosed: '阶段未披露' };
 const ERROR_MESSAGES = {
@@ -169,7 +169,7 @@ function renderOverview() {
   for (const key of ['total', 'candidate', 'analyzed', 'shortlisted']) $(`stat-${key}`).textContent = count(stats[key]);
   $('export-all').disabled = !(number(stats.analyzed) > 0);
   $('export-all').title = number(stats.analyzed) > 0 ? '导出已有分析且未归档的研究资料。' : '完成资料分析后可导出研究结果。';
-  const analysisText = !config.analysisEnabled ? '分析未启用。可以先收集资料、阅读原文并记录个人笔记。' : config.autoAnalyze ? '自动分析已启用。信源采集到的符合条件新资料会进入队列，并受用量上限约束；手动导入由你安排分析。' : '当前为手动分析。收集资料后，点击“加入分析队列”才会安排模型处理。';
+  const analysisText = !config.analysisEnabled ? '分析未启用。可以先收集资料、阅读原文并记录个人笔记。' : config.autoAnalyze ? '自动分析已启用。信源采集到的符合条件新资料会进入队列，并受用量上限约束；手动导入由你安排分析。' : '当前为手动分析。点击“AI 分析”可安排模型处理这篇资料。';
   $('analysis-mode').textContent = analysisText;
   $('pause-banner').hidden = !paused;
   $('pause-reason').textContent = paused ? message({ message: paused }, '请检查用量和运行状态，再恢复分析。') : '';
@@ -248,6 +248,12 @@ function articleCard(article) {
   const side = node('div', { class: 'article-side' }, statusBadge(article.status), badge(EDITORIAL[article.editorialStatus] || '待整理', article.editorialStatus === 'new' ? 'outline' : 'editorial'), article.personalNotes ? node('span', { class: 'note-indicator', text: '已有个人笔记' }) : null);
   const buttons = node('div', { class: 'article-actions' }, action(a ? '查看研究' : '查看资料', () => openDetail(article.id), { class: 'small', icon: 'arrow' }));
   if (!a) buttons.append(queueButton(article));
+  if (state.filters.editorialStatus === 'new') {
+    if (article.status === 'analyzed' && a?.relevance === 'relevant') {
+      buttons.append(node('a', { href: `/editorial.html?article=${encodeURIComponent(article.id)}`, class: 'button small' }, '整理素材'));
+    }
+    buttons.append(action('标为已整理', event => updateEditorial(event.currentTarget, article, 'organized'), { class: 'small' }));
+  }
   const originalLink = externalLink('阅读原文', article.url); if (originalLink) buttons.append(originalLink);
   return node('article', { class: 'article-card' }, main, side, buttons);
 }
@@ -256,7 +262,7 @@ function queueButton(article, options = {}) {
   if (article.status === 'skipped') return action('已被规则过滤', () => {}, { class: 'small', disabled: true, title: '未调用模型。可补充相关正文，或继续阅读和记录笔记。' });
   const pending = ['queued', 'analyzing'].includes(article.status) || state.queueing.has(article.id);
   const enabled = Boolean(state.overview?.config?.analysisEnabled);
-  const label = pending ? (article.status === 'analyzing' ? '正在分析' : '已加入队列') : article.analysis ? '重新分析' : article.status === 'failed' ? '确认后重试' : '加入分析队列';
+  const label = pending ? (article.status === 'analyzing' ? '正在分析' : '已加入队列') : article.analysis ? '重新分析' : article.status === 'failed' ? '确认后重试' : 'AI 分析';
   return action(label, event => queueArticle(article, event.currentTarget), { class: options.primary ? 'primary small' : 'small', disabled: pending || !enabled, title: !enabled ? '分析尚未启用，请先检查部署配置。' : undefined });
 }
 async function queueArticle(article, button, forceRetry = false) {
@@ -325,6 +331,48 @@ function detailList(values, fallback) {
   const valid = items(values).filter(v => typeof v === 'string' && v.trim());
   return valid.length ? node('ul', { class: 'detail-list' }, valid.map(v => node('li', { text: v }))) : node('p', { text: fallback });
 }
+function translationPanel(article) {
+  const panel = node('details', { class: 'body-details' }, node('summary', { text: '查看中文译文' }));
+  const content = node('div', { 'aria-live': 'polite' });
+  panel.append(content);
+  const path = `/api/articles/${encodeURIComponent(article.id)}/translation`;
+  let loading = false;
+  async function update(options) {
+    if (loading || !panel.open || !panel.isConnected) return;
+    loading = true;
+    try {
+      const translated = await api(path, options);
+      if (!panel.isConnected || !panel.open) return;
+      if (translated.status === 'completed' && translated.result) {
+        content.replaceChildren(node('h3', { text: translated.result.title }),
+          node('p', { class: 'form-hint', text: article.bodyKind === 'feed_excerpt' ? '译文仅覆盖已收录的订阅摘要。全文请查原文。' : '译文对应研究台已收录的正文。引用请核对英文原文。' }),
+          node('pre', { text: translated.result.body }));
+        return;
+      }
+      if (translated.status === 'running') {
+        content.replaceChildren(node('p', { text: '正在翻译。结果保存后会自动显示。' }));
+        setTimeout(() => update(), 2000);
+        return;
+      }
+      const retry = translated.status === 'unknown' || translated.status === 'failed';
+      const enabled = Boolean(state.overview?.config?.analysisEnabled);
+      content.replaceChildren(node('p', { class: 'form-hint', text: retry ? '上次翻译结果不明确。请先核对用量。' : enabled ? '一次翻译与研究分析、公众号写作共享模型额度。' : '模型已关闭。启用模型后可手动翻译。' }),
+        action(retry ? '确认后重新翻译' : 'AI 翻译成中文', event => {
+          if (retry && !window.confirm('上次翻译可能已消耗额度。确认发起一次新翻译吗？')) return;
+          busyButton(event.currentTarget, true, '正在安排…');
+          void update({ method: 'POST', body: retry ? { acceptExtraUsage: true } : {} });
+        }, { class: 'small', disabled: !enabled }));
+    } catch (error) {
+      if (!panel.isConnected || !panel.open || !state.authenticated) return;
+      const errorText = error.code === 'daily_limit' ? '滚动 24 小时模型额度已用完，请在有额度时再翻译。' : message(error);
+      content.replaceChildren(node('p', { role: 'status', text: errorText }), action('查看翻译状态', () => update(), { class: 'small' }));
+    } finally {
+      loading = false;
+    }
+  }
+  panel.addEventListener('toggle', () => { if (panel.open && !loading) void update(); });
+  return panel;
+}
 function renderDetail() {
   const article = state.currentArticle; if (!article) return;
   const a = article.analysis;
@@ -335,7 +383,8 @@ function renderDetail() {
     node('div', { class: 'detail-actions' }, externalLink('阅读原文', article.url, 'button small'), action('导出 Markdown', event => exportResearch(article.id, event.currentTarget), { class: 'small', icon: 'download', disabled: !a, title: !a ? '完成分析后可导出研究结果。' : undefined }), queueButton(article), a?.relevance === 'relevant' && article.status === 'analyzed' && article.editorialStatus !== 'archived' ? node('a', { href: `/editorial.html?article=${encodeURIComponent(article.id)}`, class: 'button small' }, '写公众号') : null, article.status !== 'needs_body' ? action('补充正文', () => openImport(article), { class: 'small text-button' }) : null));
   const select = node('select', { id: 'detail-editorial', onChange: event => updateEditorial(event.currentTarget) }, Object.entries(EDITORIAL).map(([value, label]) => node('option', { value, text: label })));
   select.value = article.editorialStatus || 'new';
-  const editorial = node('div', { class: 'detail-status' }, node('div', { class: 'select-field' }, node('label', { for: 'detail-editorial', text: '选题进度' }), select), node('p', { class: 'form-hint', text: '只记录个人进度，不会向外部平台发布。' }));
+  const editorial = node('div', { class: 'detail-status' }, node('div', { class: 'select-field' }, node('label', { for: 'detail-editorial', text: '选题进度' }), select),
+    node('p', { class: 'form-hint', text: '待整理的资料还需核对原文和归纳要点。完成后可标为已整理，再决定是否列入选题。' }));
   const content = [heading, editorial];
   if (a) {
     if (a.relevance !== 'relevant') content.push(node('div', { class: 'notice warning' }, node('p', { text: a.relevance === 'unrelated' ? '本次分析认为资料与研究方向关联较弱。请阅读原文后自行决定是否保留。' : '本次分析未能确认资料与研究方向的关联。请核对原文后再使用。' })));
@@ -365,18 +414,19 @@ function renderDetail() {
   content.push(section('个人笔记', [node('label', { for: 'personal-notes', class: 'sr-only', text: '个人笔记内容' }), notes,
     node('div', { class: 'notes-actions' }, node('span', { id: 'notes-state', class: 'notes-state', role: 'status', text: state.noteDirty ? '草稿尚未保存' : savedNotes ? '已保存' : '最多 10000 个字符' }), node('button', { id: 'save-notes', type: 'button', class: 'button small primary', disabled: !state.noteDirty, onClick: saveNotes }, '保存笔记'))]));
   const body = text(article.body, text(article.bodyExcerpt));
+  if (article.canTranslate) content.push(translationPanel(article));
   content.push(node('details', { class: 'body-details' }, node('summary', { text: '查看已收录正文' }), body ? node('pre', { text: body }) : node('p', { class: 'form-hint', text: '尚未收录正文，请阅读原文或补充正文。' })));
   $('detail-content').replaceChildren(...content);
 }
-async function updateEditorial(select) {
-  const article = state.currentArticle; if (!article) return;
-  const previous = article.editorialStatus; select.disabled = true;
+async function updateEditorial(control, article = state.currentArticle, value = control.value) {
+  if (!article) return;
+  const previous = article.editorialStatus; control.disabled = true;
   try {
-    const response = await api(`/api/articles/${encodeURIComponent(article.id)}`, { method: 'PATCH', body: { editorialStatus: select.value } });
-    if (state.currentArticle?.id === article.id) state.currentArticle.editorialStatus = response.editorialStatus || select.value;
-    toast('选题进度已保存。'); await loadOverview({ quiet: true }); await loadArticles({ quiet: true });
-  } catch (error) { select.value = previous; if (state.authenticated) toast(message(error)); }
-  finally { if (select.isConnected) select.disabled = false; }
+    const response = await api(`/api/articles/${encodeURIComponent(article.id)}`, { method: 'PATCH', body: { editorialStatus: value } });
+    if (state.currentArticle?.id === article.id) state.currentArticle.editorialStatus = response.editorialStatus || value;
+    toast(value === 'organized' ? '已标为已整理。' : '选题进度已保存。'); await loadOverview({ quiet: true }); await loadArticles({ quiet: true });
+  } catch (error) { if (control.tagName === 'SELECT') control.value = previous; if (state.authenticated) toast(message(error)); }
+  finally { if (control.isConnected) control.disabled = false; }
 }
 async function saveNotes() {
   const article = state.currentArticle; if (!article) return;
@@ -469,7 +519,7 @@ function renderUsage() {
   const costKnown = usage.costKnown === true;
   const mode = config.provider === 'api' ? 'API 模式' : config.provider === 'codex' ? '本机 Codex 模式' : '暂未接入模型';
   const cards = node('div', { class: 'usage-grid' },
-    usageCard('过去 24 小时模型任务', `${count(usage.attempts24h)} 次`, `研究分析与公众号写作共用 ${count(config.dailyLimit)} 次上限，失败和未知回执也计入。`),
+    usageCard('过去 24 小时模型任务', `${count(usage.attempts24h)} 次`, `研究分析、公众号写作与翻译共用 ${count(config.dailyLimit)} 次上限，失败和未知回执也计入。`),
     usageCard('本月已记录输入 / 输出', `${count(usage.inputTokens)} / ${count(usage.outputTokens)}`, '单位为 token。未返回完整用量的请求，不代表没有消耗。', true),
     usageCard(costKnown ? '本月 API 估算费用' : '当前接入的费用', costKnown ? money(usage.monthCostUsd) : '金额未知', costKnown ? '单位为美元，按配置单价估算；不含 Codex 账号中无法折算的消耗。' : config.provider === 'codex' ? '本机工具不提供可可靠换算的美元账单。尝试次数不是费用。' : '尚未接入 API 费用统计。', true));
   const settings = [

@@ -58,7 +58,7 @@ async function api(path, options = {}) {
 function updateBudget() {
   const { usage = {}, config = {}, paused } = state.overview || {};
   $('budget-count').textContent = `滚动 24 小时已用 ${usage.attempts24h ?? '—'} / ${config.dailyLimit ?? '—'} 次模型任务`;
-  const breakdown = Number.isFinite(usage.analysisAttempts24h) ? `研究分析 ${usage.analysisAttempts24h} 次，公众号写作 ${usage.editorialAttempts24h ?? 0} 次。` : '';
+  const breakdown = Number.isFinite(usage.analysisAttempts24h) ? `研究分析 ${usage.analysisAttempts24h} 次，公众号写作 ${usage.editorialAttempts24h ?? 0} 次，翻译 ${usage.translationAttempts24h ?? 0} 次。` : '';
   $('budget-detail').textContent = `${breakdown}失败与未知回执同样计入。切换版式和导出不增加次数。`;
   $('pause-notice').hidden = !paused;
   $('pause-text').textContent = paused ? `模型任务已暂停。${message({ message: paused })} 素材稿、编辑和导出仍可使用。` : '';

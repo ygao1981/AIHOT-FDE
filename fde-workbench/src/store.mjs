@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { AppError } from './config.mjs';
 
-const EDITORIAL = ['new', 'shortlisted', 'drafting', 'published', 'archived'];
+const EDITORIAL = ['new', 'organized', 'shortlisted', 'drafting', 'published', 'archived'];
 export const hashBody = body => createHash('sha256').update(String(body).normalize('NFKC').replace(/\s+/g, ' ').trim()).digest('hex');
 const nowIso = () => new Date().toISOString();
 function present(row, body = false) {
@@ -177,12 +177,30 @@ export class Store {
       return {id,articleId,key,bodyHash:row.body_hash,cached:false};
     });
   }
+  translationStatus(articleId, key) {
+    const row = this.db.prepare("SELECT status,result_json FROM attempts WHERE article_id=? AND fingerprint=? AND kind='translation' ORDER BY started_at DESC,id DESC LIMIT 1").get(articleId,key);
+    return { status:row?.status??'not_requested', result:row?.status==='completed'&&row.result_json?JSON.parse(row.result_json):null };
+  }
+  beginTranslation(articleId, key, config, reservation, retry) {
+    return this.transaction(()=>{
+      const prior=this.translationStatus(articleId,key);
+      if(prior.status==='running'||prior.status==='completed')return null;
+      if(prior.status!=='not_requested'&&!retry)throw new AppError('retry_confirmation','这次翻译可能已消耗额度，请核对用量后再明确重试。',409);
+      this.assertModelSlot();
+      const timestamp=nowIso(),id=randomUUID();
+      this.assertBudget(config,reservation,timestamp);
+      this.db.prepare("INSERT INTO attempts(id,article_id,fingerprint,nonce,provider,model,status,started_at,reserved_usd,kind) VALUES(?,?,?,?,?,?,'running',?,?,'translation')")
+        .run(id,articleId,key,retry?randomUUID():'',config.provider,config.model,timestamp,reservation);
+      return {id,articleId,key,kind:'translation'};
+    });
+  }
   completeAttempt(attempt, output) {
     this.transaction(()=>{
       const u=output.usage || {}, json=JSON.stringify(output.result), timestamp=nowIso();
       this.db.prepare(`UPDATE attempts SET status='completed',finished_at=?,cost_usd=?,input_tokens=?,cached_input_tokens=?,output_tokens=?,reasoning_tokens=?,result_json=?,request_id=? WHERE id=?`).run(
         timestamp,output.costUsd??null,u.inputTokens??null,u.cachedInputTokens??null,u.outputTokens??null,u.reasoningTokens??null,json,output.requestId||null,attempt.id);
-      this.db.prepare("UPDATE articles SET status='analyzed',analysis_json=?,analysis_key=?,last_error=NULL,updated_at=? WHERE id=? AND body_hash=?").run(json,attempt.key,timestamp,attempt.articleId,attempt.bodyHash);
+      if(attempt.kind!=='translation')
+        this.db.prepare("UPDATE articles SET status='analyzed',analysis_json=?,analysis_key=?,last_error=NULL,updated_at=? WHERE id=? AND body_hash=?").run(json,attempt.key,timestamp,attempt.articleId,attempt.bodyHash);
     });
   }
   failAttempt(attempt, error) {
@@ -191,8 +209,12 @@ export class Store {
       const u=error.usage || {},knownCost=Number.isFinite(error.costUsd)&&error.costUsd>=0?error.costUsd:null;
       this.db.prepare(`UPDATE attempts SET status='unknown',finished_at=?,error_code=?,cost_usd=?,input_tokens=?,cached_input_tokens=?,output_tokens=?,reasoning_tokens=?,request_id=? WHERE id=?`).run(
         nowIso(),code,knownCost,u.inputTokens??null,u.cachedInputTokens??null,u.outputTokens??null,u.reasoningTokens??null,error.requestId||null,attempt.id);
-      this.db.prepare("UPDATE articles SET status='failed',last_error=?,updated_at=? WHERE id=? AND body_hash=?").run('分析未完成，请核对用量后决定是否重试。',nowIso(),attempt.articleId,attempt.bodyHash);
-      this.setSetting('analysis_pause','上次分析未完成。请核对账号、网络和用量，再恢复任务。');
+      if(attempt.kind==='translation'){
+        this.setSetting('analysis_pause','上次翻译未完成。请核对账号、网络和用量，再恢复任务。');
+      }else{
+        this.db.prepare("UPDATE articles SET status='failed',last_error=?,updated_at=? WHERE id=? AND body_hash=?").run('分析未完成，请核对用量后决定是否重试。',nowIso(),attempt.articleId,attempt.bodyHash);
+        this.setSetting('analysis_pause','上次分析未完成。请核对账号、网络和用量，再恢复任务。');
+      }
     });
   }
   recoverInterrupted() {
@@ -317,7 +339,8 @@ export class Store {
       COALESCE(sum(CASE WHEN provider='api' AND cost_usd IS NULL THEN reserved_usd ELSE 0 END),0) monthReservedUsd,
       COALESCE(sum(CASE WHEN provider='codex' THEN 1 ELSE 0 END),0) cliAttemptsMonth FROM attempts WHERE started_at>=?`).get(month);
     const recent=this.db.prepare(`SELECT count(*) attempts24h,COALESCE(sum(CASE WHEN kind='analysis' THEN 1 ELSE 0 END),0) analysisAttempts24h,
-      COALESCE(sum(CASE WHEN kind='editorial' THEN 1 ELSE 0 END),0) editorialAttempts24h FROM attempts WHERE started_at>?`).get(new Date(Date.now()-86400000).toISOString());
+      COALESCE(sum(CASE WHEN kind='editorial' THEN 1 ELSE 0 END),0) editorialAttempts24h,
+      COALESCE(sum(CASE WHEN kind='translation' THEN 1 ELSE 0 END),0) translationAttempts24h FROM attempts WHERE started_at>?`).get(new Date(Date.now()-86400000).toISOString());
     return {stats,usage:{...u,...recent,costKnown:config.provider==='api'},
       config:{provider:config.provider,model:config.model,analysisEnabled:config.analysisEnabled,collectEnabled:config.collectEnabled,autoAnalyze:config.autoAnalyze,dailyLimit:config.dailyLimit,monthlyBudgetUsd:config.monthlyBudgetUsd,editorialMaxOutputTokens:config.editorialMaxOutputTokens},paused:this.setting('analysis_pause')};
   }

@@ -2,11 +2,63 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Store } from '../src/store.mjs';
 import { Worker } from '../src/worker.mjs';
+import { translationTask } from '../src/translation.mjs';
 import { analysisKey,prepareArticle } from '../src/analysis.mjs';
 import { fixture,add,output } from './helpers.mjs';
 import { acquireLock } from '../src/main.mjs';
 import { importArticle } from '../src/collect.mjs';
 
+const englishBody = 'The support team connected the RAG workflow to existing enterprise records. It limited the pilot to one service queue and kept manual review. '.repeat(28);
+
+test('manual English translation shares the single model slot and preserves the research card', async t => {
+  const {store,config}=fixture(t,{provider:'codex',dailyLimit:1});
+  const original=add(store,81,{title:'Enterprise RAG support pilot',language:'en',body:englishBody});
+  store.db.prepare("UPDATE articles SET status='analyzed',analysis_json=?,analysis_key=?,personal_notes=? WHERE id=?")
+    .run(JSON.stringify(output().result),'existing-research','只保留在私库的笔记',original.id);
+  const before=store.getArticle(original.id), waiting=add(store,82);
+  const pending=Promise.withResolvers();
+  let calls=0;
+  const worker=new Worker(store,config,{translator:async(_config,task)=>{
+    calls++;
+    assert.equal(task.name,'fde_translation');
+    assert.doesNotMatch(JSON.stringify(task.input),/只保留在私库的笔记/);
+    return pending.promise;
+  },analyzer:async()=>assert.fail('translation exhausted the shared limit')});
+  assert.equal(worker.translate(original.id).status,'running');
+  assert.equal(worker.translate(original.id).status,'running');
+  worker.enqueue(waiting.id);
+  assert.equal(await worker.analyzeOne(),'blocked');
+  await Promise.resolve();
+  assert.equal(calls,1);
+  pending.resolve({...output(),result:{title:'企业检索客服试点',body:'仅在一个客服队列试点，保留人工审核。'},costUsd:null});
+  await worker.analysisTask;
+  assert.equal(worker.translate(original.id).status,'completed');
+  assert.deepEqual(store.getArticle(original.id),before);
+  assert.deepEqual([store.overview(config).usage.attempts24h,store.overview(config).usage.translationAttempts24h],[1,1]);
+  assert.equal(await worker.analyzeOne(),'blocked');
+  await worker.stop();
+});
+
+test('translation requires complete coverage and failed receipts block automatic retries', async t => {
+  const {store,config}=fixture(t,{provider:'codex'});
+  const article=add(store,91,{title:'An English customer case',language:'en',body:englishBody});
+  const task=translationTask(article,config);
+  assert.ok(task.input.segments.length>1);
+  assert.throws(()=>task.validate({title:'标题',segments:['只返回首段，省略了剩余输入。']}),{code:'invalid_result'});
+  const value=task.validate({title:'标题',segments:task.input.segments.map(()=> '按顺序翻译段落。')});
+  assert.equal(value.body.split('\n\n').length,task.input.segments.length);
+  let calls=0;
+  const worker=new Worker(store,config,{translator:async()=>{calls++;throw Object.assign(new Error('failure'),{code:'cli_timeout_unknown'});}});
+  worker.translate(article.id);
+  await worker.analysisTask;
+  assert.equal(worker.translationStatus(article.id).status,'unknown');
+  assert.equal(store.getArticle(article.id).status,'candidate');
+  assert.equal(store.overview(config).usage.attempts24h,1);
+  assert.throws(()=>worker.translate(article.id),{code:'retry_confirmation'});
+  assert.equal(calls,1);
+  assert.ok(store.setting('analysis_pause'));
+  await worker.stop();
+});
 test('busy-time enqueue and repeated notifications drain promptly with one model at a time',async t=>{
   const {store,config}=fixture(t),first=Promise.withResolvers(),release=Promise.withResolvers();
   let calls=0,active=0,maximum=0;

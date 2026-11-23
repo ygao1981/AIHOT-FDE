@@ -6,6 +6,7 @@ import { AppError, ROOT } from './config.mjs';
 import { importArticle } from './collect.mjs';
 import { toMarkdown } from './analysis.mjs';
 import { EDITORIAL_PROFILE, validateEditorial } from './editorial.mjs';
+import { canTranslate } from './translation.mjs';
 import { renderEditorial } from './editorial-render.mjs';
 
 function equal(a,b) { const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&timingSafeEqual(x,y); }
@@ -110,12 +111,17 @@ export function createApp(store,worker,config,{importer=importArticle}={}) {
       if(path==='/api/sources'&&method==='GET')return send(res,200,{items:store.sources()});
       const sourceMatch=/^\/api\/sources\/([a-z0-9-]+)$/.exec(path);
       if(sourceMatch&&method==='POST') {const body=await readJson(req);if(typeof body.enabled!=='boolean')throw new AppError('invalid_value','请选择是否启用采集。');store.setSource(sourceMatch[1],body.enabled);return send(res,200,{ok:true});}
-      const articleMatch=/^\/api\/articles\/([a-z0-9-]+)(\/queue)?$/.exec(path);
+      const articleMatch=/^\/api\/articles\/([a-z0-9-]+)(?:\/(queue|translation))?$/.exec(path);
       if(articleMatch) {
-        const id=articleMatch[1];
-        if(articleMatch[2]&&method==='POST'){const body=await readJson(req);const result=worker.enqueue(id,body.acceptExtraUsage===true);void worker.wake();return send(res,202,result);}
-        if(!articleMatch[2]&&method==='GET'){const a=store.getArticle(id);if(!a)throw new AppError('not_found','没有找到这篇资料。',404);return send(res,200,a);}
-        if(!articleMatch[2]&&method==='PATCH')return send(res,200,store.editArticle(id,await readJson(req)));
+        const [,id,action]=articleMatch;
+        if(action==='queue'&&method==='POST'){const body=await readJson(req);const result=worker.enqueue(id,body.acceptExtraUsage===true);void worker.wake();return send(res,202,result);}
+        if(action==='translation'&&method==='GET')return send(res,200,worker.translationStatus(id));
+        if(action==='translation'&&method==='POST'){
+          const body=await readJson(req),result=worker.translate(id,body.acceptExtraUsage===true);
+          return send(res,result.status==='running'?202:200,result);
+        }
+        if(!action&&method==='GET'){const a=store.getArticle(id);if(!a)throw new AppError('not_found','没有找到这篇资料。',404);return send(res,200,{...a,canTranslate:canTranslate(a)});}
+        if(!action&&method==='PATCH')return send(res,200,store.editArticle(id,await readJson(req)));
       }
       if(path==='/api/import'&&method==='POST') {
         if(importing)throw new AppError('import_busy','已有资料正在收录，请稍后再试。',409);

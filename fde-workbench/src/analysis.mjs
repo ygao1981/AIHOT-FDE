@@ -8,7 +8,7 @@ import { join, isAbsolute } from 'node:path';
 import { fetch as officialFetch, EnvHttpProxyAgent } from 'undici';
 import { resolveCodexCommand, buildCodexEnvironment, terminateCodexProcess } from './codex-process.mjs';
 
-export const VERSION = 'fde-workbench-analysis-v1';
+export const VERSION = 'fde-workbench-analysis-v2';
 const CATEGORIES = ['case', 'architecture', 'tutorial', 'delivery', 'roi', 'retrospective'];
 const LABELS = ['落地案例', '工程方案', '实操教程', '交付方法', '成本效果', '项目复盘'];
 const STAGES = ['proposal', 'demo', 'pilot', 'production', 'not_disclosed'];
@@ -22,9 +22,9 @@ export const SCHEMA = freeze(object({
   score: { type: 'integer', minimum: 0, maximum: 100 },
   stage: { type: 'string', enum: STAGES },
   stageEvidence: string(240, 0),
-  title: string(120), summary: string(180), problem: string(250), solution: string(250), outcome: string(250),
-  lessons: list(string(160)), limitations: list(string(160)),
-  evidence: list(object({ quote: string(240), claim: string(160) })),
+  title: string(120), summary: string(360), problem: string(360), solution: string(720), outcome: string(520),
+  lessons: list(string(220)), limitations: list(string(220)),
+  evidence: list(object({ quote: string(240), claim: string(220) })),
   ideas: list(object({ title: string(50), angle: string(160) })),
 }));
 
@@ -34,8 +34,12 @@ const INSTRUCTION = `你是个人 FDE 研究与技术公众号选题助手，只
 一次输出符合 JSON Schema 的对象，使用中文。score 是本次阅读价值判断，不代表独立交叉验证。未知事项写“原文未披露”。
 relevance 为 relevant/unrelated/uncertain。stage 为 proposal/demo/pilot/production/not_disclosed，不能把方案、演示或试点写成生产上线。
 stageEvidence 必须是一段明确支持所选阶段的连续原文，最多240字符；没有证据时填空字符串且 stage=not_disclosed。production 必须有已经在生产使用的明确表述，计划、生产就绪或未来上线不算。
-title 最多120字符，summary 用80–180个中文字；problem、solution、outcome 各最多250字符。
-lessons、limitations 各最多3条，每条最多160字符。evidence 最多3条；quote 是正文中的连续原文，最多240字符；claim 最多160字符，不得扩大原文含义。
+title 最多120字符。summary 最多360字符，先写值得研究的具体问题和原文提供的最强证据。正文有事实时写清过程，少用宽泛形容词。
+problem 最多360字符，写业务角色、具体障碍、既有流程和判断标准，缺失时留作未知。
+solution 最多720字符，按原文顺序说明数据输入、关键组件或步骤、集成点、人工复核和失败处理，保留可供借鉴的工程细节。不要把建议写成原文已经实施的方案。
+outcome 最多520字符，区分已观测数据、披露者和仅有计划的结果。量化结果写出原文给出的基线、对照、样本、观察时间和适用范围，没有披露的口径写清楚。
+lessons、limitations 各最多3条，每条最多220字符。经验要关联到原文做法，写清适用前提和可迁移的小步骤。限制优先指出证据缺口、替代解释和需要复核的具体问题。
+evidence 最多3条。优先覆盖关键实施细节、部署阶段和量化结果。quote 必须是正文中连续的原文，最多240字符。claim 最多220字符，只解释该引文可以支持的结论。
 厂商自述不等于第三方验证。量化效果必须有原文依据。输入若截断，明确只能依据已提供部分。不编造客户、价格、日期、ROI或上线阶段。
 ideas 最多3项技术公众号选题，title 最多50字符、angle 最多160字符；选题是编辑建议，不是已发生事实。
 不相关或不确定时 score=0、ideas=[]、evidence=[]、stage=not_disclosed、stageEvidence=""。只输出 JSON，不输出 Markdown。`;
