@@ -6,11 +6,12 @@
 
 仓库为 `ygao1981/AIHOT-FDE`。先核对草稿 PR #7 的实时 head，从 `codex/fde-editorial-windows-acceptance` 建独立前端分支。入口为 `fde-workbench/`，本机地址 `http://127.0.0.1:3210/`。先读根及子目录 `AGENTS.md`、`CHECKPOINT.md`、`fde-workbench/README.md`、`docs/EDITORIAL_WORKFLOW.md` 和 `docs/VALIDATION.md`。再读 `public/index.html`、`app.js`、`style.css`、`editorial.html`、`editorial.js`、`editorial.css` 以及 `guide.html`、`guide.css`。后文的 `docs/` 与 `public/` 均相对 `fde-workbench/`。 [草稿 PR #7](https://github.com/ygao1981/AIHOT-FDE/pull/7)
 
-## 沿用的前端技能
+## 沿用 PM PC 的前端优化方法
 
-- **`finesse-ui` 用于设计主流程。** 能读本机技能时打开 `D:/.codex/skills/finesse-ui/SKILL.md`。按 product 类型审查现有页面。研究库属于浏览和比较，上手要快。公众号草稿属于编辑工作流，先让用户找到选材、保存和预览。按需使用技能中的 `product-ui.md`、`workflow-ui.md`、`anti-cheap.md` 和 `preflight.md`。
-- **`ui-ux-pro-max` 用于交互与无障碍复查。** 本机文件为 `D:/.codex/skills/ui-ux-pro-max/SKILL.md`。沿用已有设计系统，复核对比度、键盘焦点、触屏目标、状态反馈、长文本和响应式。保留当前 HTML、CSS 与原生 JavaScript 技术栈。
-- **`playwright` 用于真实浏览器验收。** 如有本机技能，读取 `D:/.codex/skills/playwright/SKILL.md`。仓库已有 `qa/README.md` 和浏览器验收脚本，能使用时直接复用。
+1. **用 `hallmark` 主导视觉重排。** 参照 PM PC 实际采用的 Hallmark v2.0.0 `redesign` 流程。先量出现有页面的问题，保存真实浏览器基线，再用统一的颜色、字号和间距组织真实操作。沿用 FDE 自己的青绿标识和中文字体。优先重排登录、研究列表、详情和草稿工作区的展示层。小范围调整沿用现有组件与功能。能访问本机时读取 `D:/.codex/skills/hallmark/SKILL.md` 和 `references/redesign.md`。
+2. **用 `impeccable audit` 做独立复查。** 改完后按 Operate 模式查主内容区、标题层级、筛选首屏高度、状态名称、焦点、对比度和响应式。逐条复核自动报告，记录问题、实测证据和修复结果。能访问本机时读取 `D:/.codex/skills/impeccable/SKILL.md` 与 `reference/audit.md`。
+3. **参考 PM 地图曾用的 `finesse-ui` 和 `ui-ux-pro-max`。** 用 `finesse-ui` 的 product/workflow 准则检查密度和主次操作。用 `ui-ux-pro-max` 检查文字可读性、键盘和触屏。两者按需补充主流程。本机技能在 `D:/.codex/skills/finesse-ui/SKILL.md` 和 `D:/.codex/skills/ui-ux-pro-max/SKILL.md`。
+4. **用 `playwright` 在真实浏览器验收。** 参考 `D:/.codex/skills/playwright/SKILL.md`。复用仓库 `qa/README.md` 和浏览器验收脚本，输出同页面同尺寸的前后对比截图。若没有实际运行某项工具，记录为待验。
 
 云端环境读不到本机技能时，直接应用以下设计与验收要求。技能不需要进入产品运行依赖。
 

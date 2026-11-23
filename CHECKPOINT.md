@@ -3,7 +3,13 @@
 ## 2026-11-24 网页使用说明与 Gemini 交接
 
 - [RUN] 新增 `/guide.html`，从登录页、研究库和公众号草稿均可打开。包含分析与选题进度、翻译、写稿、两版导出、额度和备份操作。说明页本身只读取静态文件，资料库仍需登录。 [验收记录](fde-workbench/docs/VALIDATION.md#2026-11-24-使用说明页)
-- [READ] [Gemini 前端提示词](fde-workbench/docs/GEMINI_FRONTEND_PROMPT.md) 以草稿 PR #7 为基线，包含 `finesse-ui` 产品设计、`ui-ux-pro-max` 交互检查和 Playwright 验收流程。旧的实际运行与账号验收见下方记录。
+- [READ] [Gemini 前端提示词](fde-workbench/docs/GEMINI_FRONTEND_PROMPT.md) 以草稿 PR #7 为基线，按 PM PC 实际采用的 Hallmark 重排和 Impeccable 独立审查交接。保留 `finesse-ui`、`ui-ux-pro-max` 和 Playwright 的适用检查。
+
+## 2026-11-24 Windows 五次真实模型验收
+
+- [RUN] 按用户单次授权临时为进程增加 5 个尝试名额。官方 Codex CLI 实际完成 1 份公众号初稿、2 张研究卡和 2 份中文译文。五项重复操作都复用已保存结果。 [验收结果](fde-workbench/docs/VALIDATION.md#2026-11-24-真实-codex-五次验收)
+- [RUN] 首次长文翻译发现句中切分被拼成空行。`0442124` 修复译文拼接，130 项测试通过，另用最后一次真实请求验了四个片段的长文。翻译请求和缓存标识保持原样，前一份译文和回执可继续读取。
+- [RUN] 24 小时上限已恢复 5。测试前后 `.env` 相同，采集、分析和自动分析恢复关闭，原 5 条回执包含的 2 条 unknown 保留。账本共 10 条回执。
 
 ## 2026-11-23 Windows 本机升级与公众号验收
 
