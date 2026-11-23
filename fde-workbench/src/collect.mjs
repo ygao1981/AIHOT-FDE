@@ -86,21 +86,26 @@ export function parseList(html,source) {
   }
   return dedupeEntries(items,source);
 }
-export async function readSource(source,{fetcher=fetchText}={}) {
+export function sourceFetchOptions(source, sourceProxyUrl, {listing=false}={}) {
+  const allowedHosts=listing?[...new Set([new URL(source.url).hostname,...source.allowedHosts||[]])]:source.allowedHosts;
+  return {allowedHosts,sourceProxyUrl:source.disposition==='auto'?sourceProxyUrl:undefined};
+}
+export async function readSource(source,{fetcher=fetchText,sourceProxyUrl}={}) {
   if(source.kind==='manual')return [];
-  const listing=await fetcher(source.url,{allowedHosts:[...new Set([new URL(source.url).hostname,...source.allowedHosts||[]])]});
+  const listing=await fetcher(source.url,sourceFetchOptions(source,sourceProxyUrl,{listing:true}));
   const entries=source.kind==='rss'?parseFeed(listing.text,source):parseList(listing.text,source);
   if(!entries.length)throw new AppError('empty_source','没有解析到文章，请检查信源规则或改用手动收录。');
   return entries;
 }
 export async function collectSource(store,source,config,{fetcher=fetchText}={}) {
-  const entries=await readSource(source,{fetcher});let added=0,failed=0;
+  const entries=await readSource(source,{fetcher,sourceProxyUrl:config.sourceProxyUrl});let added=0,failed=0;
+  const detailOptions=sourceFetchOptions(source,config.sourceProxyUrl);
   const first=!source.lastCheckedAt;
   for(const e of entries){
     if(store.findUrl(e.url))continue;
     let article={...e},bodyKind='page';
     try{
-      const page=await fetcher(e.url,{allowedHosts:source.allowedHosts});
+      const page=await fetcher(e.url,detailOptions);
       const detail=extractArticle(page.text,page.url,source);article={...e,...detail,publishedAt:detail.publishedAt||e.publishedAt};
       if(detail.body.length<180)throw new AppError('needs_body','正文不足。');
     }catch(error){

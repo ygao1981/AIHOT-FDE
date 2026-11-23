@@ -6,6 +6,14 @@ export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export class AppError extends Error {
   constructor(code, message, status = 400) { super(message); this.code = code; this.status = status; }
 }
+export function readSourceProxyUrl(value = '') {
+  const input = value.trim();
+  if (!input) return '';
+  const endpoint = /^http:\/\/(127\.0\.0\.1|\[::1\]):([1-9]\d{0,4})\/?$/.exec(input);
+  if (!endpoint || Number(endpoint[2]) > 65535)
+    throw new AppError('invalid_config', 'FDE_SOURCE_PROXY_URL 需要填写本机回环 HTTP 代理及实际端口。');
+  return 'http://' + endpoint[1] + ':' + endpoint[2];
+}
 function number(env, key, fallback, min, max, integer = true) {
   const raw = env[key];
   const n = raw === undefined || raw === '' ? fallback : Number(raw);
@@ -23,6 +31,7 @@ export function loadConfig(env = process.env) {
   const config = {
     host: env.FDE_HOST || '127.0.0.1', port, baseUrl: baseUrl.origin,
     dataDir: resolve(ROOT, env.FDE_DATA_DIR || '.data'), accessToken: env.FDE_ACCESS_TOKEN || '',
+    sourceProxyUrl: readSourceProxyUrl(env.FDE_SOURCE_PROXY_URL),
     collectEnabled: env.FDE_COLLECT_ENABLED === 'true', analysisEnabled: env.FDE_ANALYSIS_ENABLED === 'true',
     autoAnalyze: env.FDE_AUTO_ANALYZE === 'true', provider,
     dailyLimit: number(env, 'FDE_DAILY_LIMIT', 5, 1, 50),

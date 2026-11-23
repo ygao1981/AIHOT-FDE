@@ -75,6 +75,8 @@ ssh -N -L 3210:127.0.0.1:3210 your-user@your-vps
 
 ## 4. 先采集，再选模型
 
+普通网络可将 `FDE_SOURCE_PROXY_URL` 留空。Windows 或 Linux 遇到本机代理的 Fake-IP 时，可填写同一网络环境中已有的可信回环 HTTP CONNECT 代理。运行时使用的地址和端口按本机监听核实。在容器内运行时，回环地址属于容器自身。 [Windows 代理检查](WINDOWS_LOCAL.md#检查本机采集代理) · [两种出站路径及信任边界](ARCHITECTURE.md)
+
 编辑本目录 `.env`，先只开启：
 
 ```dotenv

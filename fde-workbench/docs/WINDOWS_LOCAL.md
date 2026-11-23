@@ -41,6 +41,27 @@ npm.cmd start
 
 先验证页面、资料导入、个人笔记、正常退出后重启，以及 `npm.cmd run backup`。这一步不需要模型登录。
 
+### 检查本机采集代理
+
+当 RSS 或列表报 `blocked_url` 时，先用当前运行 Node 的终端查看原域名的解析结果，并检查活动网卡、本机监听端口及代理进程。`198.18.0.0/15` 属于特殊用途地址，查询返回该网段时可继续确认是否由活动 TUN 的 Fake-IP 服务应答。 [Mihomo DNS 配置](https://wiki.metacubex.one/en/config/dns/)
+
+```powershell
+node -e "require('node:dns').lookup('tech.meituan.com',{all:true},(error,addresses)=>console.log(error?.code ?? addresses))"
+Get-NetAdapter | Where-Object Status -eq Up | Select-Object Name, InterfaceDescription
+Get-NetTCPConnection -State Listen -LocalAddress '127.0.0.1' | Select-Object LocalPort, OwningProcess
+Get-ChildItem Env: | Where-Object Name -Match '^(HTTP|HTTPS|ALL|NO)_PROXY$' | Select-Object Name
+```
+
+如果现有可信代理提供 HTTP CONNECT，在研究台 `.env` 中将 `FDE_SOURCE_PROXY_URL` 设置为 `http://127.0.0.1:<已核实端口>`。端口和所属进程以本机实测为准。只在同机回环代理支持 CONNECT 时填写。已审核信源的 HTTPS 读取由代理解析域名，应用继续核对跳转白名单和证书。Windows DNS、TUN、路由和系统代理可沿用原配置。手工补正文仍可独立使用。 [网络安全边界](ARCHITECTURE.md)
+
+```powershell
+npm.cmd run sources:check -- --id=meituan-engineering
+npm.cmd run sources:check -- --id=shopify-engineering
+npm.cmd run sources:check -- --id=anthropic-engineering
+```
+
+检查结果中的 `bodyKind=page` 表示成功读取原文，`publishedAt` 为原始发表日期。确认后重启研究台，采集与模型分析可以独立开关。
+
 ## 3. 准备官方 Codex CLI
 
 先查找已经存在的官方 CLI；存在且兼容时无需重复安装。缺失时按 [官方 CLI 文档](https://developers.openai.com/codex/cli/) 安装，核对官方包 `@openai/codex` 或官方原生发行文件，记录验证版本。[非交互文档](https://developers.openai.com/codex/noninteractive/) 说明了 `codex exec` 的结构化输出和自动化用法。

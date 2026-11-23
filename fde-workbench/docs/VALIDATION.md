@@ -1,5 +1,23 @@
 # 验证记录
 
+## 2026-11-23 Windows Fake-IP 采集验收
+
+[RUN] 以 PR #4 的 `a5b18b1` 为基线，在 Windows、Node 24.22.3 上验收。此次关闭模型分析与自动分析，采集只在验收期间开启。SQLite 用量账本逐字段比对一致，保留原有 5 条回执，其中 2 条 `unknown`。
+
+| 检查 | 实际结果 |
+|---|---|
+| 默认 DNS | 美团、Shopify 和 Anthropic 返回 `198.18.0.0/15` 中的地址，直接采集返回 `blocked_url`。TUN 的 DNS 应答与 Node 查询一致。 |
+| 明确配置的采集路径 | 使用既有回环 HTTP CONNECT 代理，三家的公开入口均可读取。`sources:check` 各解析 8 个条目，首篇均为全文且具备原始日期。 |
+| 美团技术团队 | 新增 6 篇。首篇示例正文 7,900 字符，日期 2026-11-18。 [原文](https://tech.meituan.com/2026/11/18/Papers-EMNLP-2026.html) |
+| Shopify Engineering | 新增 5 篇。首篇示例正文 6,919 字符，日期 2026-11-18。 [原文](https://shopify.engineering/secure-agentic-apps) |
+| Anthropic Engineering | 新增 8 篇。首篇示例正文 27,861 字符，日期 2026-11-13。 [原文](https://www.anthropic.com/research/building-strong-safety-evaluations) |
+| SQLite 与重启 | 19 篇新增资料均含正文和原始日期，重复检查新增 0 篇。正常重启后仍有 26 篇资料及三家信源状态，旧资料逐字段一致，待分析队列与新增模型请求均为 0。 |
+| Windows 自动回归 | `npm.cmd run check` 检查 27 个文件。`npm.cmd test` 90 项通过，`npm.cmd audit --omit=dev` 报告 0 个漏洞。 |
+
+[RUN] 模拟回归覆盖 IPv4、IPv6、混合答案和特殊用途地址，验证直连连接使用已核验地址、代理拒绝无效证书与越界跳转、断开时不回退、重复采集不重复入库。Fake-IP 在未显式配置可信代理时继续拒绝。任意手工 URL 不走专用代理。
+
+[READ] 采用应用级的本机代理设置，让可信代理为已审核域名解析，保留源站 HTTPS 证书检查。系统 DNS、代理、路由与 TUN 设置保持原状。应用没有采用双公共 DNS、Fake-IP 全量放行或禁用 TLS 校验。代理最终解析的 IP 由代理管理。全局 DNS 防泄露效果本轮未重新验证。 [架构说明](ARCHITECTURE.md) · [部署配置](WINDOWS_LOCAL.md#检查本机采集代理)
+
 ## 2026-11-23 CLI 事件适配器修复（尚未进行用户真实重试）\n\nWindows 用户报告：授权和 CLI 参数诊断通过，但一次真实美团文章分析返回 `unexpected_tool`，保存 1 条 `unknown` 回执并暂停。CLI 官方协议允许 `todo_list` 作为非工具计划事件；原代码只允许两种 item，存在误判。**无法根据现场回执证明本次具体 item 类型就是 `todo_list`。**\n\n本版仅将 `todo_list` 纳入非工具白名单，实际命令、文件、MCP、网页等工具事件和未知 item 继续失败关闭，并以受限类型名记录未来的拒绝原因。不修改用户已有回执、不自动重试、不增加模型调用。新增假 CLI 测试覆盖计划事件和工具事件。完整处置见 [INCIDENT_20261123_CODEX_EVENT.md](INCIDENT_20261123_CODEX_EVENT.md)。修复提交 [`046a7cb`](https://github.com/ygao1981/AIHOT-FDE/commit/046a7cbc7afbdad191cfabd3a069defc3a9f23ef) 的 [FDE workbench CI 45135209199](https://github.com/ygao1981/AIHOT-FDE/actions/runs/45135209199) 已通过：Windows 82 项、Linux 82 项测试（均为 0 失败）、真实 Chromium 页面验收和基础 Docker 检查通过。所有模型相关用例使用模拟 CLI，没有消耗用户真实模型额度。用户真实账号仍未复验。\n\n---\n\n
 ## 2.1.0 — 2026-11-22
 

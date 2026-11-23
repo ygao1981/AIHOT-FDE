@@ -47,6 +47,8 @@ npm start
 
 首次采集、旧文章和未披露日期的资料不会自动送给模型；它们仍可以人工排队分析。打开网页、搜索、保存笔记和导出均不触发模型。
 
+如果代理的 Fake-IP 让已审核信源返回 `blocked_url`，可以在研究台的 `.env` 中设置 `FDE_SOURCE_PROXY_URL`，指向已经核实的本机 HTTP CONNECT 代理。留空可沿用普通网络的采集路径。运行 `npm run sources:check -- --id=meituan-engineering` 可检查入口、正文和原始日期，命令只访问公开信源。 [Windows 代理检查与验收](docs/WINDOWS_LOCAL.md#检查本机采集代理)
+
 ## 文档入口
 
 | 目的 | 文档 |
