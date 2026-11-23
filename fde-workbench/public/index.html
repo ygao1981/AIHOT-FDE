@@ -46,6 +46,7 @@
         <button id="login-submit" type="submit" class="button primary full">进入工作区 <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
       </form>
       <p class="form-hint login-hint">口令用于保护研究资料，不是模型服务的密钥。请勿在此输入模型 API Key。</p>
+      <p><a class="button text-button" href="/guide.html">使用说明</a></p>
     </section>
   </main>
 
@@ -68,7 +69,7 @@
       <section id="view-library" class="view" role="tabpanel" aria-labelledby="tab-library">
         <div class="page-heading"><div><p class="eyebrow">资料 · 证据 · 选题</p><h1>研究库</h1><p class="page-lead">优先看业务问题、实施方法和可复用经验。</p></div><div class="page-actions"><button id="refresh-library" class="button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>刷新</button><button id="export-all" class="button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>导出研究资料</button></div></div>
         <div class="stat-grid" aria-label="研究库概况"><div class="stat-card"><span>已收录资料</span><strong id="stat-total">—</strong></div><div class="stat-card"><span>待分析资料</span><strong id="stat-candidate">—</strong></div><div class="stat-card"><span>已完成分析</span><strong id="stat-analyzed">—</strong></div><div class="stat-card emphasis"><span>已列入选题</span><strong id="stat-shortlisted">—</strong></div></div>
-        <p id="analysis-mode" class="section-note"></p>
+        <div class="library-help"><p id="analysis-mode" class="section-note"></p><a class="button text-button" href="/guide.html">使用说明</a></div>
         <form id="filter-form" class="filter-bar" aria-label="筛选研究资料">
           <div class="search-field"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><label for="search" class="sr-only">搜索资料</label><input id="search" type="search" name="q" placeholder="搜索标题、研究内容或笔记" autocomplete="off"><button type="submit" class="search-submit">搜索</button></div>
           <div class="select-field">

@@ -49,7 +49,9 @@ export function createApp(store,worker,config,{importer=importArticle}={}) {
           throw new AppError('invalid_origin','请求来源不匹配，请从本站页面操作。',403);
       }
       if(path==='/api/health'&&method==='GET')return send(res,200,{ok:true,version:'2.2.0'});
-      const assets={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/style.css':'style.css','/editorial.html':'editorial.html','/editorial.js':'editorial.js','/editorial.css':'editorial.css','/editorial-assets.js':'editorial-assets.js'};
+      const assets={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/style.css':'style.css',
+        '/editorial.html':'editorial.html','/editorial.js':'editorial.js','/editorial.css':'editorial.css','/editorial-assets.js':'editorial-assets.js',
+        '/guide.html':'guide.html','/guide.css':'guide.css'};
       if(assets[path]&&method==='GET') {
         const data=await readFile(resolve(ROOT,'public',assets[path]));
         res.writeHead(200,{'Content-Type':path.endsWith('.js')?'text/javascript; charset=utf-8':path.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8'});return res.end(data);

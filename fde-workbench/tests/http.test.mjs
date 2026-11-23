@@ -31,6 +31,23 @@ test('cross-origin mutations and incorrect tokens are rejected',async t=>{
   assert.equal((await ctx.request('/api/login',{method:'POST',body:'{"token":"wrong"}',headers:{Origin:'https://untrusted.example'}})).status,403);
   assert.equal((await ctx.request('/api/login',{method:'POST',body:'{"token":"wrong"}'})).status,401);
 });
+test('the static user guide is readable before login without exposing the library or creating attempts',async t=>{
+  const ctx=await app(t),article=add(ctx.store);
+  const guide=await ctx.request('/guide.html');
+  assert.equal(guide.status,200);
+  assert.match(guide.headers.get('content-type'),/^text\/html/);
+  assert.match(guide.headers.get('content-security-policy'),/script-src 'self'/);
+  const html=await guide.text();
+  assert.match(html,/<h1>使用说明<\/h1>/u);
+  assert.ok(!html.includes(ctx.config.accessToken));
+  for(const path of ['/api/overview',`/api/articles/${article.id}`,'/api/editorial']){
+    assert.equal((await ctx.request(path)).status,401);
+  }
+  const css=await ctx.request('/guide.css');
+  assert.equal(css.status,200);
+  assert.match(css.headers.get('content-type'),/^text\/css/);
+  assert.equal(ctx.store.overview(ctx.config).usage.attempts24h,0);
+});
 test('authenticated private reading, editorial changes and export never call a model',async t=>{
   const ctx=await app(t),a=add(ctx.store);const auth={Authorization:`Bearer ${ctx.config.accessToken}`};
   const edit=await ctx.request(`/api/articles/${a.id}`,{method:'PATCH',headers:auth,body:JSON.stringify({editorialStatus:'shortlisted',personalNotes:'用于公众号选题。'})});

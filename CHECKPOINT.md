@@ -1,5 +1,10 @@
 # CHECKPOINT — FDE 研究台 v2.2
 
+## 2026-11-24 网页使用说明与 Gemini 交接
+
+- [RUN] 新增 `/guide.html`，从登录页、研究库和公众号草稿均可打开。包含分析与选题进度、翻译、写稿、两版导出、额度和备份操作。说明页本身只读取静态文件，资料库仍需登录。 [验收记录](fde-workbench/docs/VALIDATION.md#2026-11-24-使用说明页)
+- [READ] [Gemini 前端提示词](fde-workbench/docs/GEMINI_FRONTEND_PROMPT.md) 以草稿 PR #7 为基线，包含 `finesse-ui` 产品设计、`ui-ux-pro-max` 交互检查和 Playwright 验收流程。旧的实际运行与账号验收见下方记录。
+
 ## 2026-11-23 Windows 本机升级与公众号验收
 
 - [READ] [PR #6](https://github.com/ygao1981/AIHOT-FDE/pull/6) 为草稿，`codex/fde-editorial-workbench` 头部 `56b6230` 在功能提交 `8a36611` 之上补交接文档。Windows 修复在叠加分支 `codex/fde-editorial-windows-acceptance`，保留上游 CLI 和采集代理修复。

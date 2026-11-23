@@ -54,11 +54,14 @@ npm start
 
 ## 文档入口
 
+运行后可从研究库、登录页或公众号草稿打开「使用说明」。本机默认地址为 [使用说明](http://127.0.0.1:3210/guide.html)。
+
 | 目的 | 文档 |
 |---|---|
 | 当前完成情况、限制、后续接手 | [仓库 CHECKPOINT](../CHECKPOINT.md)、[Codex 接手顺序](docs/CODEX_HANDOFF.md) |
 | 直接交给 Codex 安装与验收 | [Codex 部署提示词](docs/CODEX_DEPLOY_PROMPT.md) |
 | 交给 Codex 继续开发 | [二次开发提示词](docs/CODEX_DEVELOPMENT_PROMPT.md) |
+| 交给 Gemini 优化前端 | [Gemini 前端提示词](docs/GEMINI_FRONTEND_PROMPT.md) |
 | T3 为什么不直接嵌入 | [T3 设计取舍](docs/T3_DESIGN_REVIEW.md) |
 | Windows 本机 / 外部脚本接入 | [WINDOWS_LOCAL](docs/WINDOWS_LOCAL.md)、[EVENT_INTAKE](docs/EVENT_INTAKE.md) |
 | 系统设计与模块职责 | [ARCHITECTURE](docs/ARCHITECTURE.md) |
