@@ -303,26 +303,52 @@ test('normal Codex todo_list start/update/complete events are non-tool metadata'
   assert.equal(await readFile(fixture.calls, 'utf8'), '1');
 });
 
-test('official tool events and unknown items still fail closed', async t => {
-  for (const kind of ['command_execution','file_change','mcp_tool_call','web_search','collab_tool_call','unexpected_new_item']) {
-    const fixture = await cliFixture(t, `console.log(JSON.stringify({type:'item.started',item:{type:${JSON.stringify(kind)}}}));setTimeout(()=>{},1000);`);
+test('official tools, unknown events and malformed items still fail closed', async t => {
+  const events = ['command_execution', 'file_change', 'mcp_tool_call', 'web_search', 'collab_tool_call', 'unexpected_new_item', 'error', undefined]
+    .map(type => ({ type: 'item.started', item: { type } }));
+  events.push({ type: 'item.future', item: { type: 'agent_message' } }, { type: 'unknown.tool' });
+  for (const event of events) {
+    const fixture = await cliFixture(t, `console.log(${JSON.stringify(JSON.stringify(event))});setTimeout(()=>{},1000);`);
     await assert.rejects(runAnalysis(fixture.config, ARTICLE), e => e.code === 'unexpected_tool' && e.mayHaveConsumed);
     assert.equal(await readFile(fixture.calls, 'utf8'), '1');
   }
 });
 
-test('Codex error item rejects an incomplete analysis without treating it as a tool', async t => {
-  const fixture = await cliFixture(t, `console.log(JSON.stringify({type:'item.completed',item:{type:'error',message:'private unexpected details'}}));setTimeout(()=>{},1000);`);
+const notice = `console.log(JSON.stringify({type:'item.completed',item:{type:'error',message:'private notice details'}}));`;
+
+test('Codex notices allow a successful turn and log only the event type', async t => {
+  const warn = t.mock.method(console, 'warn', () => {});
+  const fixture = await cliFixture(t, `${notice}\n${notice}\n${successCli}`);
+  const response = await runAnalysis(fixture.config, ARTICLE);
+  assert.deepEqual(warn.mock.calls.map(call => call.arguments), [['FDE Codex notice item type: error']]);
+  assert.equal(response.result.title, result().title);
+  assert.equal(response.usage.inputTokens, 100);
+  assert.equal(await readFile(fixture.calls, 'utf8'), '1');
+});
+
+test('Codex notices require a completed turn even if a valid response file exists', async t => {
+  const fixture = await cliFixture(t, `${notice}\nawait writeFile(output,${JSON.stringify(JSON.stringify(result()))});`);
   await assert.rejects(runAnalysis(fixture.config, ARTICLE), e => {
     assert.equal(e.code, 'cli_execution');
     assert.equal(e.mayHaveConsumed, true);
-    assert.ok(!e.message.includes('private unexpected details'));
+    assert.ok(!e.message.includes('private notice details'));
     return true;
   });
 });
 
-test('unexpected CLI tool events abort immediately, before a later result is accepted', async t => {
-  const fixture = await cliFixture(t, `console.log(JSON.stringify({type:'item.started',item:{type:'command_execution',command:'do not run'}}));setTimeout(async()=>{await writeFile(output,'{}');},300);`);
+test('fatal Codex events still abort after a nonterminal notice', async t => {
+  for (const event of [
+    { type: 'error', message: '401 private account details' },
+    { type: 'turn.failed', error: { message: '401 private account details' } },
+  ]) {
+    const fixture = await cliFixture(t, `${notice}\nconsole.log(${JSON.stringify(JSON.stringify(event))});\n${successCli}`);
+    await assert.rejects(runAnalysis(fixture.config, ARTICLE), e => e.code === 'cli_authentication' && e.mayHaveConsumed && !e.message.includes('private account details'));
+    assert.equal(await readFile(fixture.calls, 'utf8'), '1');
+  }
+});
+
+test('a tool event after a notice still aborts before accepting a later result', async t => {
+  const fixture = await cliFixture(t, `${notice}\nconsole.log(JSON.stringify({type:'item.started',item:{type:'command_execution',command:'do not run'}}));\n${successCli}`);
   await assert.rejects(runAnalysis(fixture.config, ARTICLE), e => e.code === 'unexpected_tool' && e.mayHaveConsumed);
   assert.equal(await readFile(fixture.calls, 'utf8'), '1');
 });

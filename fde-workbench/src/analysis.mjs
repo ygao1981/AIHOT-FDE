@@ -359,7 +359,7 @@ async function runCli(c, article, deps) {
     await writeFile(join(directory, 'schema.json'), JSON.stringify(SCHEMA), { mode: 0o600 });
     const env = buildCodexEnvironment(c, directory, deps.env ?? process.env);
     const aggregate = { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0 };
-    let turns = 0, stderr = '', pendingLine = '', bytes = 0, failure = null;
+    let turns = 0, sawNotice = false, stderr = '', pendingLine = '', bytes = 0, failure = null;
     const resultCode = await new Promise(resolve => {
       let child;
       try {
@@ -380,22 +380,32 @@ async function runCli(c, article, deps) {
       const timer = setTimeout(() => abort('cli_timeout_unknown'), c.timeoutMs);
       function eventLine(line) {
         let event; try { event = JSON.parse(line); } catch { return; }
-        if (['turn.failed', 'error'].includes(event.type)) abort(cliErrorCode(JSON.stringify(event)));
-        if (/^item\./.test(event.type) && event.item?.type) {
-          const kind = event.item.type;
-          // Codex exec emits todo_list for a plan; it is metadata, not a tool invocation.
-          if (kind === 'error') abort('cli_execution');
-          else if (!['agent_message', 'reasoning', 'todo_list'].includes(kind)) {
-            // Log only a bounded event *type* for diagnosis. Never log article text, commands, output or auth.
-            const safeKind = typeof kind === 'string' && /^[a-z][a-z0-9_]{0,40}$/.test(kind) ? kind : 'unrecognized';
-            console.warn(`FDE Codex blocked item type: ${safeKind}`);
-            abort('unexpected_tool');
-          }
+        const type = event?.type;
+        const itemType = event?.item?.type;
+        if (type === 'turn.failed' || type === 'error') {
+          console.warn(`FDE Codex failure event type: ${type}`);
+          abort(cliErrorCode(JSON.stringify(event)));
+          return;
         }
-        if (event.type === 'turn.completed') {
+        if (type === 'turn.completed') {
           turns++; const next = usageOf(event.usage);
           for (const key of Object.keys(aggregate)) aggregate[key] = aggregate[key] === null || next[key] === null ? null : aggregate[key] + next[key];
+          return;
         }
+        if (type === 'thread.started' || type === 'turn.started') return;
+        // Codex exec encodes warnings and other nonterminal notices as completed error items.
+        if (type === 'item.completed' && itemType === 'error') {
+          if (!sawNotice) console.warn('FDE Codex notice item type: error');
+          sawNotice = true;
+          return;
+        }
+        const isItem = ['item.started', 'item.updated', 'item.completed'].includes(type);
+        if (isItem && ['agent_message', 'reasoning', 'todo_list'].includes(itemType)) return;
+        // Never log event messages, article text, commands or other payload fields.
+        const kind = isItem ? itemType : type;
+        const safeKind = typeof kind === 'string' && /^[a-z][a-z0-9_.]{0,40}$/.test(kind) ? kind : 'unrecognized';
+        console.warn(`FDE Codex blocked ${isItem ? 'item' : 'event'} type: ${safeKind}`);
+        abort('unexpected_tool');
       }
       child.on('spawn', () => { spawned = true; });
       child.on('error', () => { failure ??= 'cli_spawn'; });
@@ -422,7 +432,14 @@ async function runCli(c, article, deps) {
     const usage = turns ? aggregate : usageOf();
     const details = { usage, costUsd: null, requestId: null };
     if (failure) throw new AnalysisError(failure, spawned, details);
-    if (resultCode !== 0) throw new AnalysisError(cliErrorCode(stderr), spawned, details);
+    if (resultCode !== 0) {
+      console.warn('FDE Codex failure event type: process.exit');
+      throw new AnalysisError(cliErrorCode(stderr), spawned, details);
+    }
+    if (sawNotice && turns === 0) {
+      console.warn('FDE Codex failure event type: turn.incomplete');
+      throw new AnalysisError('cli_execution', spawned, details);
+    }
     const file = join(directory, 'result.json');
     if ((await stat(file)).size > 256 * 1024) throw new AnalysisError('output_limit', true, details);
     let result;

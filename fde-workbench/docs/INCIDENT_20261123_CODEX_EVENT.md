@@ -1,8 +1,8 @@
 # Codex CLI 事件拦截：2026-11-23 现场验收记录与处置
 
-> **2026-11-23 最新用户授权（覆盖旧的一篇/每天一次试运行要求）：** Windows 本机真实测试上限改为 `FDE_DAILY_LIMIT=5`，表示滚动 24 小时内**最多五次真实分析尝试**，失败和 unknown 同样计入。旧美团 unknown 回执必须保留且如仍在 24 小时内已占一次。修复验证、备份和安全核对后允许恢复暂停、逐篇测试，无须每篇重复请求授权；不得自动重试未知请求或超出总次数。先手动测试，成功且稳定后可在剩余次数内短暂开启自动分析，结束后关闭。完整操作见 [5 次真实测试接手提示词](fde-workbench/docs/CODEX_TEST_5_PER_DAY_PROMPT.md)。
+> **2026-11-23 最新用户授权（覆盖旧的一篇/每天一次试运行要求）**　Windows 本机真实测试上限改为 `FDE_DAILY_LIMIT=5`，表示滚动 24 小时内**最多五次真实分析尝试**，失败和 unknown 同样计入。旧美团 unknown 回执必须保留且如仍在 24 小时内已占一次。修复验证、备份和安全核对后允许恢复暂停、逐篇测试，无须每篇重复请求授权；不得自动重试未知请求或超出总次数。手工分析至少成功两篇且安全检查通过后，可在剩余次数内临时开启自动分析，结束后关闭。完整操作见 [5 次真实测试接手提示词](CODEX_TEST_5_PER_DAY_PROMPT.md)。
 
-实现提交 [`046a7cb`](https://github.com/ygao1981/AIHOT-FDE/commit/046a7cbc7afbdad191cfabd3a069defc3a9f23ef) 已通过 [FDE CI 45135209199](https://github.com/ygao1981/AIHOT-FDE/actions/runs/45135209199)：Windows、Linux 82 项自动测试均通过，Linux 浏览器和基础 Docker 检查通过；**实际账号的第 2 次分析尚未执行**。注意此前唯一真实分析的 `unknown` 回执没有被修改。
+实现提交 `046a7cb` 在 Windows 和 Linux 各通过 82 项自动测试，Linux 浏览器和基础 Docker 检查通过。当时实际账号已执行一次分析，保留了 `unknown` 回执。 [提交](https://github.com/ygao1981/AIHOT-FDE/commit/046a7cbc7afbdad191cfabd3a069defc3a9f23ef) · [FDE CI 45135209199](https://github.com/ygao1981/AIHOT-FDE/actions/runs/45135209199)
 
 ## 已确认事实（用户本机报告，不是我们远程实测）
 
@@ -17,13 +17,11 @@
 
 源文件 `fde-workbench/src/analysis.mjs` 的 CLI JSONL 事件处理此前只允许 `agent_message` 和 `reasoning`。官方 `codex exec --json` 可能发出 `todo_list`（纯任务计划事件，含 started/updated/completed），不应视作工具执行。
 
-本次将 `todo_list` 加入**严格非工具白名单**；`command_execution`、`file_change`、`mcp_tool_call`、`web_search`、`collab_tool_call` 及未知类型仍被拒绝；`error` item 作为执行错误处理。本次修改不能证明首次真实失败就是 `todo_list`，因为旧版没有记录该类型。
+`046a7cb` 将 `todo_list` 加入白名单。`command_execution`、`file_change`、`mcp_tool_call`、`web_search`、`collab_tool_call` 及未知类型仍会中止分析。首次真实失败的具体事件类型未被旧版记录。
 
-未来拒绝时，后端日志仅输出形如 `FDE Codex blocked item type: <safe-type>` 的受限类型名，不保存、打印正文、命令、事件原始负载、登录凭据或 token。诊断时先使用这条类型名区分“真工具触发”与适配器误判。
+官方 CLI 0.169.1 会把运行警告、配置提示和模型路由提示编码为 `item.completed`，其 `item.type` 是 `error`。适配器收到这种通知后继续读取，直到收到 `turn.completed` 且进程正常退出，再按 Schema 和原文校验结果。顶层 `error`、`turn.failed`、异常退出及未知事件仍会拒绝结果。 [官方 JSONL 事件实现](https://github.com/openai/codex/blob/rust-v0.169.1/codex-rs/exec/src/event_processor_with_jsonl_output.rs#L412-L565) · [事件协议](https://github.com/openai/codex/blob/rust-v0.169.1/codex-rs/exec/src/exec_events.rs#L8-L37)
 
-参考官方：
-- https://developers.openai.com/codex/noninteractive
-- https://github.com/openai/codex/blob/main/codex-rs/exec/src/exec_events.rs
+诊断日志只报告受限类型名，例如 `FDE Codex notice item type: error`、`FDE Codex failure event type: turn.failed`、`FDE Codex blocked item type: command_execution`。通知、失败和被拒绝的工具可以据此区分。历史回执缺少事件分类时，具体原因仍须记为未知。 [Codex 非交互模式](https://developers.openai.com/codex/noninteractive)
 
 ## 处置原则
 
@@ -31,7 +29,7 @@
 2. 先在 Codex 本机保留 `.env`、`.data`、用户现场报告，以及本地未提交修改；数据库备份需验证独立可读。禁止把真实库、凭据、CLI 原始日志推送 GitHub。
 3. 安全合并此修复分支，运行 `npm run check`、`npm test`，分别验证普通计划事件允许和执行工具仍拒绝；测试使用假 CLI，不消耗真实额度。
 4. 复查安装的官方 CLI 版本、`codex exec --help` 与本项目实际禁用工具的参数。只读沙箱不等于没有任何工具；不能为了通过验证删掉限制。
-5. **在用户明确接受再消耗一次且有新的可用尝试额度时**，解除暂停，手工对已知文章单次重试或换一篇非敏感文章做一次测试。第一次已占用默认日上限 1，未满滚动 24 小时不得偷偷调高上限。不得自动重发，也不得启动自动分析。
+5. 用户已授权且滚动 24 小时仍有额度时，可在故障核对完成后解除暂停，换一篇非敏感文章进行下一次人工测试。已保存的 `unknown` 同样占用当日尝试额度。自动化验收的开启条件和关停步骤见 [5 次真实测试接手提示词](CODEX_TEST_5_PER_DAY_PROMPT.md)。
 6. 若仍返回 `unexpected_tool`，先读日志里受限的具体事件类型；如果是 `command_execution` 或 MCP 等真实工具事件，应排查 CLI 配置而非放行该类型。
 7. 有完整结构化输出、可定位原文引文、正确用量回执且同一输入普通重复排队不新增模型请求，才视为真实单篇验收通过。
 8. 在本机 `CHECKPOINT.md`、`docs/VALIDATION.md` 记录最终安装的提交号、真正运行过的测试、实际事件类型和账户页面变化；记录为本机结果，不写成 CI 实测。
