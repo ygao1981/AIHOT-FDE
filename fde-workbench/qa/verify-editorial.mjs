@@ -33,20 +33,31 @@ function zipEntries(bytes) {
   return files;
 }
 async function previewReady(frame,expectedUrl,expectedTitle) {
-  await frame.waitForURL(expectedUrl);
-  const heading=frame.locator('h1');await heading.waitFor({state:'visible'});
-  assert.equal(await heading.innerText(),expectedTitle);
-  await heading.scrollIntoViewIfNeeded();
-  const evidence=await frame.evaluate(async()=>{
-    await document.fonts.ready;
-    await Promise.all([...document.images].map(image=>image.decode()));
-    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  const deadline=Date.now()+15000;
+  const bounded=async(stage,action)=>{
+    const remaining=deadline-Date.now();report.previewWait={url:expectedUrl,stage};
+    if(remaining<=0)throw new Error(`预览检查超过 15 秒总期限：${stage}`);
+    let timer;
+    try{return await Promise.race([Promise.resolve().then(action),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`预览检查超过 15 秒总期限：${stage}`)),remaining);})]);}
+    finally{clearTimeout(timer);}
+  };
+  await bounded('前台页面',()=>frame.page().bringToFront());
+  await bounded('最终版式地址',()=>frame.waitForURL(expectedUrl));
+  if(frame.parentFrame())await bounded('预览进入视口',async()=>{const element=await frame.frameElement();try{await element.scrollIntoViewIfNeeded();}finally{await element.dispose();}});
+  const heading=frame.locator('h1');await bounded('标题可见',()=>heading.waitFor({state:'visible'}));
+  assert.equal(await bounded('标题内容',()=>heading.innerText()),expectedTitle);
+  await bounded('标题进入视口',()=>heading.scrollIntoViewIfNeeded());
+  await bounded('字体加载',()=>frame.evaluate(()=>document.fonts.ready.then(()=>true)));
+  await bounded('图片解码',()=>frame.evaluate(()=>Promise.all([...document.images].map((image,index)=>image.decode().catch(()=>{throw new Error(`第 ${index+1} 张预览图片解码失败`);}))).then(()=>true)));
+  // The production preview forbids scripts. Do not depend on rAF/timer callbacks in that sandbox;
+  // the following visibility checks and Playwright's bounded screenshots supply the visual evidence.
+  const evidence=await bounded('实际可见尺寸',()=>frame.evaluate(()=>{
     const bounds=element=>{const {x,y,width,height}=element.getBoundingClientRect();return {x,y,width,height};};
     return {url:location.href,title:document.querySelector('h1')?.innerText,fonts:document.fonts.status,
       viewport:{width:innerWidth,height:innerHeight},heading:bounds(document.querySelector('h1')),
       images:[...document.images].map(image=>({complete:image.complete,naturalWidth:image.naturalWidth,naturalHeight:image.naturalHeight,
         bounds:bounds(image),display:getComputedStyle(image).display,visibility:getComputedStyle(image).visibility,opacity:getComputedStyle(image).opacity}))};
-  });
+  }));
   assert.equal(evidence.url,expectedUrl);assert.equal(evidence.title,expectedTitle);assert.equal(evidence.fonts,'loaded');
   assert.ok(evidence.heading.width>0&&evidence.heading.height>0&&evidence.heading.y>=-1&&evidence.heading.y<evidence.viewport.height);
   assert.ok(evidence.images.length>=2);
@@ -54,6 +65,7 @@ async function previewReady(frame,expectedUrl,expectedTitle) {
     assert.ok(image.complete&&image.naturalWidth>0&&image.naturalHeight>0&&image.bounds.width>0&&image.bounds.height>0);
     assert.ok(image.display!=='none'&&image.visibility==='visible'&&Number(image.opacity)>0);
   }
+  report.previewWait={url:expectedUrl,stage:'completed'};
   return evidence;
 }
 try{
@@ -84,6 +96,7 @@ try{
   server=createApp(store,worker,config);server.listen(config.port,'127.0.0.1');await once(server,'listening');report.cleanup.serverStopped=false;
   report.phase='browser-launch';browser=await chromium.launch({executablePath,headless:true});report.cleanup.browserClosed=false;
   const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'zh-CN',timezoneId:'Asia/Singapore',acceptDownloads:true});
+  context.setDefaultTimeout(15000);
   await context.grantPermissions(['clipboard-read','clipboard-write'],{origin:config.baseUrl});
   const externalRequests=[],pageErrors=[];
   await context.route('**/*',route=>{const url=new URL(route.request().url());if(url.origin!==config.baseUrl&&!['data:','blob:'].includes(url.protocol)){externalRequests.push(url.href);return route.abort();}return route.continue();});
@@ -138,15 +151,16 @@ try{
   await page.locator('#draft-preview').scrollIntoViewIfNeeded();
   report.previewEvidence={embedded:await previewReady(previewFrame,previewUrl,'FDE 交付观察：先把试点边界说清楚')};
   assert.equal(await previewFrame.locator('script').count(),0);
-  await page.screenshot({path:join(outputDir,'desktop-editorial.png'),fullPage:true});
-  await page.screenshot({path:join(outputDir,'desktop-editorial-viewport.png'),fullPage:false});
+  await page.screenshot({path:join(outputDir,'desktop-editorial.png'),fullPage:true,timeout:15000});
+  await page.screenshot({path:join(outputDir,'desktop-editorial-viewport.png'),fullPage:false,timeout:15000});
   // A top-level capture avoids depending on full-page capture of an out-of-process iframe.
   const standalonePreview=await context.newPage();standalonePreview.on('pageerror',error=>pageErrors.push(error.message));
   await standalonePreview.setViewportSize({width:760,height:1000});
   await standalonePreview.goto(previewUrl,{waitUntil:'load'});
   report.previewEvidence.standalone=await previewReady(standalonePreview.mainFrame(),previewUrl,'FDE 交付观察：先把试点边界说清楚');
-  await standalonePreview.screenshot({path:join(outputDir,'desktop-preview.png'),fullPage:true});
+  await standalonePreview.screenshot({path:join(outputDir,'desktop-preview.png'),fullPage:true,timeout:15000});
   await standalonePreview.close();
+  await page.bringToFront();
   report.previewEvidence.screenshots=['desktop-editorial-viewport.png','desktop-preview.png'];
   await page.locator('#copy-draft').click();
   await page.waitForFunction(()=>document.getElementById('toast').textContent.includes('已复制'));
@@ -163,10 +177,10 @@ try{
   await page.locator('#active-draft').scrollIntoViewIfNeeded();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   const bounds=await page.locator('#draft-preview').boundingBox();assert.ok(bounds.width<=375&&bounds.x>=-1&&bounds.x+bounds.width<=376);
-  await page.screenshot({path:join(outputDir,'mobile-editorial.png'),fullPage:true});
+  await page.screenshot({path:join(outputDir,'mobile-editorial.png'),fullPage:true,timeout:15000});
   await page.locator('#draft-preview').scrollIntoViewIfNeeded();
   report.previewEvidence.mobile=await previewReady(previewFrame,previewUrl,'FDE 交付观察：先把试点边界说清楚');
-  await page.screenshot({path:join(outputDir,'mobile-preview-viewport.png'),fullPage:false});
+  await page.screenshot({path:join(outputDir,'mobile-preview-viewport.png'),fullPage:false,timeout:15000});
   await page.reload();await page.locator('#edit-title').waitFor();
   assert.equal(await page.locator('#edit-title').inputValue(),'FDE 交付观察：先把试点边界说清楚');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
