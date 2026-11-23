@@ -1,5 +1,7 @@
 # Codex CLI 事件拦截：2026-11-23 现场验收记录与处置
 
+> **2026-11-23 最新用户授权（覆盖旧的一篇/每天一次试运行要求）：** Windows 本机真实测试上限改为 `FDE_DAILY_LIMIT=5`，表示滚动 24 小时内**最多五次真实分析尝试**，失败和 unknown 同样计入。旧美团 unknown 回执必须保留且如仍在 24 小时内已占一次。修复验证、备份和安全核对后允许恢复暂停、逐篇测试，无须每篇重复请求授权；不得自动重试未知请求或超出总次数。先手动测试，成功且稳定后可在剩余次数内短暂开启自动分析，结束后关闭。完整操作见 [5 次真实测试接手提示词](fde-workbench/docs/CODEX_TEST_5_PER_DAY_PROMPT.md)。
+
 实现提交 [`046a7cb`](https://github.com/ygao1981/AIHOT-FDE/commit/046a7cbc7afbdad191cfabd3a069defc3a9f23ef) 已通过 [FDE CI 45135209199](https://github.com/ygao1981/AIHOT-FDE/actions/runs/45135209199)：Windows、Linux 82 项自动测试均通过，Linux 浏览器和基础 Docker 检查通过；**实际账号的第 2 次分析尚未执行**。注意此前唯一真实分析的 `unknown` 回执没有被修改。
 
 ## 已确认事实（用户本机报告，不是我们远程实测）
