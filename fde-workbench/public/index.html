@@ -71,7 +71,18 @@
         <p id="analysis-mode" class="section-note"></p>
         <form id="filter-form" class="filter-bar" aria-label="筛选研究资料">
           <div class="search-field"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><label for="search" class="sr-only">搜索资料</label><input id="search" type="search" name="q" placeholder="搜索标题、研究内容或笔记" autocomplete="off"><button type="submit" class="search-submit">搜索</button></div>
-          <div class="select-field"><label for="filter-editorial">选题进度</label><select id="filter-editorial" name="editorialStatus"><option value="">全部进度</option value="new">待整理</option><option value="organized">已整理</option><option value="shortlisted">已选题</option><option value="drafting">写作中</option><option value="published">已发布</option><option value="archived">已归档</option></select></div>
+          <div class="select-field">
+            <label for="filter-editorial">选题进度</label>
+            <select id="filter-editorial" name="editorialStatus">
+              <option value="">全部进度</option>
+              <option value="new">待整理</option>
+              <option value="organized">已整理</option>
+              <option value="shortlisted">已选题</option>
+              <option value="drafting">写作中</option>
+              <option value="published">已发布</option>
+              <option value="archived">已归档</option>
+            </select>
+          </div>
           <div class="select-field"><label for="filter-status">分析进度</label><select id="filter-status" name="status"><option value="">全部状态</option><option value="candidate">待分析</option><option value="queued">排队中</option><option value="analyzing">分析中</option><option value="analyzed">已分析</option><option value="needs_body">待补正文</option><option value="skipped">已跳过</option><option value="failed">分析未完成</option></select></div>
           <button id="clear-filters" type="button" class="button text-button">重置</button>
         </form>
