@@ -8,6 +8,16 @@ import { fixture,add,output } from './helpers.mjs';
 import { acquireLock } from '../src/main.mjs';
 import { importArticle } from '../src/collect.mjs';
 
+test('translation joins artificial splits without losing original paragraph boundaries', () => {
+  const body='A'.repeat(2600)+' manually reviewed '+'B'.repeat(2500)+'\n\n'+'C'.repeat(1100);
+  const task=translationTask({title:'Fictional source',language:'en',body},{});
+  assert.equal(task.input.segments.length,3);
+  const chinese=task.validate({title:'测试原文',segments:['随后由一位','复核员复查。','下一段。']});
+  assert.equal(chinese.body,'随后由一位复核员复查。\n\n下一段。');
+  const mixed=task.validate({title:'测试原文',segments:['先核对 API','schema。','下一段。']});
+  assert.equal(mixed.body,'先核对 API schema。\n\n下一段。');
+});
+
 const englishBody = 'The support team connected the RAG workflow to existing enterprise records. It limited the pilot to one service queue and kept manual review. '.repeat(28);
 
 test('manual English translation shares the single model slot and preserves the research card', async t => {
@@ -45,8 +55,9 @@ test('translation requires complete coverage and failed receipts block automatic
   const task=translationTask(article,config);
   assert.ok(task.input.segments.length>1);
   assert.throws(()=>task.validate({title:'标题',segments:['只返回首段，省略了剩余输入。']}),{code:'invalid_result'});
-  const value=task.validate({title:'标题',segments:task.input.segments.map(()=> '按顺序翻译段落。')});
-  assert.equal(value.body.split('\n\n').length,task.input.segments.length);
+  const segments=task.input.segments.map((_,index)=>`第 ${index + 1} 个片段已翻译。`);
+  const value=task.validate({title:'标题',segments});
+  assert.equal(value.body,segments.join(''));
   let calls=0;
   const worker=new Worker(store,config,{translator:async()=>{calls++;throw Object.assign(new Error('failure'),{code:'cli_timeout_unknown'});}});
   worker.translate(article.id);

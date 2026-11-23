@@ -16,12 +16,15 @@ export function canTranslate(article) {
 export function translationTask(article, config) {
   if (!canTranslate(article)) throw new AppError('translation_unavailable', '仅可翻译已收录的英文正文。需要时请先补充原文。', 409);
   const input = { title: article.title, segments: [] };
+  const boundaries = [];
   let remaining = article.body.trim();
   while (remaining.length > 3500) {
     const boundary = Math.max(remaining.lastIndexOf('\n', 3500), remaining.lastIndexOf(' ', 3500));
     const end = boundary >= 2000 ? boundary : /[\uD800-\uDBFF]/u.test(remaining[3499]) ? 3499 : 3500;
     input.segments.push(remaining.slice(0, end).trim());
-    remaining = remaining.slice(end).trimStart();
+    const tail = remaining.slice(end);
+    remaining = tail.trimStart();
+    boundaries.push(tail.slice(0, tail.length - remaining.length));
   }
   input.segments.push(remaining);
   const pieces = input.segments.length;
@@ -44,7 +47,16 @@ export function translationTask(article, config) {
           !result.title.trim() || result.title.length > 300 || !Array.isArray(result.segments) ||
           result.segments.length !== pieces || result.segments.some(segment => typeof segment !== 'string' || !segment.trim() || segment.length > 7000) ||
           !result.segments.some(segment => /\p{Script=Han}/u.test(segment))) throw new AnalysisError('invalid_result');
-      return { title: result.title.trim(), body: result.segments.map(segment => segment.trim()).join('\n\n') };
+      // Chunk joins follow the supplied text without changing the request or its cache key.
+      const translated = result.segments.map(segment => segment.trim());
+      let body = translated[0];
+      for (const [index, boundary] of boundaries.entries()) {
+        const next = translated[index + 1];
+        if (/[\r\n]/u.test(boundary)) body += '\n\n';
+        else if (boundary && /[A-Za-z0-9]$/u.test(body) && /^[A-Za-z0-9]/u.test(next)) body += ' ';
+        body += next;
+      }
+      return { title: result.title.trim(), body };
     },
   };
 }
