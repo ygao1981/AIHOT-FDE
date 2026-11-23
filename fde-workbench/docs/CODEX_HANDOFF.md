@@ -3,48 +3,31 @@
 ## 当前入口
 
 - 仓库：`https://github.com/ygao1981/AIHOT-FDE`
-- 分支：`codex/fde-workbench-v2`
-- 运行目录：`fde-workbench/`
-- 产品：FDE 研究台，个人研究和公众号选题。
-- 当前版本：2.1.0；Windows 本机优先，真实目标机仍须验收。
-- 默认：采集关闭、模型关闭、自动分析关闭。
+- 本轮分支：`codex/fde-editorial-workbench`；基于 PR #5 的 `8d0df4506a86a2981c55798300884415c4190903`，保留 CLI 与代理修复。
+- 运行目录：`fde-workbench/`，版本 2.2.0，SQLite schema 2。
+- 产品：个人 FDE 研究与公众号草稿，Node 24.x + SQLite，Windows 本机优先。
+- 默认采集、模型和自动分析关闭；公众号素材稿和排版可以零模型使用。
 
-先以远端分支和实际提交为准。`main` 和旧 `codex/fde-cli-single-pass` 可能仍指向 PostgreSQL 版本；不要只看仓库名字就执行根目录安装。
+`main` 和早期分支不是这次入口。先读远端分支及实际提交，不执行根目录旧 Compose，不回退近期修复。
 
 ## 阅读顺序
 
-1. 根 `CHECKPOINT.md`：已完成、真实验证、待完成与当前边界。
-2. 根 `AGENTS.md` 和 `fde-workbench/AGENTS.md`：对应入口的工程规则。
-3. `fde-workbench/README.md` 与 `docs/ARCHITECTURE.md`：目录与数据流。
-   同时读 `docs/T3_DESIGN_REVIEW.md`：本轮决定是借鉴持久任务与通知原则，不安装、嵌入或依赖整套 T3。
-4. `docs/SOURCES.md` 和 `config/source-audit.json`：来源状态与限制。
-5. `docs/MODEL_USAGE.md`：实际费用触发、两种接入与未知用量。
-6. `docs/DEPLOYMENT.md` 和 `docs/OPERATIONS.md`：机器预检、安装、备份恢复。
-7. `docs/VALIDATION.md`：哪些证据可以复用、哪些需要目标环境补验。
-8. `docs/WINDOWS_LOCAL.md`、`docs/EVENT_INTAKE.md`：Windows 原生执行与外部脚本收录契约。
+1. 根 CHECKPOINT、根与子目录 AGENTS、子目录 README。
+2. `WECHAT_DESIGN_REVIEW.md`、`EDITORIAL_WORKFLOW.md`：个人规则、开源工具审查与实际功能边界。
+3. `ARCHITECTURE.md`、`MODEL_USAGE.md`：单 worker、同一账本、分析与写作合计每日5次。
+4. `OPERATIONS.md` 的 2.2.0 升级章节：必须用旧代码先备份，再切新代码；回滚须有旧 schema 快照。
+5. `VALIDATION.md`：真实运行过的检查和仍需本机验收的项目。
+6. `WINDOWS_LOCAL.md` 与已有代理配置；未改采集则不重复新装 VPN、调整系统 DNS 或重审所有来源。
+7. `CODEX_WECHAT_PROMPT.md`：本轮完整可复制升级、零模型验收与真实写作提示词。
 
-## 第一轮接手应完成
+## 接手目标
 
-- 记录当前提交及工作区变化，不覆盖使用者改动。
-- 在真正目标机器只读检查磁盘、内存、已有服务、端口和 Node。
-- 明确选择原生本机或原生 VPS；低资源机器不默认安装 Docker。
-- 当前用户已明确 Windows 本机，默认先完成本机试运行；不要因为有 VPS 就优先占用它的资源。
-- 启动关闭模型的研究台，完成登录、导入、笔记、重启和备份。
-- 用户选择 Codex 时，安装官方 CLI 并让本人完成专用目录登录；只运行非模型诊断。
-- 配好每 24 小时一次的初始上限和关闭的自动分析，再人工验收一篇真实资料。
-- 记录分析前后 attempt、重复操作是否命中缓存，以及官方账户实际用量。
-- 更新 checkpoint 和验证文档，写清测试机器与提交，不写账号凭据。
+保留本机未提交记录和所有数据，先备份再升级。用已分析资料验证素材稿、正文编辑、两种版本、PNG、下载与重启。未核实当前剩余次数前不调用真实模型；在已授权滚动24小时合计5次内可以直接逐项测试，不必逐篇重复确认。未知回执不自动重试，达到上限就继续零模型验证。
 
-## 不需要现在做
+公众号规则在 `config/editorial-profile.json` 和 `prompts/editorial.md`。新增图片是本地模板，不是图片模型结果。HTML/PNG 已生成不等于微信后台粘贴和手机预览通过；必须分别记录。
 
-不用新装 PostgreSQL、迁移 MariaDB、引入向量数据库、自动写整篇公众号文章、对外开放资料库、多账号轮换或编写通用爬虫。候选源不能因为“来自大厂”就直接启用，教程、产品宣传和客户自述应继续区分。
+## 保持的边界
 
-不用安装 T3、引入 Effect/app-server 或另建事件溯源数据库。现有 SQLite 队列与账本已经承担所需持久化。普通程序的来源检查不消耗模型 token；不要让一个常驻模型总管重复询问是否有新任务。
+不安装 T3、PostgreSQL、Redis、向量库或浏览器服务。网页检查、去重和排版交给程序，不引入常驻模型总管。不自动上传或发布公众号，不把研究卡和厂商自述当成独立核验事实。
 
-## 出现问题时
-
-先看来源状态、暂停说明、用量预留和官方登录状态。未知模型请求不会自动重发；确认重试可能新增消耗。运行锁按运维文档核查，不能无条件删除。网络受限时保留人工导入路径；不增加绕过站点限制的抓取服务。
-
-完整可复制任务见 [CODEX_DEPLOY_PROMPT.md](CODEX_DEPLOY_PROMPT.md)。
-
-已有部署、要继续开发时使用 [CODEX_DEVELOPMENT_PROMPT.md](CODEX_DEVELOPMENT_PROMPT.md)，补充具体功能和验收目标。保留 2.1.0 的数据兼容性、模型边界和原文证据规则。
+不提交真实草稿、私有笔记、SQLite、口令、登录目录或原始模型日志。后续二开使用 `CODEX_DEVELOPMENT_PROMPT.md`，先判断收益，再做最小实现，持续更新 checkpoint 与验证记录。

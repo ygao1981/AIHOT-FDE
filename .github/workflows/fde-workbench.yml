@@ -78,6 +78,8 @@ jobs:
           export FDE_QA_BROWSER_PATH="$(node --input-type=module -e 'const { chromium } = await import(process.env.FDE_QA_PLAYWRIGHT_PATH); process.stdout.write(chromium.executablePath());')"
           node qa/verify-dom.mjs
           node qa/verify-ui.mjs
+          node qa/verify-editorial-assets.mjs
+          node qa/verify-editorial.mjs
       - name: Save synthetic-data QA reports and screenshots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

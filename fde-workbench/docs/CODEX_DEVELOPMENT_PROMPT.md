@@ -4,9 +4,9 @@
 
 ---
 
-请接手 `https://github.com/ygao1981/AIHOT-FDE`，基于 `codex/fde-workbench-v2` 的最新版本开展我的后续功能开发。
+请接手 `https://github.com/ygao1981/AIHOT-FDE`，基于 `codex/fde-editorial-workbench` 的最新版本开展我的后续功能开发。
 
-项目运行入口是 `fde-workbench/`。它是个人 FDE 研究与公众号选题台，Node 24.x + SQLite，当前版本 2.1.0。我的本机是 Windows，VPS 为资源紧张的 Linux。模型采用我本人登录的官方 Codex CLI；桌面 Codex 用于开发，不充当资料监视服务。
+项目运行入口是 `fde-workbench/`。它是个人 FDE 研究与公众号草稿台，Node 24.x + SQLite，当前版本 2.2.0。我的本机是 Windows，VPS 为资源紧张的 Linux。模型采用我本人登录的官方 Codex CLI；桌面 Codex 用于开发，不充当资料监视服务。
 
 先读取根 CHECKPOINT、根和子目录 AGENTS、子目录 README、T3_DESIGN_REVIEW、ARCHITECTURE、MODEL_USAGE、EVENT_INTAKE、WINDOWS_LOCAL、VALIDATION。记录真实分支、commit 和工作区改动；保留我的未提交工作，建立本次独立功能分支。不把旧入口或早期文档当成当前架构。
 
@@ -20,7 +20,7 @@
 4. 新接入的邮件、网页或文件监视器优先通过 intake HTTP 边界提交 JSON，不直接打开 SQLite，不给文章执行命令或修改配置的能力。
 5. 不为扩展接入器安装 T3、PostgreSQL、Redis、向量库或浏览器集群。本轮对 T3 的选择是借鉴原则，未复制其源码。只有新需求确实需要长会话、多用户开发工作区或交互审批时，才重新论证。
 6. 不把公众号选题自动发布；不把教程或厂商自述包装为已经独立核验的生产案例。
-7. 保留数据和笔记；schema 当前 user_version=1，结构变化必须提供显式迁移、备份和回滚方案。不可删库重建。
+7. 保留数据和笔记；schema 当前 user_version=2，结构变化必须提供显式迁移、备份和回滚方案。不可删库重建。
 8. 凭据、真实资料、登录目录、生产 SQLite 和模型原始日志不进入 Git 或报告。
 
 为具体行为风险写测试，使用假 CLI 和本地 HTTP 服务，不使用我的真实模型额度做错误分支验证。完成后在 `fde-workbench/` 执行：

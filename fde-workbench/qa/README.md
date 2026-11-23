@@ -114,3 +114,17 @@ DOM 脚本不创建数据库，所有 API 都由测试数据模拟。它通过�
 这类启动失败应如实保留为失败结果。可在允许运行浏览器的独立开发机或 GitHub runner 执行同一脚本；后续验证结论以该次生成的 JSON、截图和 CI 退出码为准。不要因为 DOM 检查通过，就把真实浏览器检查标为通过。
 
 后续已在 [GitHub run 44749368030](https://github.com/ygao1981/AIHOT-FDE/actions/runs/44749368030) 完成真实 Chromium 验收：10 组流程通过、两种视口、模型尝试为 0；详情与关闭按钮在移动视口内，截图已实际查看。首轮发现的异步加载等待问题已修复，没有用固定 sleep 或删除断言解决。完整版本与范围见 [VALIDATION](../docs/VALIDATION.md)。
+
+
+## 2.2 公众号草稿与配图
+
+沿用上面的隔离 Playwright 与 Chromium 配置，新增执行：
+
+```bash
+node qa/verify-editorial-assets.mjs
+node qa/verify-editorial.mjs
+```
+
+前者验证固定SVG到真实PNG、双版本ZIP、剪贴板与手机配图；后者验证登录、资料选择、素材稿、保存冲突、两版预览与下载。只用临时虚构数据，全部模型关闭，无外部网络。报告和截图同样写入 `FDE_QA_OUTPUT_DIR` 的独立子目录。
+
+浏览器在启动阶段被系统拒绝时如实标记未完成，不以DOM模拟或脚本存在替代。不要为了生产部署给低资源VPS安装浏览器；图片由日常用户的桌面浏览器生成。Windows真实CLI写作和微信后台手机预览仍需单独验收。

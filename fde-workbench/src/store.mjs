@@ -24,7 +24,7 @@ export class Store {
     chmodSync(this.path, 0o600);
     this.db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
     const version = this.db.prepare('PRAGMA user_version').get().user_version;
-    if (version > 1) { this.db.close(); throw new AppError('newer_database', '数据库版本高于本程序，请使用对应的新版本。'); }
+    if (version > 2) { this.db.close(); throw new AppError('newer_database', '数据库版本高于本程序，请使用对应的新版本。'); }
     if (version === 0) this.db.exec(`BEGIN IMMEDIATE;
       CREATE TABLE articles (
         id TEXT PRIMARY KEY, url TEXT NOT NULL UNIQUE, title TEXT NOT NULL, source_id TEXT NOT NULL,
@@ -47,6 +47,24 @@ export class Store {
       CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
       PRAGMA user_version=1;
       COMMIT;`);
+    // Additive migration: keep the existing articles, receipts, reservations and settings intact.
+    if (version < 2) try { this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE editorial_drafts (
+        id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL UNIQUE, sources_json TEXT NOT NULL,
+        spec_json TEXT NOT NULL, status TEXT NOT NULL, result_json TEXT, generated_json TEXT,
+        revision INTEGER NOT NULL DEFAULT 1, queue_nonce TEXT NOT NULL DEFAULT '',
+        attempt_id TEXT, last_error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+      );
+      CREATE INDEX editorial_queue ON editorial_drafts(status,created_at);
+      ALTER TABLE attempts ADD COLUMN kind TEXT NOT NULL DEFAULT 'analysis';
+      ALTER TABLE attempts ADD COLUMN draft_id TEXT REFERENCES editorial_drafts(id);
+      PRAGMA user_version=2;
+      COMMIT;`); }
+    catch {
+      try { this.db.exec('ROLLBACK'); } catch { /* SQLite may already have rolled back the transaction. */ }
+      this.db.close();
+      throw new AppError('migration_failed','资料库升级未完成，请保留数据库与备份，并检查文件权限和可用空间。');
+    }
     this.catalog = catalog;
     for (const s of catalog) this.db.prepare('INSERT OR IGNORE INTO source_state(id,enabled) VALUES(?,?)').run(s.id, s.enabled ? 1 : 0);
   }
@@ -111,7 +129,7 @@ export class Store {
     if (a.status === 'analyzing') throw new AppError('busy','这篇资料正在分析，请等待结果。',409);
     if (!a.body || a.body.length < 180) throw new AppError('needs_body','正文不足，请通过手动收录粘贴原文后再分析。');
     if (!retry && a.analysisKey === key && a.analysis) return {queued:false,cached:true,message:'已复用现有研究结果，没有新模型请求。'};
-    const prior=this.db.prepare("SELECT status FROM attempts WHERE fingerprint=? AND status IN ('unknown','failed','running') LIMIT 1").get(key);
+    const prior=this.db.prepare("SELECT status FROM attempts WHERE fingerprint=? AND kind='analysis' AND status IN ('unknown','failed','running') LIMIT 1").get(key);
     if (prior && !retry) throw new AppError('retry_confirmation','之前的请求可能已消耗额度，请明确确认重试。',409);
     this.db.prepare("UPDATE articles SET status='queued',queue_nonce=?,last_error=NULL,updated_at=? WHERE id=?").run(retry ? randomUUID() : '',nowIso(),id);
     return {queued:true,cached:false,message:'已加入分析队列。'};
@@ -123,29 +141,36 @@ export class Store {
     for(const r of rows) this.db.prepare("UPDATE articles SET status='queued',queue_nonce='' WHERE id=?").run(r.id);
     return rows.length;
   }
+  assertModelSlot() {
+    const paused=this.setting('analysis_pause');
+    if(paused) throw new AppError('paused',`模型任务已暂停：${paused}`,409);
+    if(this.db.prepare("SELECT id FROM attempts WHERE status='running' LIMIT 1").get())
+      throw new AppError('busy','已有模型任务正在执行。',409);
+  }
+  assertBudget(config,reservation,timestamp=nowIso()) {
+    const since=new Date(Date.now()-86400000).toISOString();
+    const n=this.db.prepare('SELECT count(*) n FROM attempts WHERE started_at>?').get(since).n;
+    if(n>=config.dailyLimit) throw new AppError('daily_limit','已达到滚动 24 小时模型任务上限，任务会等待。',409);
+    if(config.provider==='api') {
+      if(!Number.isFinite(reservation) || reservation<=0) throw new AppError('invalid_reservation','无法计算请求预算，请检查模型价格配置。');
+      const used=this.db.prepare("SELECT COALESCE(sum(COALESCE(cost_usd,reserved_usd,0)),0) n FROM attempts WHERE provider='api' AND started_at>=?").get(timestamp.slice(0,7)+'-01T00:00:00.000Z').n;
+      if(used+reservation>config.monthlyBudgetUsd) throw new AppError('monthly_limit','本月预算不足以预留这次模型任务，任务会等待。',409);
+    }
+  }
   beginAttempt(articleId, key, config, reservation) {
     return this.transaction(()=>{
-      const paused=this.setting('analysis_pause');
-      if(paused) throw new AppError('paused',`分析已暂停：${paused}`,409);
-      const active=this.db.prepare("SELECT id FROM attempts WHERE status='running' LIMIT 1").get();
-      if(active) throw new AppError('busy','已有模型任务正在执行。',409);
+      this.assertModelSlot();
       const row=this.db.prepare("SELECT * FROM articles WHERE id=? AND status='queued'").get(articleId);
       if(!row) throw new AppError('not_queued','任务已改变，请刷新后查看。',409);
       const nonce=row.queue_nonce || '';
-      const cached=this.db.prepare('SELECT * FROM attempts WHERE fingerprint=? AND nonce=?').get(key,nonce);
+      const cached=this.db.prepare("SELECT * FROM attempts WHERE fingerprint=? AND nonce=? AND kind='analysis'").get(key,nonce);
       if(cached?.status==='completed' && cached.result_json) {
         this.db.prepare("UPDATE articles SET analysis_json=?,analysis_key=?,status='analyzed',updated_at=? WHERE id=?").run(cached.result_json,key,nowIso(),articleId);
         return {cached:true};
       }
       if(cached) throw new AppError('retry_confirmation','请求结果不明确，需要手动确认重试。',409);
-      const since=new Date(Date.now()-86400000).toISOString(), timestamp=nowIso();
-      const n=this.db.prepare('SELECT count(*) n FROM attempts WHERE started_at>?').get(since).n;
-      if(n>=config.dailyLimit) throw new AppError('daily_limit','已达到滚动 24 小时尝试上限，任务会等待。',409);
-      if(config.provider==='api') {
-        if(!Number.isFinite(reservation) || reservation<=0) throw new AppError('invalid_reservation','无法计算请求预算，请检查模型价格配置。');
-        const used=this.db.prepare("SELECT COALESCE(sum(COALESCE(cost_usd,reserved_usd,0)),0) n FROM attempts WHERE provider='api' AND started_at>=?").get(timestamp.slice(0,7)+'-01T00:00:00.000Z').n;
-        if(used+reservation>config.monthlyBudgetUsd) throw new AppError('monthly_limit','本月预算不足以预留这次分析，任务会等待。',409);
-      }
+      const timestamp=nowIso();
+      this.assertBudget(config,reservation,timestamp);
       const id=randomUUID();
       this.db.prepare('INSERT INTO attempts(id,article_id,fingerprint,nonce,provider,model,status,started_at,reserved_usd) VALUES(?,?,?,?,?,?,?,?,?)').run(id,articleId,key,nonce,config.provider,config.model,'running',timestamp,reservation);
       this.markStatus(articleId,'analyzing');
@@ -173,10 +198,99 @@ export class Store {
   recoverInterrupted() {
     const n=this.db.prepare("SELECT count(*) n FROM attempts WHERE status='running'").get().n;
     if(n) this.transaction(()=>{
-      this.db.exec("UPDATE articles SET status='failed',last_error='程序在分析期间退出，请核对用量后重试。' WHERE status='analyzing'; UPDATE attempts SET status='unknown',error_code='interrupted' WHERE status='running';");
+      this.db.exec("UPDATE articles SET status='failed',last_error='程序在分析期间退出，请核对用量后重试。' WHERE status='analyzing';");
+      this.db.prepare("UPDATE editorial_drafts SET status='unknown',last_error=?,revision=revision+1,updated_at=? WHERE status='writing'").run('程序在写作期间退出，请核对用量后决定是否重试。',nowIso());
+      this.db.exec("UPDATE attempts SET status='unknown',error_code='interrupted' WHERE status='running';");
       this.setSetting('analysis_pause','检测到中断的模型请求，已保留预算且不会自动重发。');
     });
     return n;
+  }
+  presentEditorial(row) {
+    if(!row)return null;
+    const sources=JSON.parse(row.sources_json);
+    const staleSources=sources.some(source=>{
+      const article=this.getArticle(source.articleId);
+      return !article || article.bodyHash!==source.bodyHash || article.analysisKey!==source.analysisKey ||
+        JSON.stringify(article.analysis)!==JSON.stringify(source.analysis);
+    });
+    return {id:row.id,fingerprint:row.fingerprint,sources,spec:JSON.parse(row.spec_json),status:row.status,
+      result:row.result_json?JSON.parse(row.result_json):null,generatedResult:row.generated_json?JSON.parse(row.generated_json):null,
+      revision:row.revision,createdAt:row.created_at,updatedAt:row.updated_at,attemptId:row.attempt_id,lastError:row.last_error,staleSources};
+  }
+  createEditorial(input,{result=null}={}) {
+    return this.transaction(()=>{
+      const existing=this.db.prepare('SELECT * FROM editorial_drafts WHERE fingerprint=?').get(input.fingerprint);
+      if(existing)return {draft:this.presentEditorial(existing),cached:true};
+      const id=randomUUID(),timestamp=nowIso();
+      this.db.prepare(`INSERT INTO editorial_drafts(id,fingerprint,sources_json,spec_json,status,result_json,created_at,updated_at)
+        VALUES(?,?,?,?,?,?,?,?)`).run(id,input.fingerprint,JSON.stringify(input.sources),JSON.stringify(input.spec),
+        input.spec.mode==='template'?'ready':'queued',result===null?null:JSON.stringify(result),timestamp,timestamp);
+      return {draft:this.getEditorial(id),cached:false};
+    });
+  }
+  getEditorial(id) {return this.presentEditorial(this.db.prepare('SELECT * FROM editorial_drafts WHERE id=?').get(id));}
+  listEditorial() {return this.db.prepare('SELECT * FROM editorial_drafts ORDER BY updated_at DESC,id DESC LIMIT 100').all().map(row=>this.presentEditorial(row));}
+  editEditorial(id,result,expectedRevision) {
+    if(!Number.isSafeInteger(expectedRevision)||expectedRevision<1)throw new AppError('invalid_revision','草稿版本不正确，请刷新后重试。');
+    return this.transaction(()=>{
+      const draft=this.getEditorial(id);
+      if(!draft)throw new AppError('not_found','没有找到这份草稿。',404);
+      if(draft.revision!==expectedRevision)throw new AppError('revision_conflict','草稿已在其他页面更新。请保留当前修改并重新读取最新版本。',409);
+      if(draft.status!=='ready')throw new AppError('draft_not_ready','草稿尚未生成完成，暂时不能修改正文。',409);
+      this.db.prepare('UPDATE editorial_drafts SET result_json=?,revision=revision+1,updated_at=? WHERE id=?').run(JSON.stringify(result),nowIso(),id);
+      return this.getEditorial(id);
+    });
+  }
+  queueEditorialRetry(id) {
+    return this.transaction(()=>{
+      const draft=this.getEditorial(id);
+      if(!draft)throw new AppError('not_found','没有找到这份草稿。',404);
+      if(draft.status!=='unknown')throw new AppError('retry_not_allowed','只有结果不明确的写作任务可以确认重试。',409);
+      this.db.prepare("UPDATE editorial_drafts SET status='queued',queue_nonce=?,last_error=NULL,revision=revision+1,updated_at=? WHERE id=?").run(randomUUID(),nowIso(),id);
+      return this.getEditorial(id);
+    });
+  }
+  blockEditorial(id,message) {
+    this.db.prepare("UPDATE editorial_drafts SET status='blocked',last_error=?,revision=revision+1,updated_at=? WHERE id=? AND status='queued'").run(message,nowIso(),id);
+    return this.getEditorial(id);
+  }
+  nextEditorialQueued() {return this.presentEditorial(this.db.prepare("SELECT * FROM editorial_drafts WHERE status='queued' ORDER BY created_at,id LIMIT 1").get());}
+  beginEditorialAttempt(draftId,config,reservation) {
+    return this.transaction(()=>{
+      this.assertModelSlot();
+      const row=this.db.prepare("SELECT * FROM editorial_drafts WHERE id=? AND status='queued'").get(draftId);
+      if(!row)throw new AppError('not_queued','写作任务已改变，请刷新后查看。',409);
+      const prior=this.db.prepare('SELECT id FROM attempts WHERE fingerprint=? AND nonce=?').get(row.fingerprint,row.queue_nonce);
+      if(prior)throw new AppError('retry_confirmation','写作请求已经记录，不能自动重复发送。',409);
+      const timestamp=nowIso();this.assertBudget(config,reservation,timestamp);
+      const id=randomUUID(),articleId=JSON.parse(row.sources_json)[0].articleId;
+      this.db.prepare(`INSERT INTO attempts(id,article_id,fingerprint,nonce,provider,model,status,started_at,reserved_usd,kind,draft_id)
+        VALUES(?,?,?,?,?,?,?,?,?,'editorial',?)`).run(id,articleId,row.fingerprint,row.queue_nonce,config.provider,config.model,'running',timestamp,reservation,draftId);
+      this.db.prepare("UPDATE editorial_drafts SET status='writing',attempt_id=?,revision=revision+1,updated_at=? WHERE id=?").run(id,timestamp,draftId);
+      return {id,draftId,articleId,key:row.fingerprint,cached:false};
+    });
+  }
+  completeEditorialAttempt(attempt,output) {
+    this.transaction(()=>{
+      const u=output.usage||{},json=JSON.stringify(output.result),timestamp=nowIso();
+      const receipt=this.db.prepare(`UPDATE attempts SET status='completed',finished_at=?,cost_usd=?,input_tokens=?,cached_input_tokens=?,output_tokens=?,reasoning_tokens=?,result_json=?,request_id=?
+        WHERE id=? AND kind='editorial' AND draft_id=? AND status='running'`).run(timestamp,output.costUsd??null,u.inputTokens??null,u.cachedInputTokens??null,
+        u.outputTokens??null,u.reasoningTokens??null,json,output.requestId||null,attempt.id,attempt.draftId);
+      if(receipt.changes)this.db.prepare("UPDATE editorial_drafts SET status='ready',result_json=?,generated_json=?,last_error=NULL,revision=revision+1,updated_at=? WHERE id=? AND attempt_id=? AND status='writing'").run(json,json,timestamp,attempt.draftId,attempt.id);
+    });
+  }
+  failEditorialAttempt(attempt,error) {
+    this.transaction(()=>{
+      const code=typeof error.code==='string'&&/^[a-z0-9_]{1,64}$/.test(error.code)?error.code:'editorial_failed';
+      const u=error.usage||{},knownCost=Number.isFinite(error.costUsd)&&error.costUsd>=0?error.costUsd:null,timestamp=nowIso();
+      const receipt=this.db.prepare(`UPDATE attempts SET status='unknown',finished_at=?,error_code=?,cost_usd=?,input_tokens=?,cached_input_tokens=?,output_tokens=?,reasoning_tokens=?,request_id=?
+        WHERE id=? AND kind='editorial' AND draft_id=? AND status='running'`).run(timestamp,code,knownCost,u.inputTokens??null,u.cachedInputTokens??null,
+        u.outputTokens??null,u.reasoningTokens??null,error.requestId||null,attempt.id,attempt.draftId);
+      if(receipt.changes){
+        this.db.prepare("UPDATE editorial_drafts SET status='unknown',last_error=?,revision=revision+1,updated_at=? WHERE id=? AND attempt_id=? AND status='writing'").run('写作未完成，可能已消耗额度。请核对用量后决定是否重试。',timestamp,attempt.draftId,attempt.id);
+        this.setSetting('analysis_pause','上次写作未完成。请核对账号、网络和用量，再恢复模型任务。');
+      }
+    });
   }
   sources() {
     return this.catalog.map(s=>{const r=this.db.prepare('SELECT * FROM source_state WHERE id=?').get(s.id); return {...s,description:s.notes||'',enabled:!!r?.enabled,lastCheckedAt:r?.last_checked_at||null,lastError:r?.last_error||null,lastCount:r?.last_count||0,nextFetchAt:r?.next_fetch_at||null};});
@@ -196,14 +310,16 @@ export class Store {
     const stats={total:0,candidate:0,queued:0,analyzed:0,shortlisted:0};
     for(const g of grouped) {stats.total+=g.n;if(g.status in stats)stats[g.status]=g.n;}
     stats.shortlisted=this.db.prepare("SELECT count(*) n FROM articles WHERE editorial_status='shortlisted'").get().n;
+    stats.editorialQueued=this.db.prepare("SELECT count(*) n FROM editorial_drafts WHERE status='queued'").get().n;
     const month=nowIso().slice(0,7)+'-01T00:00:00.000Z';
     const u=this.db.prepare(`SELECT COALESCE(sum(input_tokens),0) inputTokens,COALESCE(sum(output_tokens),0) outputTokens,
       COALESCE(sum(CASE WHEN provider='api' THEN cost_usd ELSE 0 END),0) monthCostUsd,
       COALESCE(sum(CASE WHEN provider='api' AND cost_usd IS NULL THEN reserved_usd ELSE 0 END),0) monthReservedUsd,
       COALESCE(sum(CASE WHEN provider='codex' THEN 1 ELSE 0 END),0) cliAttemptsMonth FROM attempts WHERE started_at>=?`).get(month);
-    const attempts24h=this.db.prepare('SELECT count(*) n FROM attempts WHERE started_at>?').get(new Date(Date.now()-86400000).toISOString()).n;
-    return {stats,usage:{...u,attempts24h,costKnown:config.provider==='api'},
-      config:{provider:config.provider,model:config.model,analysisEnabled:config.analysisEnabled,collectEnabled:config.collectEnabled,autoAnalyze:config.autoAnalyze,dailyLimit:config.dailyLimit,monthlyBudgetUsd:config.monthlyBudgetUsd},paused:this.setting('analysis_pause')};
+    const recent=this.db.prepare(`SELECT count(*) attempts24h,COALESCE(sum(CASE WHEN kind='analysis' THEN 1 ELSE 0 END),0) analysisAttempts24h,
+      COALESCE(sum(CASE WHEN kind='editorial' THEN 1 ELSE 0 END),0) editorialAttempts24h FROM attempts WHERE started_at>?`).get(new Date(Date.now()-86400000).toISOString());
+    return {stats,usage:{...u,...recent,costKnown:config.provider==='api'},
+      config:{provider:config.provider,model:config.model,analysisEnabled:config.analysisEnabled,collectEnabled:config.collectEnabled,autoAnalyze:config.autoAnalyze,dailyLimit:config.dailyLimit,monthlyBudgetUsd:config.monthlyBudgetUsd,editorialMaxOutputTokens:config.editorialMaxOutputTokens},paused:this.setting('analysis_pause')};
   }
   retention(days) {
     // Never delete analyzed material, personal notes, shortlisted topics or receipt history.

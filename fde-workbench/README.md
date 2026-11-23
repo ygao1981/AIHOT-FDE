@@ -11,6 +11,8 @@
 - 选择官方 API 或已登录 ChatGPT 的官方 Codex CLI，单篇生成一次结构化研究结果。
 - 记录业务问题、实施方案、阶段依据、效果、经验、限制和原文引文。
 - 保存个人笔记、选题进度，导出已分析资料的 Markdown。
+- 选择 1–3 篇有原文证据的研究卡，生成公众号素材稿或安排一次 AI 写作；草稿可修改并保存。
+- 同一正文输出纯文字与图文排版，程序绘制封面和要点卡，浏览器导出 PNG、TXT、Markdown、HTML 与排版包。排版不调用模型。
 - 查看采集状态、分析次数、API 费用估算与未知预留。
 - 通过 `npm run intake` 接收外部脚本提供的文章；默认只收录，显式请求才排队分析。
 - 入队后及时通知串行消费者；繁忙时的新任务接着处理，慢来源不阻塞已有分析。
@@ -19,7 +21,7 @@
 
 ## 五分钟本地启动
 
-当前版本 **2.1.0**，优先在用户 Windows 本机试运行，详见 [Windows 本机部署](docs/WINDOWS_LOCAL.md)。Windows 的 npm 启动器适配和 CI 不等于真实账号已经验收。对 T3 的决定是借鉴少量原则，不安装或嵌入整套平台，见 [设计取舍](docs/T3_DESIGN_REVIEW.md)。
+当前版本 **2.2.0**，公众号写作分支为 `codex/fde-editorial-workbench`，基于保留 CLI 与代理修复的 PR #5。已有 2.1 用户先按 [升级说明](docs/OPERATIONS.md#220-草稿数据库升级) 用旧代码备份，再切换新代码；SQLite 会从 schema 1 升级到 2。Windows 本机优先，新增写作和微信公众号粘贴仍需本机验收。对 T3 的取舍不变；公众号工具比较见 [WECHAT_DESIGN_REVIEW](docs/WECHAT_DESIGN_REVIEW.md)。
 
 需要 Node.js **24.22.1 或更新的 24.x**。本版在 24.22.3 验证。先从仓库根目录进入本目录：
 
@@ -41,9 +43,9 @@ npm start
 
 1. 按 [部署文档](docs/DEPLOYMENT.md) 在目标机器完成资源与端口检查。
 2. 保持模型关闭，仅将 `FDE_COLLECT_ENABLED=true`，重启，检查首批来源与文章质量。
-3. 选择 `api` 或 `codex`，先设置 `FDE_DAILY_LIMIT=1`，保持 `FDE_AUTO_ANALYZE=false`。
+3. 选择 `api` 或 `codex`，设置 `FDE_DAILY_LIMIT=5`，保持 `FDE_AUTO_ANALYZE=false`。分析与写作共享上限，失败和未知尝试也计入。
 4. 在界面人工选择一篇资料，核对原文引文、实际用量和结果。
-5. 质量与额度确认后，再决定是否增加每日次数或开启自动分析。
+5. 已有研究卡可进入“公众号草稿”。先用零模型素材稿验证编辑与排版，再在剩余次数内测试 AI 写作。不要清空账本来制造剩余额度。
 
 首次采集、旧文章和未披露日期的资料不会自动送给模型；它们仍可以人工排队分析。打开网页、搜索、保存笔记和导出均不触发模型。
 
@@ -63,6 +65,7 @@ npm start
 | API / Plus CLI、用量与失败处理 | [MODEL_USAGE](docs/MODEL_USAGE.md) |
 | 本机 / VPS / 可选 Docker | [DEPLOYMENT](docs/DEPLOYMENT.md) |
 | 研究与公众号选题 | [EDITORIAL_WORKFLOW](docs/EDITORIAL_WORKFLOW.md) |
+| 公众号写作、两种版本、排版与工具取舍 | [WECHAT_DESIGN_REVIEW](docs/WECHAT_DESIGN_REVIEW.md)、[本机升级与验收提示词](docs/CODEX_WECHAT_PROMPT.md) |
 | 备份、恢复、升级和锁处理 | [OPERATIONS](docs/OPERATIONS.md) |
 | 已运行的验证与未验证项 | [VALIDATION](docs/VALIDATION.md) |
 | 修改规则 | [AGENTS](AGENTS.md)、[CHANGELOG](CHANGELOG.md) |

@@ -1,5 +1,7 @@
 # 部署：先判断本机还是 VPS
 
+> **2.2.0 已有用户升级：** 先按 [公众号升级提示词](CODEX_WECHAT_PROMPT.md) 用旧代码备份，再切换新代码；数据库升级到 schema 2。分析和写作共享滚动24小时5次上限，失败/unknown计入；旧的一次试运行限制不再适用。
+
 本入口只需要 Node.js 24.x 和本目录依赖。SQLite 已包含在 Node 中。**不安装 PostgreSQL，不接管 MariaDB，不需要 Redis。** 首次推荐原生运行，Docker 为可选项。
 
 本次没有登录用户 VPS，也没有读取它的容量、进程或账单。以下容量是试运行建议，不是对目标机器的判断。
@@ -47,7 +49,7 @@ Node 安装按目标系统选择官方发行包或现有版本管理器；核对
 首次下载：
 
 ```bash
-git clone --branch codex/fde-workbench-v2 --single-branch https://github.com/ygao1981/AIHOT-FDE.git
+git clone --branch codex/fde-editorial-workbench --single-branch https://github.com/ygao1981/AIHOT-FDE.git
 cd AIHOT-FDE/fde-workbench
 npm ci --ignore-scripts
 npm run init
@@ -111,7 +113,7 @@ FDE_CODEX_HOME=/var/lib/fde-workbench/codex-home
 FDE_CODEX_MODEL=
 FDE_ANALYSIS_ENABLED=false
 FDE_AUTO_ANALYZE=false
-FDE_DAILY_LIMIT=1
+FDE_DAILY_LIMIT=5
 ```
 
 `FDE_CODEX_HOME` 是工作台配置名；手动登录 CLI 时使用官方的 `CODEX_HOME`。两者指向同一个专用目录。模型留空代表账户默认模型，明确填写账户支持的模型更便于比较用量。
@@ -131,7 +133,7 @@ FDE_API_MODEL=账户可用的模型
 FDE_API_INPUT_PRICE=对应官方输入单价
 FDE_API_OUTPUT_PRICE=对应官方输出单价
 FDE_MONTHLY_BUDGET_USD=10
-FDE_DAILY_LIMIT=1
+FDE_DAILY_LIMIT=5
 FDE_ANALYSIS_ENABLED=true
 FDE_AUTO_ANALYZE=false
 ```

@@ -38,6 +38,7 @@ export function loadConfig(env = process.env) {
     monthlyBudgetUsd: number(env, 'FDE_MONTHLY_BUDGET_USD', 10, 0.01, 10000, false),
     maxInputChars: number(env, 'FDE_MAX_INPUT_CHARS', 16000, 2000, 32000),
     maxOutputTokens: number(env, 'FDE_MAX_OUTPUT_TOKENS', 2500, 512, 8000),
+    editorialMaxOutputTokens: number(env, 'FDE_EDITORIAL_MAX_OUTPUT_TOKENS', 4500, 1000, 8000),
     timeoutMs: number(env, 'FDE_MODEL_TIMEOUT_MS', 180000, 1000, 300000),
     reasoning: env.FDE_REASONING || 'low',
     model: provider === 'codex' ? env.FDE_CODEX_MODEL || '' : env.FDE_API_MODEL || 'gpt-6.2-sol',

@@ -1,6 +1,8 @@
 # 交给 Codex：优先在 Windows 本机部署 FDE 研究台
 
-> **2026-11-23 最新用户授权（覆盖旧的一篇/每天一次试运行要求）：** Windows 本机真实测试上限改为 `FDE_DAILY_LIMIT=5`，表示滚动 24 小时内**最多五次真实分析尝试**，失败和 unknown 同样计入。旧美团 unknown 回执必须保留且如仍在 24 小时内已占一次。修复验证、备份和安全核对后允许恢复暂停、逐篇测试，无须每篇重复请求授权；不得自动重试未知请求或超出总次数。先手动测试，成功且稳定后可在剩余次数内短暂开启自动分析，结束后关闭。完整操作见 [5 次真实测试接手提示词](fde-workbench/docs/CODEX_TEST_5_PER_DAY_PROMPT.md)。
+> **2.2.0 已有用户升级：** 先按 [公众号升级提示词](CODEX_WECHAT_PROMPT.md) 用旧代码备份，再切换新代码；数据库升级到 schema 2。分析和写作共享滚动24小时5次上限，失败/unknown计入；旧的一次试运行限制不再适用。
+
+> **2026-11-23 最新用户授权（覆盖旧的一篇/每天一次试运行要求）：** Windows 本机真实测试上限改为 `FDE_DAILY_LIMIT=5`，表示滚动 24 小时内**最多五次真实分析尝试**，失败和 unknown 同样计入。旧美团 unknown 回执必须保留且如仍在 24 小时内已占一次。修复验证、备份和安全核对后允许恢复暂停、逐篇测试，无须每篇重复请求授权；不得自动重试未知请求或超出总次数。先手动测试，成功且稳定后可在剩余次数内短暂开启自动分析，结束后关闭。完整操作见 [5 次真实测试接手提示词](CODEX_TEST_5_PER_DAY_PROMPT.md)。
 
 将下面整段交给目标机器上的 Codex。它先做只读评估，再完成合适的安装。不要把登录口令、API key、设备码或数据库发到对话中。
 
@@ -11,10 +13,10 @@
 ## 项目与目标
 
 - 仓库：`https://github.com/ygao1981/AIHOT-FDE`
-- 分支：`codex/fde-workbench-v2`
+- 分支：`codex/fde-editorial-workbench`
 - 当前运行入口：`fde-workbench/`
 - 用途：个人 FDE/企业 AI 落地研究，积累微信公众号选题和原文证据。
-- 当前版本：2.1.0。实际提交以远端指定分支和 CHECKPOINT 为准，不要检出 main 后误用旧入口。
+- 当前版本：2.2.0。实际提交以远端指定分支和 CHECKPOINT 为准，不要检出 main 后误用旧入口。
 - 我使用 Windows 桌面版 Codex。你负责开发、安装和维护；研究台自己的 Node 后台负责调度，官方 Codex CLI 只在有已授权资料时做单篇分析。
 - 我的 VPS 是 Linux，已经有 MariaDB，之前磁盘紧张。你必须用本次实测判断是否能部署，不能沿用旧估算。
 - 已作出的设计决定：借鉴 T3 的持久任务与通知机制，但不安装 T3，不嵌入它的 server / app-server / Effect；不因为调研过一个项目就引入它。
@@ -36,7 +38,7 @@ Windows 使用 PowerShell 等效命令检查可用物理内存与文件系统；
 
 如果已有仓库，先检查未提交改动和运行版本，不覆盖。首次下载指定分支；记录实际 commit。使用独立目录、数据目录和合适的运行用户。
 
-首次克隆使用 `git clone --branch codex/fde-workbench-v2 --single-branch https://github.com/ygao1981/AIHOT-FDE.git`。已有改动时保留；不要使用 `reset --hard`、清理数据或重新初始化数据库来强制对齐。
+首次克隆使用 `git clone --branch codex/fde-editorial-workbench --single-branch https://github.com/ygao1981/AIHOT-FDE.git`。已有改动时保留；不要使用 `reset --hard`、清理数据或重新初始化数据库来强制对齐。
 
 准备 Node.js 24.22.1 或更新的 24.x，核对平台和官方发行来源。进入 `fde-workbench/`，执行：
 
@@ -86,7 +88,7 @@ Windows 支持原生 codex.exe，以及标准官方 npm 安装的 codex.cmd/code
 
 ## 第五步：只验收一篇真实分析
 
-确认账号就绪后设置所选 provider，开启分析，保持 `FDE_AUTO_ANALYZE=false`、`FDE_DAILY_LIMIT=1`。手动选择一篇与 FDE 交付相关的资料。
+确认账号就绪后设置所选 provider，开启分析，保持 `FDE_AUTO_ANALYZE=false`、`FDE_DAILY_LIMIT=5`。手动选择一篇与 FDE 交付相关的资料。
 
 核对：
 

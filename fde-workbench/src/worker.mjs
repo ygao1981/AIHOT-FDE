@@ -1,10 +1,11 @@
 import { collectSource } from './collect.mjs';
 import { prepareArticle, precheck, analysisKey, estimateReservation, runAnalysis } from './analysis.mjs';
+import { prepareEditorial, templateEditorial, editorialFingerprint, estimateEditorialReservation, runEditorial } from './editorial.mjs';
 import { AppError } from './config.mjs';
 
 export class Worker {
-  constructor(store,config,{analyzer=runAnalysis,collector=collectSource}={}) {
-    this.store=store;this.config=config;this.analyzer=analyzer;this.collector=collector;
+  constructor(store,config,{analyzer=runAnalysis,editor=runEditorial,collector=collectSource}={}) {
+    this.store=store;this.config=config;this.analyzer=analyzer;this.editor=editor;this.collector=collector;
     this.busy=false;this.collecting=false;this.stopped=false;this.started=false;
     this.timer=null;this.retainedAt=0;this.analysisTask=null;this.wakeRequested=false;
   }
@@ -19,10 +20,42 @@ export class Worker {
     if(result.queued&&this.started)void this.wake();
     return result;
   }
+  createEditorial({articleIds,angle,format,mode}={}) {
+    if(!Array.isArray(articleIds)||articleIds.length<1||articleIds.length>3||new Set(articleIds).size!==articleIds.length||
+      articleIds.some(id=>typeof id!=='string'||id.length>100))throw new AppError('invalid_sources','请选择一至三篇不同的已分析资料。');
+    const articles=articleIds.map(id=>this.store.getArticle(id));
+    if(articles.some(article=>!article))throw new AppError('not_found','所选资料已不存在，请重新选择。',404);
+    const input=prepareEditorial(articles,{angle,format,mode},this.config);
+    if(input.spec.mode==='model'&&(!this.config.analysisEnabled||this.config.provider==='off'))
+      throw new AppError('analysis_disabled','模型写作尚未开启。仍可生成不调用模型的素材初稿。',409);
+    const output=this.store.createEditorial(input,{result:input.spec.mode==='template'?templateEditorial(input):null});
+    if(output.draft.status==='queued'&&this.started)void this.wake();
+    return {...output,message:output.cached?'已复用已保存的草稿及其状态，没有创建重复模型任务。':
+      input.spec.mode==='template'?'素材初稿已保存，没有调用模型。':'写作任务已保存，使用与研究分析共享的模型额度。'};
+  }
+  retryEditorial(id) {
+    if(!this.config.analysisEnabled||this.config.provider==='off')throw new AppError('analysis_disabled','模型写作尚未开启，请先检查运行配置。',409);
+    const draft=this.store.queueEditorialRetry(id);
+    if(this.started)void this.wake();
+    return {draft,cached:false,message:'已安排明确确认后的写作重试。新请求仍受共享次数、预算和暂停状态限制。'};
+  }
   async analyzeOne() {
     if(this.busy||this.stopped||!this.config.analysisEnabled||this.config.provider==='off'||this.store.setting('analysis_pause'))return 'blocked';
     this.busy=true;
     try{
+      // Explicit writing requests share the same consumer and ledger, ahead of the analysis backlog.
+      const draft=this.store.nextEditorialQueued();
+      if(draft){
+        if(editorialFingerprint(draft.sources,draft.spec,this.config)!==draft.fingerprint){
+          this.store.blockEditorial(draft.id,'写作配置已变化，本次未调用模型，请以当前配置重新创建草稿。');
+          return 'progressed';
+        }
+        const input={sources:draft.sources,spec:draft.spec,fingerprint:draft.fingerprint};
+        const attempt=this.store.beginEditorialAttempt(draft.id,this.config,estimateEditorialReservation(this.config,input));
+        try{const output=await this.editor(this.config,input);this.store.completeEditorialAttempt(attempt,output);}
+        catch(error){this.store.failEditorialAttempt(attempt,error);return 'blocked';}
+        return 'progressed';
+      }
       const row=this.store.nextQueued();if(!row)return 'empty';
       const article=this.store.getArticle(row.id),input=this.input(article),key=analysisKey(input,this.config);
       const admitted=precheck(input);
@@ -67,7 +100,7 @@ export class Worker {
     if(this.stopped||!c.autoAnalyze||!c.analysisEnabled||c.provider==='off'||this.store.setting('analysis_pause'))return 0;
     const {stats,usage}=this.store.overview(c);
     // Keep the automatic backlog within the remaining daily allowance, including manual queue items.
-    return this.store.autoQueue(Math.max(0,c.dailyLimit-usage.attempts24h-stats.queued));
+    return this.store.autoQueue(Math.max(0,c.dailyLimit-usage.attempts24h-stats.queued-stats.editorialQueued));
   }
   async collect({force=false}={}) {
     if(!this.config.collectEnabled)throw new AppError('collection_disabled','采集尚未开启，请先在运行环境中开启。',409);
