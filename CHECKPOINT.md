@@ -2,11 +2,12 @@
 
 ## 2026-11-23 公众号草稿与两种排版（2.2.0）
 
-- [READ] 基线为 PR #5 的 `8d0df4506a86a2981c55798300884415c4190903`。本轮分支 `codex/fde-editorial-workbench`，保留已有 CLI 和代理修复。详细取舍见 [公众号工具审查](fde-workbench/docs/WECHAT_DESIGN_REVIEW.md)。
+- [READ] 基线为 PR #5 的 `8d0df4506a86a2981c55798300884415c4190903`。本轮分支 `codex/fde-editorial-workbench`，交付 [草稿 PR #6](https://github.com/ygao1981/AIHOT-FDE/pull/6)，保留已有 CLI 和代理修复。功能与回归提交为 `8a36611d6bb60935814dcd5b57a2ffa1922e7f17`，详细取舍见 [公众号工具审查](fde-workbench/docs/WECHAT_DESIGN_REVIEW.md)。
 - [RUN] 新增已分析资料选择、零模型素材稿或一次 AI 写作任务、持久草稿、修订冲突、原文快照、纯文字/图文、两主题、HTML/Markdown/TXT、浏览器 PNG 与双版本 ZIP。研究卡不被写稿覆盖，私人笔记不自动进入公开稿。
 - [RUN] 分析和写作合计仍是滚动24小时最多5次，包含失败和 unknown；一个串行 worker，同一 attempts 账本。换主题、编辑、图片绘制和导出不调用模型。默认三个工作开关关闭，provider=off，无新增生产依赖。
-- [RUN] Linux x64 / Node24.22.3：37个脚本语法与配置检查、122项自动测试、既有DOM6组通过，依赖审计0漏洞。真实模型调用0。迁移用虚构5回执/3研究卡作回归，没有访问用户正式库。
-- [UNKNOWN] 当前执行环境在 Chromium 启动前拒绝 socket；本轮尚不能据此记为真实浏览器通过。已接入 GitHub CI 的新增页面/PNG/剪贴板/ZIP验收，结果见 [VALIDATION](fde-workbench/docs/VALIDATION.md)。用户Windows真实写作及微信公众号粘贴/手机预览尚待本机。
+- [RUN] Linux x64 / Node24.22.3：37个脚本语法与配置检查、124项自动测试、既有DOM6组通过，依赖审计0漏洞。Windows CI 同样124项通过。真实模型调用0。迁移用虚构5回执/3研究卡作回归，没有访问用户正式库。
+- [RUN] [FDE CI 45168134888](https://github.com/ygao1981/AIHOT-FDE/actions/runs/45168134888) 的 Windows、Linux与Docker全部通过；真实Chromium验证草稿交互、PNG、剪贴板、两版ZIP和375/390px窄屏。已下载报告并实际查看桌面/手机预览及配图截图，模型请求0，详见 [VALIDATION](fde-workbench/docs/VALIDATION.md)。首轮Windows CRLF夹具、配图句尾标点及预览验收等待问题均已修复。
+- [UNKNOWN] 用户Windows真实写作及微信公众号粘贴、PNG上传、手机预览尚待本机。开发容器不能启动Chromium，真实浏览器证据来自GitHub runner，不将两种环境混为一谈。
 - [READ] SQLite升为schema2。**必须先用旧版代码备份，再切新版**；新版backup/status同样可能触发迁移。回滚需升级前快照，不能手改schema或让历史真实消费随备份回退。见 [运维升级章节](fde-workbench/docs/OPERATIONS.md#220-草稿数据库升级)。
 - 下一步直接使用 [Codex公众号升级与验收提示词](fde-workbench/docs/CODEX_WECHAT_PROMPT.md)。未合并main，没有访问或部署到用户Windows/VPS，没有上传或发布公众号。
 

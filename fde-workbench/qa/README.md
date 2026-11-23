@@ -127,4 +127,6 @@ node qa/verify-editorial.mjs
 
 前者验证固定SVG到真实PNG、双版本ZIP、剪贴板与手机配图；后者验证登录、资料选择、素材稿、保存冲突、两版预览与下载。只用临时虚构数据，全部模型关闭，无外部网络。报告和截图同样写入 `FDE_QA_OUTPUT_DIR` 的独立子目录。
 
+草稿预览另存 `desktop-editorial-viewport.png`、`desktop-preview.png` 和 `mobile-preview-viewport.png`。验收等待确切主题、修订号与标题、字体加载及图片解码；`editorial-results.json` 的 `previewEvidence` 记录对应URL和图片尺寸。独立预览截图用于排除跨进程iframe在全页截图中空白的取证问题，不能只凭DOM中有图片节点就宣布显示正确。
+
 浏览器在启动阶段被系统拒绝时如实标记未完成，不以DOM模拟或脚本存在替代。不要为了生产部署给低资源VPS安装浏览器；图片由日常用户的桌面浏览器生成。Windows真实CLI写作和微信后台手机预览仍需单独验收。

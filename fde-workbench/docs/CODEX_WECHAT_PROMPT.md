@@ -8,7 +8,7 @@
 
 仓库：https://github.com/ygao1981/AIHOT-FDE
 
-新功能分支：`codex/fde-editorial-workbench`。它基于 `codex/fde-proxy-dns-compat` 的 PR #5，保留 PR #4 的 Codex JSONL 通知修复和 PR #5 的本机代理采集修复。不要用旧 main 或旧 workbench 分支覆盖这些修改。运行入口只在 `fde-workbench/`。
+新功能分支：`codex/fde-editorial-workbench`，草稿 PR：https://github.com/ygao1981/AIHOT-FDE/pull/6 。功能与回归提交 `8a36611d6bb60935814dcd5b57a2ffa1922e7f17`，接手时核对该分支最新提交及其验证记录。它基于 `codex/fde-proxy-dns-compat` 的 PR #5，保留 PR #4 的 Codex JSONL 通知修复和 PR #5 的本机代理采集修复。不要用旧 main 或旧 workbench 分支覆盖这些修改。运行入口只在 `fde-workbench/`。
 
 已有目录曾为 `F:\AIHOT-FDE\source`，资料位于其 `fde-workbench\.data`，地址为 `http://127.0.0.1:3210/`。我的 Codex CLI 使用本人 ChatGPT 登录。Windows 有 0day Cloud 与 Clash/VPS 代理，DNS 防泄露已配置；保留现有网络和 `FDE_SOURCE_PROXY_URL`，不要修改系统 DNS、TUN、路由或关闭校验。
 
