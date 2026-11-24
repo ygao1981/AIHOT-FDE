@@ -2,15 +2,17 @@ import { DatabaseSync, backup } from 'node:sqlite';
 import { mkdirSync, chmodSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { AppError } from './config.mjs';
+import { AppError, MAX_AUTO_DAILY_LIMIT } from './config.mjs';
 
 const EDITORIAL = ['new', 'organized', 'shortlisted', 'drafting', 'published', 'archived'];
+const MODEL_WINDOW_MS = 86400000;
+const windowStart = now => new Date(now - MODEL_WINDOW_MS).toISOString();
 export const hashBody = body => createHash('sha256').update(String(body).normalize('NFKC').replace(/\s+/g, ' ').trim()).digest('hex');
 const nowIso = () => new Date().toISOString();
 function present(row, body = false) {
   if (!row) return null;
   return { id:row.id, url:row.url, title:row.title, sourceId:row.source_id, sourceName:row.source_name,
-    language:row.language, publishedAt:row.published_at, status:row.status, editorialStatus:row.editorial_status,
+    language:row.language, publishedAt:row.published_at, status:row.status, editorialStatus:row.editorial_status, queueOrigin:row.queue_origin,
     personalNotes:row.personal_notes, bodyExcerpt:row.body.slice(0, 240), ...(body ? {body:row.body} : {}),
     bodyKind:row.body_kind, bodyHash:row.body_hash, backfill:!!row.backfill,
     analysis:row.analysis_json ? JSON.parse(row.analysis_json) : null, analysisKey:row.analysis_key,
@@ -24,7 +26,7 @@ export class Store {
     chmodSync(this.path, 0o600);
     this.db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
     const version = this.db.prepare('PRAGMA user_version').get().user_version;
-    if (version > 2) { this.db.close(); throw new AppError('newer_database', '数据库版本高于本程序，请使用对应的新版本。'); }
+    if (version > 3) { this.db.close(); throw new AppError('newer_database', '数据库版本高于本程序，请使用对应的新版本。'); }
     if (version === 0) this.db.exec(`BEGIN IMMEDIATE;
       CREATE TABLE articles (
         id TEXT PRIMARY KEY, url TEXT NOT NULL UNIQUE, title TEXT NOT NULL, source_id TEXT NOT NULL,
@@ -65,6 +67,19 @@ export class Store {
       this.db.close();
       throw new AppError('migration_failed','资料库升级未完成，请保留数据库与备份，并检查文件权限和可用空间。');
     }
+    if (version < 3) try { this.db.exec(`BEGIN IMMEDIATE;
+      ALTER TABLE articles ADD COLUMN queue_origin TEXT CHECK(queue_origin IN ('manual','auto','legacy'));
+      UPDATE articles SET queue_origin='legacy' WHERE status IN ('queued','analyzing');
+      ALTER TABLE attempts ADD COLUMN origin TEXT NOT NULL DEFAULT 'legacy' CHECK(origin IN ('manual','auto','legacy'));
+      CREATE INDEX attempts_origin_window ON attempts(origin,started_at);
+      CREATE INDEX articles_collection_day ON articles(created_at) WHERE source_id<>'manual';
+      PRAGMA user_version=3;
+      COMMIT;`); }
+    catch {
+      try { this.db.exec('ROLLBACK'); } catch { /* SQLite may already have rolled back the transaction. */ }
+      this.db.close();
+      throw new AppError('migration_failed','资料库升级未完成，请保留数据库与备份，并检查文件权限和可用空间。');
+    }
     this.catalog = catalog;
     for (const s of catalog) this.db.prepare('INSERT OR IGNORE INTO source_state(id,enabled) VALUES(?,?)').run(s.id, s.enabled ? 1 : 0);
   }
@@ -79,6 +94,35 @@ export class Store {
     if (value === null) this.db.prepare('DELETE FROM settings WHERE key=?').run(key);
     else this.db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key, String(value));
   }
+  automaticDailyLimit(config) {
+    const saved=Number(this.setting('auto_daily_limit'));
+    return Number.isInteger(saved)&&saved>=1&&saved<=MAX_AUTO_DAILY_LIMIT?saved:config.dailyLimit;
+  }
+  setAutomaticDailyLimit(limit) {
+    if (!Number.isSafeInteger(limit)||limit<1||limit>MAX_AUTO_DAILY_LIMIT)
+      throw new AppError('invalid_auto_limit',`请输入 1–${MAX_AUTO_DAILY_LIMIT} 之间的整数。`);
+    this.setSetting('auto_daily_limit',limit);
+  }
+  collectionLimits(now = Date.now()) {
+    const lookbackDays=Number(this.setting('collection_lookback_days'))||30;
+    const dailyLimit=Number(this.setting('collection_daily_limit'))||50;
+    const today=new Date(now);today.setHours(0,0,0,0);
+    const tomorrow=new Date(today);tomorrow.setDate(today.getDate()+1);
+    const oldest=new Date(today);oldest.setDate(today.getDate()-lookbackDays+1);
+    const addedToday=this.db.prepare("SELECT count(*) n FROM articles WHERE source_id<>'manual' AND created_at>=? AND created_at<?")
+      .get(today.toISOString(),tomorrow.toISOString()).n;
+    return {lookbackDays,dailyLimit,addedToday,oldestAt:oldest.getTime(),dayEndAt:tomorrow.getTime()};
+  }
+  setCollectionLimits({lookbackDays,dailyLimit}) {
+    if(!Number.isSafeInteger(lookbackDays)||lookbackDays<1||lookbackDays>365)
+      throw new AppError('invalid_collection_days','请输入 1 到 365 之间的天数。');
+    if(!Number.isSafeInteger(dailyLimit)||dailyLimit<1||dailyLimit>200)
+      throw new AppError('invalid_collection_limit','请输入 1 到 200 之间的篇数。');
+    this.transaction(()=>{
+      this.setSetting('collection_lookback_days',lookbackDays);
+      this.setSetting('collection_daily_limit',dailyLimit);
+    });
+  }
   getArticle(id) { return present(this.db.prepare('SELECT * FROM articles WHERE id=?').get(id), true); }
   findUrl(url) { return present(this.db.prepare('SELECT * FROM articles WHERE url=?').get(url), true); }
   upsertArticle(a, {updateExisting = false, maxArticles = 10000} = {}) {
@@ -87,7 +131,7 @@ export class Store {
     if (old) {
       if (updateExisting && body && bodyHash !== old.bodyHash) {
         this.db.prepare(`UPDATE articles SET body=?,body_hash=?,body_kind=?,title=?,status=?,backfill=?,analysis_json=NULL,
-          analysis_key=NULL,queue_nonce=NULL,last_error=NULL,updated_at=? WHERE id=?`).run(body, bodyHash, a.bodyKind || 'manual', a.title || old.title, a.status || 'candidate',
+          analysis_key=NULL,queue_nonce=NULL,queue_origin=NULL,last_error=NULL,updated_at=? WHERE id=?`).run(body, bodyHash, a.bodyKind || 'manual', a.title || old.title, a.status || 'candidate',
           (a.backfill===undefined?old.backfill:a.backfill)?1:0,timestamp,old.id);
       }
       return {article:this.getArticle(old.id), created:false};
@@ -129,16 +173,23 @@ export class Store {
     if (a.status === 'analyzing') throw new AppError('busy','这篇资料正在分析，请等待结果。',409);
     if (!a.body || a.body.length < 180) throw new AppError('needs_body','正文不足，请通过手动收录粘贴原文后再分析。');
     if (!retry && a.analysisKey === key && a.analysis) return {queued:false,cached:true,message:'已复用现有研究结果，没有新模型请求。'};
+    if (a.status === 'queued') {
+      this.db.prepare("UPDATE articles SET queue_origin='manual' WHERE id=? AND status='queued' AND queue_origin IS NOT 'manual'").run(id);
+      return {queued:true,cached:false,message:'已安排手动分析。'};
+    }
     const prior=this.db.prepare("SELECT status FROM attempts WHERE fingerprint=? AND kind='analysis' AND status IN ('unknown','failed','running') LIMIT 1").get(key);
     if (prior && !retry) throw new AppError('retry_confirmation','之前的请求可能已消耗额度，请明确确认重试。',409);
-    this.db.prepare("UPDATE articles SET status='queued',queue_nonce=?,last_error=NULL,updated_at=? WHERE id=?").run(retry ? randomUUID() : '',nowIso(),id);
+    this.db.prepare("UPDATE articles SET status='queued',queue_origin='manual',queue_nonce=?,last_error=NULL,updated_at=? WHERE id=?").run(retry ? randomUUID() : '',nowIso(),id);
     return {queued:true,cached:false,message:'已加入分析队列。'};
   }
-  nextQueued() { return this.db.prepare("SELECT * FROM articles WHERE status='queued' ORDER BY priority DESC,created_at LIMIT 1").get(); }
+  nextQueued(allowAutomatic = false) {
+    return this.db.prepare(`SELECT * FROM articles WHERE status='queued' AND (? OR COALESCE(queue_origin,'manual')='manual')
+      ORDER BY COALESCE(queue_origin,'manual')<>'manual',priority DESC,created_at LIMIT 1`).get(allowAutomatic?1:0);
+  }
   autoQueue(limit=5) {
     if(limit<=0)return 0;
     const rows=this.db.prepare("SELECT id FROM articles WHERE status='candidate' AND backfill=0 AND editorial_status!='archived' ORDER BY priority DESC,created_at DESC LIMIT ?").all(limit);
-    for(const r of rows) this.db.prepare("UPDATE articles SET status='queued',queue_nonce='' WHERE id=?").run(r.id);
+    for(const r of rows) this.db.prepare("UPDATE articles SET status='queued',queue_origin='auto',queue_nonce='' WHERE id=? AND status='candidate'").run(r.id);
     return rows.length;
   }
   assertModelSlot() {
@@ -147,10 +198,11 @@ export class Store {
     if(this.db.prepare("SELECT id FROM attempts WHERE status='running' LIMIT 1").get())
       throw new AppError('busy','已有模型任务正在执行。',409);
   }
-  assertBudget(config,reservation,timestamp=nowIso()) {
-    const since=new Date(Date.now()-86400000).toISOString();
-    const n=this.db.prepare('SELECT count(*) n FROM attempts WHERE started_at>?').get(since).n;
-    if(n>=config.dailyLimit) throw new AppError('daily_limit','已达到滚动 24 小时模型任务上限，任务会等待。',409);
+  assertBudget(config,reservation,timestamp,origin='manual') {
+    if(origin==='auto') {
+      const n=this.db.prepare("SELECT count(*) n FROM attempts WHERE origin='auto' AND started_at>?").get(windowStart(Date.parse(timestamp))).n;
+      if(n>=this.automaticDailyLimit(config)) throw new AppError('daily_limit','自动分析已达到滚动 24 小时上限。',409);
+    }
     if(config.provider==='api') {
       if(!Number.isFinite(reservation) || reservation<=0) throw new AppError('invalid_reservation','无法计算请求预算，请检查模型价格配置。');
       const used=this.db.prepare("SELECT COALESCE(sum(COALESCE(cost_usd,reserved_usd,0)),0) n FROM attempts WHERE provider='api' AND started_at>=?").get(timestamp.slice(0,7)+'-01T00:00:00.000Z').n;
@@ -170,9 +222,11 @@ export class Store {
       }
       if(cached) throw new AppError('retry_confirmation','请求结果不明确，需要手动确认重试。',409);
       const timestamp=nowIso();
-      this.assertBudget(config,reservation,timestamp);
+      const origin=row.queue_origin==='auto'||row.queue_origin==='legacy'?'auto':'manual';
+      if(origin==='auto'&&!config.autoAnalyze)throw new AppError('not_queued','自动分析已关闭。',409);
+      this.assertBudget(config,reservation,timestamp,origin);
       const id=randomUUID();
-      this.db.prepare('INSERT INTO attempts(id,article_id,fingerprint,nonce,provider,model,status,started_at,reserved_usd) VALUES(?,?,?,?,?,?,?,?,?)').run(id,articleId,key,nonce,config.provider,config.model,'running',timestamp,reservation);
+      this.db.prepare('INSERT INTO attempts(id,article_id,fingerprint,nonce,provider,model,status,started_at,reserved_usd,origin) VALUES(?,?,?,?,?,?,?,?,?,?)').run(id,articleId,key,nonce,config.provider,config.model,'running',timestamp,reservation,origin);
       this.markStatus(articleId,'analyzing');
       return {id,articleId,key,bodyHash:row.body_hash,cached:false};
     });
@@ -189,7 +243,7 @@ export class Store {
       this.assertModelSlot();
       const timestamp=nowIso(),id=randomUUID();
       this.assertBudget(config,reservation,timestamp);
-      this.db.prepare("INSERT INTO attempts(id,article_id,fingerprint,nonce,provider,model,status,started_at,reserved_usd,kind) VALUES(?,?,?,?,?,?,'running',?,?,'translation')")
+      this.db.prepare("INSERT INTO attempts(id,article_id,fingerprint,nonce,provider,model,status,started_at,reserved_usd,kind,origin) VALUES(?,?,?,?,?,?,'running',?,?,'translation','manual')")
         .run(id,articleId,key,retry?randomUUID():'',config.provider,config.model,timestamp,reservation);
       return {id,articleId,key,kind:'translation'};
     });
@@ -286,8 +340,8 @@ export class Store {
       if(prior)throw new AppError('retry_confirmation','写作请求已经记录，不能自动重复发送。',409);
       const timestamp=nowIso();this.assertBudget(config,reservation,timestamp);
       const id=randomUUID(),articleId=JSON.parse(row.sources_json)[0].articleId;
-      this.db.prepare(`INSERT INTO attempts(id,article_id,fingerprint,nonce,provider,model,status,started_at,reserved_usd,kind,draft_id)
-        VALUES(?,?,?,?,?,?,?,?,?,'editorial',?)`).run(id,articleId,row.fingerprint,row.queue_nonce,config.provider,config.model,'running',timestamp,reservation,draftId);
+      this.db.prepare(`INSERT INTO attempts(id,article_id,fingerprint,nonce,provider,model,status,started_at,reserved_usd,kind,draft_id,origin)
+        VALUES(?,?,?,?,?,?,?,?,?,'editorial',?,'manual')`).run(id,articleId,row.fingerprint,row.queue_nonce,config.provider,config.model,'running',timestamp,reservation,draftId);
       this.db.prepare("UPDATE editorial_drafts SET status='writing',attempt_id=?,revision=revision+1,updated_at=? WHERE id=?").run(id,timestamp,draftId);
       return {id,draftId,articleId,key:row.fingerprint,cached:false};
     });
@@ -333,6 +387,7 @@ export class Store {
     for(const g of grouped) {stats.total+=g.n;if(g.status in stats)stats[g.status]=g.n;}
     stats.shortlisted=this.db.prepare("SELECT count(*) n FROM articles WHERE editorial_status='shortlisted'").get().n;
     stats.editorialQueued=this.db.prepare("SELECT count(*) n FROM editorial_drafts WHERE status='queued'").get().n;
+    stats.autoQueued=this.db.prepare("SELECT count(*) n FROM articles WHERE status='queued' AND queue_origin IN ('auto','legacy')").get().n;
     const month=nowIso().slice(0,7)+'-01T00:00:00.000Z';
     const u=this.db.prepare(`SELECT COALESCE(sum(input_tokens),0) inputTokens,COALESCE(sum(output_tokens),0) outputTokens,
       COALESCE(sum(CASE WHEN provider='api' THEN cost_usd ELSE 0 END),0) monthCostUsd,
@@ -340,9 +395,10 @@ export class Store {
       COALESCE(sum(CASE WHEN provider='codex' THEN 1 ELSE 0 END),0) cliAttemptsMonth FROM attempts WHERE started_at>=?`).get(month);
     const recent=this.db.prepare(`SELECT count(*) attempts24h,COALESCE(sum(CASE WHEN kind='analysis' THEN 1 ELSE 0 END),0) analysisAttempts24h,
       COALESCE(sum(CASE WHEN kind='editorial' THEN 1 ELSE 0 END),0) editorialAttempts24h,
-      COALESCE(sum(CASE WHEN kind='translation' THEN 1 ELSE 0 END),0) translationAttempts24h FROM attempts WHERE started_at>?`).get(new Date(Date.now()-86400000).toISOString());
+      COALESCE(sum(CASE WHEN kind='translation' THEN 1 ELSE 0 END),0) translationAttempts24h,
+      COALESCE(sum(CASE WHEN origin='auto' THEN 1 ELSE 0 END),0) autoAttempts24h FROM attempts WHERE started_at>?`).get(windowStart(Date.now()));
     return {stats,usage:{...u,...recent,costKnown:config.provider==='api'},
-      config:{provider:config.provider,model:config.model,analysisEnabled:config.analysisEnabled,collectEnabled:config.collectEnabled,autoAnalyze:config.autoAnalyze,dailyLimit:config.dailyLimit,monthlyBudgetUsd:config.monthlyBudgetUsd,editorialMaxOutputTokens:config.editorialMaxOutputTokens},paused:this.setting('analysis_pause')};
+      config:{provider:config.provider,model:config.model,analysisEnabled:config.analysisEnabled,collectEnabled:config.collectEnabled,autoAnalyze:config.autoAnalyze,dailyLimit:this.automaticDailyLimit(config),monthlyBudgetUsd:config.monthlyBudgetUsd,editorialMaxOutputTokens:config.editorialMaxOutputTokens},paused:this.setting('analysis_pause')};
   }
   retention(days) {
     // Never delete analyzed material, personal notes, shortlisted topics or receipt history.

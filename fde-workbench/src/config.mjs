@@ -3,16 +3,23 @@ import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+export const MAX_AUTO_DAILY_LIMIT = 50;
 export class AppError extends Error {
   constructor(code, message, status = 400) { super(message); this.code = code; this.status = status; }
 }
-export function readSourceProxyUrl(value = '') {
+export function readSourceProxyUrl(value = '', key = 'FDE_SOURCE_PROXY_URL') {
   const input = value.trim();
   if (!input) return '';
   const endpoint = /^http:\/\/(127\.0\.0\.1|\[::1\]):([1-9]\d{0,4})\/?$/.exec(input);
   if (!endpoint || Number(endpoint[2]) > 65535)
-    throw new AppError('invalid_config', 'FDE_SOURCE_PROXY_URL 需要填写本机回环 HTTP 代理及实际端口。');
+    throw new AppError('invalid_config', `${key} 需要填写本机回环 HTTP 代理及实际端口。`);
   return 'http://' + endpoint[1] + ':' + endpoint[2];
+}
+export function readSourceProxyConfig(env) {
+  const sourceProxyUrl=readSourceProxyUrl(env.FDE_SOURCE_PROXY_URL);
+  const sourceProxyFallbackUrls=(env.FDE_SOURCE_PROXY_FALLBACK_URLS||'').split(',')
+    .map(url=>readSourceProxyUrl(url,'FDE_SOURCE_PROXY_FALLBACK_URLS')).filter(Boolean);
+  return {sourceProxyUrl,sourceProxyFallbackUrls:[...new Set(sourceProxyFallbackUrls)].filter(url=>url!==sourceProxyUrl)};
 }
 function number(env, key, fallback, min, max, integer = true) {
   const raw = env[key];
@@ -31,10 +38,10 @@ export function loadConfig(env = process.env) {
   const config = {
     host: env.FDE_HOST || '127.0.0.1', port, baseUrl: baseUrl.origin,
     dataDir: resolve(ROOT, env.FDE_DATA_DIR || '.data'), accessToken: env.FDE_ACCESS_TOKEN || '',
-    sourceProxyUrl: readSourceProxyUrl(env.FDE_SOURCE_PROXY_URL),
+    ...readSourceProxyConfig(env),
     collectEnabled: env.FDE_COLLECT_ENABLED === 'true', analysisEnabled: env.FDE_ANALYSIS_ENABLED === 'true',
     autoAnalyze: env.FDE_AUTO_ANALYZE === 'true', provider,
-    dailyLimit: number(env, 'FDE_DAILY_LIMIT', 5, 1, 50),
+    dailyLimit: number(env, 'FDE_DAILY_LIMIT', 5, 1, MAX_AUTO_DAILY_LIMIT),
     monthlyBudgetUsd: number(env, 'FDE_MONTHLY_BUDGET_USD', 10, 0.01, 10000, false),
     maxInputChars: number(env, 'FDE_MAX_INPUT_CHARS', 16000, 2000, 32000),
     maxOutputTokens: number(env, 'FDE_MAX_OUTPUT_TOKENS', 2500, 512, 8000),

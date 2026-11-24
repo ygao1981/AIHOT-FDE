@@ -48,7 +48,7 @@ export function createApp(store,worker,config,{importer=importArticle}={}) {
         if(!bearer && (!origin||!allowedHosts.has(new URL(origin).host)||!['http:','https:'].includes(new URL(origin).protocol)))
           throw new AppError('invalid_origin','请求来源不匹配，请从本站页面操作。',403);
       }
-      if(path==='/api/health'&&method==='GET')return send(res,200,{ok:true,version:'2.2.0'});
+      if(path==='/api/health'&&method==='GET')return send(res,200,{ok:true,version:'2.2.1'});
       const assets={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/style.css':'style.css',
         '/editorial.html':'editorial.html','/editorial.js':'editorial.js','/editorial.css':'editorial.css','/editorial-assets.js':'editorial-assets.js',
         '/guide.html':'guide.html','/guide.css':'guide.css'};
@@ -110,7 +110,13 @@ export function createApp(store,worker,config,{importer=importArticle}={}) {
         }
       }
       if(path==='/api/articles'&&method==='GET')return send(res,200,store.listArticles(Object.fromEntries(url.searchParams)));
-      if(path==='/api/sources'&&method==='GET')return send(res,200,{items:store.sources()});
+      if(path==='/api/sources'&&method==='GET') {
+        const {lookbackDays,dailyLimit,addedToday}=store.collectionLimits();
+        return send(res,200,{items:store.sources(),lookbackDays,dailyLimit,addedToday,collecting:worker.collecting});
+      }
+      if(path==='/api/sources/settings'&&method==='POST') {
+        store.setCollectionLimits(await readJson(req));return send(res,200,{ok:true});
+      }
       const sourceMatch=/^\/api\/sources\/([a-z0-9-]+)$/.exec(path);
       if(sourceMatch&&method==='POST') {const body=await readJson(req);if(typeof body.enabled!=='boolean')throw new AppError('invalid_value','请选择是否启用采集。');store.setSource(sourceMatch[1],body.enabled);return send(res,200,{ok:true});}
       const articleMatch=/^\/api\/articles\/([a-z0-9-]+)(?:\/(queue|translation))?$/.exec(path);
@@ -132,13 +138,19 @@ export function createApp(store,worker,config,{importer=importArticle}={}) {
       }
       if(path==='/api/collect'&&method==='POST') {
         await readJson(req);
-        if(!config.collectEnabled)throw new AppError('collection_disabled','采集尚未开启，请先在运行环境中开启。',409);
         if(worker.collecting)throw new AppError('collection_busy','采集正在进行，请稍候。',409);
-        // Honor source intervals even when the user presses the button repeatedly.
-        void worker.collect().catch(()=>{});return send(res,202,{ok:true,message:'已检查到期信源，采集结果请稍后刷新查看。'});
+        const {dailyLimit,addedToday}=store.collectionLimits();
+        if(addedToday>=dailyLimit)throw new AppError('collection_limit','今天已达到采集上限。可调整上限，或明天再检查。',409);
+        void worker.collect({manual:true}).catch(()=>{});
+        return send(res,202,{ok:true,message:'已安排检查。最近 5 分钟检查过的信源会跳过。'});
       }
       if(path==='/api/control'&&method==='POST') {
         const body=await readJson(req);
+        if(body.action==='set-auto-daily-limit'){
+          store.setAutomaticDailyLimit(body.limit);
+          if(config.autoAnalyze){worker.refill();void worker.wake();}
+          return send(res,200,{ok:true});
+        }
         if(!['pause','resume'].includes(body.action))throw new AppError('invalid_action','请选择暂停或恢复。');
         store.setSetting('analysis_pause',body.action==='pause'?'已手动暂停。':null);
         if(body.action==='resume'){worker.refill();void worker.wake();}

@@ -13,7 +13,7 @@ export class Worker {
   }
   input(article){const input=prepareArticle(article,this.config.maxInputChars);if(article.bodyKind==='feed_excerpt')input.truncated=true;return input;}
   enqueue(id,retry=false) {
-    if(!this.config.analysisEnabled||this.config.provider==='off')throw new AppError('analysis_disabled','分析尚未开启。请先在运行环境中配置模型和额度。',409);
+    if(!this.config.analysisEnabled||this.config.provider==='off')throw new AppError('analysis_disabled','分析尚未开启。请先在运行环境中配置模型。',409);
     const article=this.store.getArticle(id);if(!article)throw new AppError('not_found','没有找到这篇资料。',404);
     const input=this.input(article),admitted=precheck(input);
     if(admitted!=='candidate')throw new AppError(admitted==='needs_body'?'needs_body':'not_candidate',admitted==='needs_body'?'正文不足，请补充正文后再分析。':'资料未通过本地相关性规则，未调用模型。可以继续阅读和保存个人笔记。',409);
@@ -33,13 +33,13 @@ export class Worker {
     const output=this.store.createEditorial(input,{result:input.spec.mode==='template'?templateEditorial(input):null});
     if(output.draft.status==='queued'&&this.started)void this.wake();
     return {...output,message:output.cached?'已复用已保存的草稿及其状态，没有创建重复模型任务。':
-      input.spec.mode==='template'?'素材初稿已保存，没有调用模型。':'写作任务已保存，使用与研究分析共享的模型额度。'};
+      input.spec.mode==='template'?'素材初稿已保存，没有调用模型。':'写作任务已保存。执行后会计入模型用量。'};
   }
   retryEditorial(id) {
     if(!this.config.analysisEnabled||this.config.provider==='off')throw new AppError('analysis_disabled','模型写作尚未开启，请先检查运行配置。',409);
     const draft=this.store.queueEditorialRetry(id);
     if(this.started)void this.wake();
-    return {draft,cached:false,message:'已安排明确确认后的写作重试。新请求仍受共享次数、预算和暂停状态限制。'};
+    return {draft,cached:false,message:'已安排写作重试。新请求仍受预算和暂停状态限制。'};
   }
   translationInput(id) {
     const article=this.store.getArticle(id);
@@ -87,7 +87,7 @@ export class Worker {
         catch(error){this.store.failEditorialAttempt(attempt,error);return 'blocked';}
         return 'progressed';
       }
-      const row=this.store.nextQueued();if(!row)return 'empty';
+      const row=this.store.nextQueued(this.config.autoAnalyze);if(!row)return 'empty';
       const article=this.store.getArticle(row.id),input=this.input(article),key=analysisKey(input,this.config);
       const admitted=precheck(input);
       if(admitted!=='candidate'){
@@ -129,18 +129,23 @@ export class Worker {
   refill() {
     const c=this.config;
     if(this.stopped||!c.autoAnalyze||!c.analysisEnabled||c.provider==='off'||this.store.setting('analysis_pause'))return 0;
-    const {stats,usage}=this.store.overview(c);
-    // Keep the automatic backlog within the remaining daily allowance, including manual queue items.
-    return this.store.autoQueue(Math.max(0,c.dailyLimit-usage.attempts24h-stats.queued-stats.editorialQueued));
+    const {stats,usage,config}=this.store.overview(c);
+    return this.store.autoQueue(Math.max(0,config.dailyLimit-usage.autoAttempts24h-stats.autoQueued));
   }
-  async collect({force=false}={}) {
-    if(!this.config.collectEnabled)throw new AppError('collection_disabled','采集尚未开启，请先在运行环境中开启。',409);
+  async collect({manual=false}={}) {
+    if(!this.config.collectEnabled&&!manual)throw new AppError('collection_disabled','定时采集尚未开启。',409);
     if(this.collecting)throw new AppError('collection_busy','采集正在进行，请稍候。',409);
     this.collecting=true;let added=0;
     try{
-      const due=this.store.sources().filter(s=>s.enabled&&s.kind!=='manual'&&(force||!s.nextFetchAt||Date.parse(s.nextFetchAt)<=Date.now()));
+      const cutoff=Date.now()-(manual?5*60000:0);
+      const due=this.store.sources().filter(source=>{
+        const last=manual?source.lastCheckedAt:source.nextFetchAt;
+        return source.enabled&&source.kind!=='manual'&&(!last||Date.parse(last)<=cutoff);
+      }).sort((a,b)=>(a.lastCheckedAt||'').localeCompare(b.lastCheckedAt||''));
       for(const source of due){
         if(this.stopped)break;
+        const {dailyLimit,addedToday}=this.store.collectionLimits();
+        if(addedToday>=dailyLimit)break;
         try{const result=await this.collector(this.store,source,this.config);added+=result.added;this.store.recordSource(source.id,result.added,result.failed?`${result.failed} 篇正文未能读取，可手动补充。`:null);}
         catch(error){this.store.recordSource(source.id,0,error instanceof AppError?error.message:'采集失败，请检查网络或手动导入。');}
         if(this.refill())void this.wake();

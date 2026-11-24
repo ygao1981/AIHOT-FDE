@@ -7,15 +7,22 @@ import { precheck, prepareArticle } from './analysis.mjs';
 
 const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
 const asArray=v=>v===undefined||v===null?[]:Array.isArray(v)?v:[v];
+const MAX_SOURCE_ENTRIES=30;
 function plain(html) { const {document}=parseHTML(`<html><body>${String(html||'')}</body></html>`);for(const el of document.querySelectorAll('script,style,nav,footer,form'))el.remove();return clean(document.body.textContent); }
 function atomText(v){return typeof v==='object'&&v!==null?String(v['#text']||''):String(v||'');}
+// Date-only metadata has calendar-day precision, including when the host is east of UTC.
+function publishedTime(value) { return value ? Date.parse(value.length===10?value+'T00:00:00':value) : NaN; }
+function inCollectionRange(value,{oldestAt,dayEndAt}) {
+  const time=publishedTime(value);
+  return time>=oldestAt&&time<dayEndAt;
+}
 export function publicationDate(value) {
   if(!value||typeof value!=='string')return null;
   const text=value.trim().replace(/^(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日$/,(_,y,m,d)=>`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
   if(/^\d{4}-\d{2}-\d{2}$/.test(text)) {
     const d=new Date(text+'T00:00:00Z');return Number.isNaN(+d)||d.toISOString().slice(0,10)!==text||d.getUTCFullYear()<1990||+d>Date.now()+86400000?null:text;
   }
-  if(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(text) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(text))return text.slice(0,10);
+  if(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(text) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(text))return publicationDate(text.slice(0,10));
   // English month dates without clock time have day precision only.
   const d=new Date(text);if(Number.isNaN(+d)||d.getUTCFullYear()<1990||+d>Date.now()+86400000)return null;
   return /\d{1,2}:\d{2}/.test(text)?d.toISOString():d.toISOString().slice(0,10);
@@ -51,7 +58,7 @@ export function extractArticle(html,url,source={}) {
   const body=clean(article?.textContent||document.querySelector('article')?.textContent||document.querySelector('main')?.textContent||'').slice(0,120000);
   return {title:clean(article?.title||fallbackTitle).slice(0,300)||url,body,publishedAt};
 }
-export function parseFeed(xml,source) {
+export function parseFeed(xml,source,maxItems=source.maxItems||8) {
   if(/<!DOCTYPE|<!ENTITY/i.test(xml))throw new AppError('unsafe_feed','订阅包含不支持的实体定义。');
   if(XMLValidator.validate(xml)!==true)throw new AppError('invalid_feed','该地址没有返回有效的 RSS 或 Atom 订阅。');
   const doc=new XMLParser({ignoreAttributes:false,attributeNamePrefix:'@_',processEntities:false,parseTagValue:false,trimValues:true}).parse(xml);
@@ -62,9 +69,9 @@ export function parseFeed(xml,source) {
     return {url:link?.['@_href']||atomText(i.link),title:plain(atomText(i.title)),publishedAt:publicationDate(atomText(i.published)),body:plain(atomText(i.content)||atomText(i.summary))};
   });
   else throw new AppError('invalid_feed','该地址返回了网页，未发现 RSS 或 Atom 内容。');
-  return dedupeEntries(items,source);
+  return dedupeEntries(items,source,maxItems);
 }
-function dedupeEntries(items,source) {
+function dedupeEntries(items,source,maxItems) {
   const seen=new Set(),out=[];
   for(const item of items){try{
     const url=canonicalUrl(new URL(item.url,source.url).href);
@@ -72,9 +79,10 @@ function dedupeEntries(items,source) {
     if(source.allowedHosts?.length&&!source.allowedHosts.includes(new URL(url).hostname))continue;
     seen.add(url);out.push({...item,url,title:clean(item.title).slice(0,300)});
   }catch{}}
-  return out.slice(0,Math.min(source.maxItems||8,30));
+  out.sort((a,b)=>(publishedTime(b.publishedAt)||0)-(publishedTime(a.publishedAt)||0));
+  return out.slice(0,Math.min(maxItems,MAX_SOURCE_ENTRIES));
 }
-export function parseList(html,source) {
+export function parseList(html,source,maxItems=source.maxItems||8) {
   const {document}=parseHTML(html),items=[];
   const containers=source.itemSelector?[...document.querySelectorAll(source.itemSelector)]:[document];
   for(const container of containers){
@@ -84,24 +92,28 @@ export function parseList(html,source) {
       items.push({url:link.getAttribute('href'),title:clean(titleNode?.textContent||link.getAttribute('aria-label')||link.textContent),publishedAt:publicationDate(dateNode?.getAttribute('datetime')||dateNode?.textContent),body:''});
     }
   }
-  return dedupeEntries(items,source);
+  return dedupeEntries(items,source,maxItems);
 }
-export function sourceFetchOptions(source, sourceProxyUrl, {listing=false}={}) {
+export function sourceFetchOptions(source, {sourceProxyUrl,sourceProxyFallbackUrls}, {listing=false}={}) {
   const allowedHosts=listing?[...new Set([new URL(source.url).hostname,...source.allowedHosts||[]])]:source.allowedHosts;
-  return {allowedHosts,sourceProxyUrl:source.disposition==='auto'?sourceProxyUrl:undefined};
+  return source.disposition==='auto'?{allowedHosts,sourceProxyUrl,sourceProxyFallbackUrls}:{allowedHosts};
 }
-export async function readSource(source,{fetcher=fetchText,sourceProxyUrl}={}) {
+export async function readSource(source,{fetcher=fetchText,sourceProxyUrl,sourceProxyFallbackUrls,maxItems}={}) {
   if(source.kind==='manual')return [];
-  const listing=await fetcher(source.url,sourceFetchOptions(source,sourceProxyUrl,{listing:true}));
-  const entries=source.kind==='rss'?parseFeed(listing.text,source):parseList(listing.text,source);
+  const listing=await fetcher(source.url,sourceFetchOptions(source,{sourceProxyUrl,sourceProxyFallbackUrls},{listing:true}));
+  const entries=source.kind==='rss'?parseFeed(listing.text,source,maxItems):parseList(listing.text,source,maxItems);
   if(!entries.length)throw new AppError('empty_source','没有解析到文章，请检查信源规则或改用手动收录。');
   return entries;
 }
 export async function collectSource(store,source,config,{fetcher=fetchText}={}) {
-  const entries=await readSource(source,{fetcher,sourceProxyUrl:config.sourceProxyUrl});let added=0,failed=0;
-  const detailOptions=sourceFetchOptions(source,config.sourceProxyUrl);
+  const {sourceProxyUrl,sourceProxyFallbackUrls}=config;
+  const entries=await readSource(source,{fetcher,sourceProxyUrl,sourceProxyFallbackUrls,maxItems:MAX_SOURCE_ENTRIES});let added=0,failed=0;
+  const detailOptions=sourceFetchOptions(source,config);
   const first=!source.lastCheckedAt;
   for(const e of entries){
+    const limits=store.collectionLimits();
+    if(limits.addedToday>=limits.dailyLimit)break;
+    if(e.publishedAt&&!inCollectionRange(e.publishedAt,limits))continue;
     if(store.findUrl(e.url))continue;
     let article={...e},bodyKind='page';
     try{
@@ -109,15 +121,20 @@ export async function collectSource(store,source,config,{fetcher=fetchText}={}) 
       const detail=extractArticle(page.text,page.url,source);article={...e,...detail,publishedAt:detail.publishedAt||e.publishedAt};
       if(detail.body.length<180)throw new AppError('needs_body','正文不足。');
     }catch(error){
-      if(e.body.length>=600){article={...e};bodyKind='feed_excerpt';}
-      else{article={...e,body:''};bodyKind='missing';failed++;}
+      article={...e,publishedAt:article.publishedAt};
+      if(e.body.length>=600)bodyKind='feed_excerpt';
+      else{article.body='';bodyKind='missing';}
     }
-    const old=article.publishedAt&&new Date(article.publishedAt).getTime()<Date.now()-30*86400000;
+    // The day or the user's settings can change while a detail request is in flight.
+    const current=store.collectionLimits();
+    if(current.addedToday>=current.dailyLimit)break;
+    if(!inCollectionRange(article.publishedAt,current))continue;
+    const old=publishedTime(article.publishedAt)<Date.now()-30*86400000;
     const admitted=precheck(prepareArticle({title:article.title,url:e.url,body:article.body},config.maxInputChars));
     const state=admitted==='candidate'?'candidate':admitted==='needs_body'?'needs_body':'skipped';
     const result=store.upsertArticle({...article,url:e.url,sourceId:source.id,sourceName:source.name,language:source.language||'unknown',bodyKind,
-      backfill:first||!!old||!article.publishedAt,priority:source.priority||3,status:state},{maxArticles:config.maxArticles});
-    if(result.created)added++;
+      backfill:first||old,priority:source.priority||3,status:state},{maxArticles:config.maxArticles});
+    if(result.created){added++;if(bodyKind==='missing')failed++;}
   }
   return {added,failed,found:entries.length};
 }

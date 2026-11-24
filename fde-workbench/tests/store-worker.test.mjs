@@ -33,7 +33,7 @@ test('manual English translation shares the single model slot and preserves the 
     assert.equal(task.name,'fde_translation');
     assert.doesNotMatch(JSON.stringify(task.input),/只保留在私库的笔记/);
     return pending.promise;
-  },analyzer:async()=>assert.fail('translation exhausted the shared limit')});
+  },analyzer:async()=>output()});
   assert.equal(worker.translate(original.id).status,'running');
   assert.equal(worker.translate(original.id).status,'running');
   worker.enqueue(waiting.id);
@@ -45,7 +45,9 @@ test('manual English translation shares the single model slot and preserves the 
   assert.equal(worker.translate(original.id).status,'completed');
   assert.deepEqual(store.getArticle(original.id),before);
   assert.deepEqual([store.overview(config).usage.attempts24h,store.overview(config).usage.translationAttempts24h],[1,1]);
-  assert.equal(await worker.analyzeOne(),'blocked');
+  assert.equal(await worker.analyzeOne(),'progressed');
+  assert.equal(store.getArticle(waiting.id).status,'analyzed');
+  assert.equal(store.overview(config).usage.autoAttempts24h,0);
   await worker.stop();
 });
 
@@ -106,9 +108,9 @@ test('a failed analysis stops the drain and resume processes only the remaining 
   assert.equal(calls,2);assert.equal(store.getArticle(a.id).status,'failed');assert.equal(store.getArticle(b.id).status,'analyzed');
 });
 test('daily and monthly blocks end the drain without spinning or making a model request',async t=>{
-  const {store,config}=fixture(t,{dailyLimit:1});let calls=0;
+  const {store,config}=fixture(t,{autoAnalyze:true,dailyLimit:1});let calls=0;
   const worker=new Worker(store,config,{analyzer:async()=>{calls++;return output();}});
-  worker.enqueue(add(store).id);worker.enqueue(add(store,2).id);
+  add(store);add(store,2);store.autoQueue(2);
   await worker.wake();await worker.wake();assert.equal(calls,1);
   config.dailyLimit=2;config.monthlyBudgetUsd=0.000001;
   await worker.wake();assert.equal(calls,1);assert.equal(store.overview(config).usage.attempts24h,1);
@@ -170,12 +172,39 @@ test('failure pauses all new analysis and preserves its budget; explicit retry c
   store.setSetting('analysis_pause',null);worker.enqueue(a.id,true);await worker.analyzeOne();
   assert.equal(calls,2);assert.equal(store.overview(config).usage.attempts24h,2);
 });
-test('daily limit counts failed attempts and changing config takes effect without a stale second budget',async t=>{
-  const {store,config}=fixture(t,{dailyLimit:1});let calls=0;
-  const worker=new Worker(store,config,{analyzer:async()=>{calls++;return output();}});
-  const a=add(store),b=add(store,2);worker.enqueue(a.id);worker.enqueue(b.id);await worker.analyzeOne();await worker.analyzeOne();
+test('an unknown automatic attempt counts toward the saved limit across connections',async t=>{
+  const {store,config,dir}=fixture(t,{autoAnalyze:true,dailyLimit:1});let calls=0;
+  const worker=new Worker(store,config,{analyzer:async()=>{
+    if(++calls===1)throw Object.assign(new Error('test failure'),{code:'timeout'});
+    return output();
+  }});
+  const a=add(store,1,{priority:5}),b=add(store,2);
+  store.autoQueue(2);await worker.wake();
+  assert.equal(store.getArticle(a.id).status,'failed');
+  assert.ok(store.setting('analysis_pause'));
+  store.setSetting('analysis_pause',null);await worker.wake();
   assert.equal(calls,1);assert.equal(store.getArticle(b.id).status,'queued');
-  config.dailyLimit=2;await worker.analyzeOne();assert.equal(calls,2);
+  assert.equal(store.overview(config).usage.autoAttempts24h,1);
+  store.setAutomaticDailyLimit(2);
+  const other=new Store(dir);try{assert.equal(other.automaticDailyLimit(config),2);}finally{other.close();}
+  await worker.wake();assert.equal(calls,2);
+  assert.equal(store.overview(config).usage.autoAttempts24h,2);
+  assert.equal(store.getArticle(a.id).status,'failed');
+});
+test('manual analysis can promote a queued automatic item while automation is off or full',async t=>{
+  const {store,config}=fixture(t,{autoAnalyze:true,dailyLimit:1});
+  const titles=[],worker=new Worker(store,config,{analyzer:async(_config,article)=>{titles.push(article.title);return output();}});
+  const first=add(store,21,{priority:5}),waiting=add(store,22,{priority:4});
+  store.autoQueue(2);await worker.wake();
+  assert.equal(store.getArticle(waiting.id).queueOrigin,'auto');
+  const explicit=add(store,23,{priority:1});worker.enqueue(explicit.id);await worker.wake();
+  assert.deepEqual(titles,[first.title,explicit.title]);
+  config.autoAnalyze=false;
+  assert.equal(store.getArticle(waiting.id).status,'queued');
+  worker.enqueue(waiting.id);worker.enqueue(waiting.id);await worker.wake();
+  assert.deepEqual(titles,[first.title,explicit.title,waiting.title]);
+  assert.equal(store.overview(config).usage.autoAttempts24h,1);
+  assert.equal(store.overview(config).usage.attempts24h,3);
 });
 test('monthly reservation prevents an unaffordable request before sending',async t=>{
   const {store,config}=fixture(t,{monthlyBudgetUsd:0.000001});let calls=0;

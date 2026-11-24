@@ -11,7 +11,7 @@ import { fixture,add,output,body } from './helpers.mjs';
 async function app(t,overrides={},deps={}) {
   const ctx=fixture(t,overrides),reservation=createServer();reservation.listen(0,'127.0.0.1');await once(reservation,'listening');
   ctx.config.port=reservation.address().port;ctx.config.baseUrl=`http://127.0.0.1:${ctx.config.port}`;await new Promise(r=>reservation.close(r));
-  ctx.calls=0;ctx.editorCalls=0;ctx.worker=new Worker(ctx.store,ctx.config,{analyzer:async()=>{ctx.calls++;return output();},editor:async(c,input)=>{ctx.editorCalls++;return deps.editor?deps.editor(c,input):{...output(),result:templateEditorial(input)};}});
+  ctx.calls=0;ctx.editorCalls=0;ctx.worker=new Worker(ctx.store,ctx.config,{collector:deps.collector,analyzer:async()=>{ctx.calls++;return output();},editor:async(c,input)=>{ctx.editorCalls++;return deps.editor?deps.editor(c,input):{...output(),result:templateEditorial(input)};}});
   const server=createApp(ctx.store,ctx.worker,ctx.config);server.listen(ctx.config.port,'127.0.0.1');await once(server,'listening');
   t.after(()=>new Promise(r=>server.close(r)));
   ctx.request=(path,options={})=>fetch(ctx.config.baseUrl+path,{...options,headers:{...(options.body?{'Content-Type':'application/json',Origin:ctx.config.baseUrl}:{}),...options.headers}});
@@ -19,7 +19,7 @@ async function app(t,overrides={},deps={}) {
 }
 test('private APIs require login; health contains no credentials; session uses HttpOnly',async t=>{
   const ctx=await app(t);assert.equal((await ctx.request('/api/articles')).status,401);
-  assert.deepEqual(await(await ctx.request('/api/health')).json(),{ok:true,version:'2.2.0'});
+  assert.deepEqual(await(await ctx.request('/api/health')).json(),{ok:true,version:'2.2.1'});
   const login=await ctx.request('/api/login',{method:'POST',body:JSON.stringify({token:ctx.config.accessToken})});
   assert.equal(login.status,200);assert.match(login.headers.get('set-cookie'),/HttpOnly/);
   const cookie=login.headers.get('set-cookie').split(';')[0];
@@ -30,6 +30,51 @@ test('cross-origin mutations and incorrect tokens are rejected',async t=>{
   const ctx=await app(t);
   assert.equal((await ctx.request('/api/login',{method:'POST',body:'{"token":"wrong"}',headers:{Origin:'https://untrusted.example'}})).status,403);
   assert.equal((await ctx.request('/api/login',{method:'POST',body:'{"token":"wrong"}'})).status,401);
+});
+test('the automatic limit is a private setting and saving it does not enable automation',async t=>{
+  const ctx=await app(t,{provider:'codex',autoAnalyze:false});
+  const post=(limit,headers)=>ctx.request('/api/control',{method:'POST',headers,body:JSON.stringify({action:'set-auto-daily-limit',limit})});
+  const auth={Authorization:`Bearer ${ctx.config.accessToken}`};
+  assert.equal((await post(8)).status,401);
+  for(const invalid of [0,51,1.5,'8'])assert.equal((await post(invalid,auth)).status,400);
+  assert.equal((await post(8,auth)).status,200);
+  const {config,usage}=await(await ctx.request('/api/overview',{headers:auth})).json();
+  assert.equal(config.dailyLimit,8);
+  assert.equal(config.autoAnalyze,false);
+  assert.equal(usage.attempts24h,0);
+  assert.equal(ctx.calls,0);
+});
+test('private source settings limit distinct collection across sources without counting manual imports or using a model',async t=>{
+  const finished=Promise.withResolvers(),fetches=[];
+  const ctx=await app(t,{collectEnabled:false,autoAnalyze:false},{collector:async(store,source)=>{
+    fetches.push(source.id);
+    add(store,2,{sourceId:source.id});
+    return {added:1,failed:0};
+  }});
+  const auth={Authorization:`Bearer ${ctx.config.accessToken}`};
+  const post=(path,body,headers=auth)=>ctx.request(path,{method:'POST',body:JSON.stringify(body),headers});
+  const settings=()=>ctx.request('/api/sources',{headers:auth}).then(r=>r.json());
+  const second={...ctx.store.catalog[0],id:'test-second'};
+  ctx.store.catalog.push(second);
+  ctx.store.db.prepare('INSERT INTO source_state(id,enabled) VALUES(?,1)').run(second.id);
+  add(ctx.store);
+  assert.equal((await post('/api/sources/settings',{lookbackDays:7,dailyLimit:1},{})).status,401);
+  const login=await post('/api/login',{token:ctx.config.accessToken},{});
+  const cookie=login.headers.get('set-cookie').split(';')[0];
+  assert.equal((await post('/api/sources/settings',{lookbackDays:7,dailyLimit:1},{Cookie:cookie,Origin:'https://example.com'})).status,403);
+  for(const invalid of [{lookbackDays:0,dailyLimit:20},{lookbackDays:366,dailyLimit:20},{lookbackDays:7,dailyLimit:201},{lookbackDays:7,dailyLimit:'20'}])
+    assert.equal((await post('/api/sources/settings',invalid)).status,400);
+  assert.equal((await post('/api/sources/settings',{lookbackDays:7,dailyLimit:1})).status,200);
+  assert.equal((await settings()).addedToday,0);
+  const collect=ctx.worker.collect.bind(ctx.worker);
+  ctx.worker.collect=(...args)=>collect(...args).finally(finished.resolve);
+  assert.equal((await post('/api/collect',{})).status,202);
+  await finished.promise;
+  const {lookbackDays,dailyLimit,addedToday}=await settings();
+  assert.deepEqual({lookbackDays,dailyLimit,addedToday},{lookbackDays:7,dailyLimit:1,addedToday:1});
+  assert.deepEqual(fetches,['test-source']);
+  assert.equal((await post('/api/collect',{})).status,409);
+  assert.equal(ctx.calls,0);
 });
 test('the static user guide is readable before login without exposing the library or creating attempts',async t=>{
   const ctx=await app(t),article=add(ctx.store);

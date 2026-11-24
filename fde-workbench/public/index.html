@@ -93,14 +93,33 @@
       </section>
 
       <section id="view-sources" class="view" role="tabpanel" aria-labelledby="tab-sources" hidden>
-        <div class="page-heading"><div><p class="eyebrow">把注意力放在相关来源</p><h1>信源管理</h1><p class="page-lead">检查启用的来源，先收集，再选择需要分析的资料。</p></div><button id="collect-now" type="button" class="button primary"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>检查信源更新</button></div>
+        <div class="page-heading"><div><p class="eyebrow">把注意力放在相关来源</p><h1>信源管理</h1><p class="page-lead">检查启用的来源，先收集，再选择需要分析的资料。</p></div><button id="collect-now" type="button" class="button primary" disabled><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span id="collect-now-label">检查信源更新</span></button></div>
         <div id="collection-notice" class="notice subtle"><p>正在读取采集配置…</p></div>
+        <form id="collection-form" class="panel collection-panel">
+          <h2>采集范围与条数</h2>
+          <p id="collection-summary">正在读取采集进度…</p>
+          <fieldset id="collection-fields" class="collection-fields" disabled>
+            <div class="form-field"><label for="collection-days">最近多少天（含今天）</label><input id="collection-days" type="number" min="1" max="365" step="1" required aria-describedby="collection-hint"></div>
+            <div class="form-field"><label for="collection-limit">每天最多新增多少篇</label><input id="collection-limit" type="number" min="1" max="200" step="1" required aria-describedby="collection-hint"></div>
+            <button id="save-collection" type="submit" class="button">保存采集设置</button>
+          </fieldset>
+          <p id="collection-hint" class="form-hint">按原文发布日期收录。日期不明的资料可以手动导入。每天只统计从信源新增的资料，自动分析额度在「用量」里设置。</p>
+          <p id="collection-feedback" role="status" hidden></p>
+        </form>
         <div class="list-caption"><span id="sources-count"></span><span>启用或停用不会删除已有资料</span></div>
         <div id="source-list" class="source-grid" aria-busy="true"></div>
       </section>
 
       <section id="view-usage" class="view" role="tabpanel" aria-labelledby="tab-usage" hidden>
         <div class="page-heading"><div><p class="eyebrow">看清消耗，控制节奏</p><h1>用量与运行</h1><p class="page-lead">采集与分析分别控制。先小批试用，再决定处理规模。</p></div><button id="refresh-usage" type="button" class="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>刷新用量</button></div>
+        <form id="auto-limit-form" class="panel auto-limit-panel">
+          <h2>自动分析额度</h2>
+          <p id="auto-limit-summary">正在读取自动分析额度…</p>
+          <div class="form-field"><label for="auto-limit">滚动 24 小时自动尝试上限</label>
+            <div class="auto-limit-actions"><input id="auto-limit" type="number" min="1" max="50" step="1" required aria-describedby="auto-limit-summary"><button id="save-auto-limit" type="submit" class="button primary">保存上限</button></div>
+          </div>
+          <p id="auto-limit-state" role="status" hidden></p>
+        </form>
         <div id="usage-content" aria-busy="true"></div>
       </section>
       <footer class="workspace-footer"><span>FDE 研究台</span><p>研究结论以原文为依据，个人判断单独记录。</p></footer>
