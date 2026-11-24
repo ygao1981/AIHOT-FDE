@@ -46,6 +46,7 @@
         <button id="login-submit" type="submit" class="button primary full">进入工作区 <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
       </form>
       <p class="form-hint login-hint">口令用于保护研究资料，不是模型服务的密钥。请勿在此输入模型 API Key。</p>
+      <p><a class="button text-button" href="/guide.html">使用说明</a></p>
     </section>
   </main>
 
@@ -68,10 +69,21 @@
       <section id="view-library" class="view" role="tabpanel" aria-labelledby="tab-library">
         <div class="page-heading"><div><p class="eyebrow">资料 · 证据 · 选题</p><h1>研究库</h1><p class="page-lead">优先看业务问题、实施方法和可复用经验。</p></div><div class="page-actions"><button id="refresh-library" class="button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>刷新</button><button id="export-all" class="button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>导出研究资料</button></div></div>
         <div class="stat-grid" aria-label="研究库概况"><div class="stat-card"><span>已收录资料</span><strong id="stat-total">—</strong></div><div class="stat-card"><span>待分析资料</span><strong id="stat-candidate">—</strong></div><div class="stat-card"><span>已完成分析</span><strong id="stat-analyzed">—</strong></div><div class="stat-card emphasis"><span>已列入选题</span><strong id="stat-shortlisted">—</strong></div></div>
-        <p id="analysis-mode" class="section-note"></p>
+        <div class="library-help"><p id="analysis-mode" class="section-note"></p><a class="button text-button" href="/guide.html">使用说明</a></div>
         <form id="filter-form" class="filter-bar" aria-label="筛选研究资料">
           <div class="search-field"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><label for="search" class="sr-only">搜索资料</label><input id="search" type="search" name="q" placeholder="搜索标题、研究内容或笔记" autocomplete="off"><button type="submit" class="search-submit">搜索</button></div>
-          <div class="select-field"><label for="filter-editorial">选题进度</label><select id="filter-editorial" name="editorialStatus"><option value="">全部进度</option value="new">待整理</option><option value="shortlisted">已选题</option><option value="drafting">写作中</option><option value="published">已发布</option><option value="archived">已归档</option></select></div>
+          <div class="select-field">
+            <label for="filter-editorial">选题进度</label>
+            <select id="filter-editorial" name="editorialStatus">
+              <option value="">全部进度</option>
+              <option value="new">待整理</option>
+              <option value="organized">已整理</option>
+              <option value="shortlisted">已选题</option>
+              <option value="drafting">写作中</option>
+              <option value="published">已发布</option>
+              <option value="archived">已归档</option>
+            </select>
+          </div>
           <div class="select-field"><label for="filter-status">分析进度</label><select id="filter-status" name="status"><option value="">全部状态</option><option value="candidate">待分析</option><option value="queued">排队中</option><option value="analyzing">分析中</option><option value="analyzed">已分析</option><option value="needs_body">待补正文</option><option value="skipped">已跳过</option><option value="failed">分析未完成</option></select></div>
           <button id="clear-filters" type="button" class="button text-button">重置</button>
         </form>
@@ -81,14 +93,33 @@
       </section>
 
       <section id="view-sources" class="view" role="tabpanel" aria-labelledby="tab-sources" hidden>
-        <div class="page-heading"><div><p class="eyebrow">把注意力放在相关来源</p><h1>信源管理</h1><p class="page-lead">检查启用的来源，先收集，再选择需要分析的资料。</p></div><button id="collect-now" type="button" class="button primary"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>检查信源更新</button></div>
+        <div class="page-heading"><div><p class="eyebrow">把注意力放在相关来源</p><h1>信源管理</h1><p class="page-lead">检查启用的来源，先收集，再选择需要分析的资料。</p></div><button id="collect-now" type="button" class="button primary" disabled><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span id="collect-now-label">检查信源更新</span></button></div>
         <div id="collection-notice" class="notice subtle"><p>正在读取采集配置…</p></div>
+        <form id="collection-form" class="panel collection-panel">
+          <h2>采集范围与条数</h2>
+          <p id="collection-summary">正在读取采集进度…</p>
+          <fieldset id="collection-fields" class="collection-fields" disabled>
+            <div class="form-field"><label for="collection-days">最近多少天（含今天）</label><input id="collection-days" type="number" min="1" max="365" step="1" required aria-describedby="collection-hint"></div>
+            <div class="form-field"><label for="collection-limit">每天最多新增多少篇</label><input id="collection-limit" type="number" min="1" max="200" step="1" required aria-describedby="collection-hint"></div>
+            <button id="save-collection" type="submit" class="button">保存采集设置</button>
+          </fieldset>
+          <p id="collection-hint" class="form-hint">按原文发布日期收录。日期不明的资料可以手动导入。每天只统计从信源新增的资料，自动分析额度在「用量」里设置。</p>
+          <p id="collection-feedback" role="status" hidden></p>
+        </form>
         <div class="list-caption"><span id="sources-count"></span><span>启用或停用不会删除已有资料</span></div>
         <div id="source-list" class="source-grid" aria-busy="true"></div>
       </section>
 
       <section id="view-usage" class="view" role="tabpanel" aria-labelledby="tab-usage" hidden>
         <div class="page-heading"><div><p class="eyebrow">看清消耗，控制节奏</p><h1>用量与运行</h1><p class="page-lead">采集与分析分别控制。先小批试用，再决定处理规模。</p></div><button id="refresh-usage" type="button" class="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>刷新用量</button></div>
+        <form id="auto-limit-form" class="panel auto-limit-panel">
+          <h2>自动分析额度</h2>
+          <p id="auto-limit-summary">正在读取自动分析额度…</p>
+          <div class="form-field"><label for="auto-limit">滚动 24 小时自动尝试上限</label>
+            <div class="auto-limit-actions"><input id="auto-limit" type="number" min="1" max="50" step="1" required aria-describedby="auto-limit-summary"><button id="save-auto-limit" type="submit" class="button primary">保存上限</button></div>
+          </div>
+          <p id="auto-limit-state" role="status" hidden></p>
+        </form>
         <div id="usage-content" aria-busy="true"></div>
       </section>
       <footer class="workspace-footer"><span>FDE 研究台</span><p>研究结论以原文为依据，个人判断单独记录。</p></footer>

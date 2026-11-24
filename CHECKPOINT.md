@@ -1,5 +1,32 @@
 # CHECKPOINT — FDE 研究台 v2.2
 
+## 2026-11-24 手动分析、信源采集与多代理
+
+- [RUN] Windows 本机 `2.2.1` 运行代码 `ed55c01`。Edge 核对「AI 分析」在研究库卡片和详情均可用。手动分析、写作和翻译照常记账。「用量 → 自动分析额度」独立配置，初始为滚动 24 小时 5 次。本机自动分析关闭。
+- [RUN] 「信源 → 采集范围与条数」默认最近 30 天、每天最多新增 50 篇。实机按需检查 9 个信源，去重后新增 9 篇。初始资料和两条 unknown 均保留，本轮真实模型尝试新增 0。
+- [RUN] 采集同时配置 0day Cloud 与 Clash 的回环 HTTP CONNECT 端点。两条路径均以公开信源实测。首选端口不可达时使用已配置的备用端点。
+- [RUN] 旧版 schema 2 快照在升级前独立验证。升级后的 schema 3 实际库逐字段核对通过。新在线快照验证通过。 [验收明细](fde-workbench/docs/VALIDATION.md#221-windows-验收)
+
+## 2026-11-24 网页使用说明与 Gemini 交接
+
+- [RUN] 新增 `/guide.html`，从登录页、研究库和公众号草稿均可打开。包含分析与选题进度、翻译、写稿、两版导出、额度和备份操作。说明页本身只读取静态文件，资料库仍需登录。 [验收记录](fde-workbench/docs/VALIDATION.md#2026-11-24-使用说明页)
+- [READ] [Gemini 前端提示词](fde-workbench/docs/GEMINI_FRONTEND_PROMPT.md) 以草稿 PR #7 为基线，按 PM PC 实际采用的 Hallmark 重排和 Impeccable 独立审查交接。保留 `finesse-ui`、`ui-ux-pro-max` 和 Playwright 的适用检查。
+
+## 2026-11-24 Windows 五次真实模型验收
+
+- [RUN] 按用户单次授权临时为进程增加 5 个尝试名额。官方 Codex CLI 实际完成 1 份公众号初稿、2 张研究卡和 2 份中文译文。五项重复操作都复用已保存结果。 [验收结果](fde-workbench/docs/VALIDATION.md#2026-11-24-真实-codex-五次验收)
+- [RUN] 首次长文翻译发现句中切分被拼成空行。`0442124` 修复译文拼接，130 项测试通过，另用最后一次真实请求验了四个片段的长文。翻译请求和缓存标识保持原样，前一份译文和回执可继续读取。
+- [RUN] 24 小时上限已恢复 5。测试前后 `.env` 相同，采集、分析和自动分析恢复关闭，原 5 条回执包含的 2 条 unknown 保留。账本共 10 条回执。
+
+## 2026-11-23 Windows 本机升级与公众号验收
+
+- [READ] [PR #6](https://github.com/ygao1981/AIHOT-FDE/pull/6) 为草稿，`codex/fde-editorial-workbench` 头部 `56b6230` 在功能提交 `8a36611` 之上补交接文档。Windows 修复在叠加分支 `codex/fde-editorial-windows-acceptance`，保留上游 CLI 和采集代理修复。
+- [RUN] Windows 实际运行 2.2.0，运行代码为 `07cad45`。旧版仍在前台时生成 schema 1 快照并独立读取；停旧服务后迁移到 schema 2。全字段比较通过，26 篇资料、3 张研究卡、3 条私人笔记、27 条信源状态和全部 5 条回执（含 2 条 unknown）都保留。
+- [RUN] Edge 在用户数据库中，从一张既有研究卡生成素材稿。两窗保存冲突、编辑与重启持久化、原稿缓存、富文本剪贴板、纯文字与图文、浅暖与墨色两主题均已实测。实际打开两包内的 TXT、Markdown、两版 HTML 和 PNG，检查 390 像素预览。此次新增真实模型回执 0。 [验收明细](fde-workbench/docs/VALIDATION.md#220-windows-本机验收)
+- [RUN] 修复了「待整理」筛选项未生成、素材稿小节重复编号与标点、出处日期显示。新增「AI 分析」「整理素材」「标为已整理」和手动翻译。英语译文、研究分析和写作共享串行执行位、24 小时 5 次上限和 unknown 保护。新的研究卡提纲增加实施步骤、人工复核和数字证据口径。 [使用流程](fde-workbench/docs/EDITORIAL_WORKFLOW.md)
+- [RUN] Codex CLI `0.169.1` 的版本、实际参数和现有登录诊断通过。本机采集、分析、自动分析三个开关关闭，provider 仍为 Codex。验收时滚动额度 5/5，下一档额度约于 2026-11-24 07:59:09（UTC+8）可用，恢复测试前再按实际账本判断。
+- [UNKNOWN] 账号真实写作、英文翻译和新版研究卡的实际生成质量待验。微信公众号后台粘贴、上传 PNG 与真机预览待验。该轮保留本机验证记录、草稿、截图与数据库于本地。
+
 ## 2026-11-23 公众号草稿与两种排版（2.2.0）
 
 - [READ] 基线为 PR #5 的 `8d0df4506a86a2981c55798300884415c4190903`。本轮分支 `codex/fde-editorial-workbench`，交付 [草稿 PR #6](https://github.com/ygao1981/AIHOT-FDE/pull/6)，保留已有 CLI 和代理修复。功能与回归提交为 `8a36611d6bb60935814dcd5b57a2ffa1922e7f17`，详细取舍见 [公众号工具审查](fde-workbench/docs/WECHAT_DESIGN_REVIEW.md)。

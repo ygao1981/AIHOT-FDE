@@ -1,8 +1,8 @@
 # Windows 本机部署与验收
 
-> **2.2.0 已有用户升级：** 先按 [公众号升级提示词](CODEX_WECHAT_PROMPT.md) 用旧代码备份，再切换新代码；数据库升级到 schema 2。分析和写作共享滚动24小时5次上限，失败/unknown计入；旧的一次试运行限制不再适用。
+> **2.2.1 已有用户升级**。先用运行中的旧代码备份并独立核对 SQLite 快照，再切换新版。数据库迁至 schema 3。`FDE_DAILY_LIMIT` 是自动分析的初始上限，可在「用量」页修改。手动分析、写作和翻译照常记账，账号额度由用户判断。采集范围与每日新增条数在「信源」页设置。 [运维说明](OPERATIONS.md)
 
-> **2026-11-23 最新用户授权（覆盖旧的一篇/每天一次试运行要求）：** Windows 本机真实测试上限改为 `FDE_DAILY_LIMIT=5`，表示滚动 24 小时内**最多五次真实分析尝试**，失败和 unknown 同样计入。旧美团 unknown 回执必须保留且如仍在 24 小时内已占一次。修复验证、备份和安全核对后允许恢复暂停、逐篇测试，无须每篇重复请求授权；不得自动重试未知请求或超出总次数。先手动测试，成功且稳定后可在剩余次数内短暂开启自动分析，结束后关闭。完整操作见 [5 次真实测试接手提示词](CODEX_TEST_5_PER_DAY_PROMPT.md)。
+> 2.2.0 及更早版本的 5 次真实测试规则见 [历史验收说明](CODEX_TEST_5_PER_DAY_PROMPT.md)。
 
 当前优先方案是在 Windows 本机原生运行 FDE 研究台。Codex 桌面版用于接手代码与维护；研究台作为独立 Node 进程运行，分析时调用已配置的官方 Codex CLI。仅打开 Codex 桌面版，并不等于研究台已经在后台运行。
 
@@ -55,6 +55,8 @@ Get-ChildItem Env: | Where-Object Name -Match '^(HTTP|HTTPS|ALL|NO)_PROXY$' | Se
 ```
 
 如果现有可信代理提供 HTTP CONNECT，在研究台 `.env` 中将 `FDE_SOURCE_PROXY_URL` 设置为 `http://127.0.0.1:<已核实端口>`。端口和所属进程以本机实测为准。只在同机回环代理支持 CONNECT 时填写。已审核信源的 HTTPS 读取由代理解析域名，应用继续核对跳转白名单和证书。Windows DNS、TUN、路由和系统代理可沿用原配置。手工补正文仍可独立使用。 [网络安全边界](ARCHITECTURE.md)
+
+同时使用 0day Cloud、Clash 等本机代理时，原来的 `FDE_SOURCE_PROXY_URL` 可以继续作为首选。在 `FDE_SOURCE_PROXY_FALLBACK_URLS` 填写其他已核实的本机 HTTP CONNECT 端点，用英文逗号分隔。研究台按设置顺序尝试不可达端口后的下一个端点。`sources:check` 在正文读取成功后会记录实际使用的代理端口。
 
 ```powershell
 npm.cmd run sources:check -- --id=meituan-engineering

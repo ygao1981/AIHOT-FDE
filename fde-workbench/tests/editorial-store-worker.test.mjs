@@ -52,18 +52,21 @@ test('schema 1 migrates without changing five historical receipts, three researc
     settings:old.prepare('SELECT * FROM settings').all(),sources:old.prepare('SELECT * FROM source_state').all()};old.close();
   const store=new Store(directory);
   try{
-    assert.equal(store.db.prepare('PRAGMA user_version').get().user_version,2);
-    assert.deepEqual(store.db.prepare('SELECT * FROM articles ORDER BY id').all(),before.articles);
+    assert.equal(store.db.prepare('PRAGMA user_version').get().user_version,3);
+    for(const [index,{queue_origin,...article}] of store.db.prepare('SELECT * FROM articles ORDER BY id').all().entries()){
+      assert.deepEqual(article,{...before.articles[index]});assert.equal(queue_origin,null);
+    }
     const attempts=store.db.prepare('SELECT * FROM attempts ORDER BY id').all();
     for(let i=0;i<attempts.length;i++){
-      const {kind,draft_id,...original}=attempts[i];
-      assert.deepEqual({...before.attempts[i]},original);assert.equal(kind,'analysis');assert.equal(draft_id,null);
+      const {kind,draft_id,origin,...original}=attempts[i];
+      assert.deepEqual({...before.attempts[i]},original);assert.equal(kind,'analysis');assert.equal(draft_id,null);assert.equal(origin,'legacy');
     }
     assert.deepEqual(store.db.prepare('SELECT * FROM settings').all(),before.settings);
     assert.deepEqual(store.db.prepare('SELECT * FROM source_state').all(),before.sources);
     assert.equal(store.listEditorial().length,0);
     assert.equal(store.overview({provider:'codex'}).usage.attempts24h,5);
     assert.equal(store.overview({provider:'codex'}).usage.analysisAttempts24h,5);
+    assert.equal(store.overview({provider:'codex'}).usage.autoAttempts24h,0);
     assert.equal(store.db.prepare('PRAGMA integrity_check').get().integrity_check,'ok');
     assert.deepEqual(store.db.prepare('PRAGMA foreign_key_check').all(),[]);
   }finally{store.close();}
@@ -88,20 +91,21 @@ test('template drafts work with models off, preserve edits on reuse and survive 
   assert.equal(calls,0);assert.equal(store.overview(config).usage.attempts24h,0);
 });
 
-test('four analyses and one writing task share the five-attempt rolling limit',async t=>{
-  const {store,config}=fixture(t,{dailyLimit:5});let analysisCalls=0,writingCalls=0;
+test('manual research and writing continue after the automatic limit is used',async t=>{
+  const {store,config}=fixture(t,{autoAnalyze:true,dailyLimit:1});let analysisCalls=0,writingCalls=0;
   const worker=new Worker(store,config,{analyzer:async()=>{analysisCalls++;return output();},editor:async()=>{writingCalls++;return written();}});
+  add(store,99);store.autoQueue(1);await worker.wake();
   const articles=Array.from({length:4},(_,i)=>add(store,i+1));
   for(const article of articles)worker.enqueue(article.id);
-  await worker.wake();assert.equal(analysisCalls,4);
+  await worker.wake();assert.equal(analysisCalls,5);
   const draft=worker.createEditorial(request(articles[0])).draft;await worker.wake();
   assert.equal(store.getEditorial(draft.id).status,'ready');assert.equal(writingCalls,1);
   worker.enqueue(add(store,5).id);
   const waiting=worker.createEditorial(request(articles[1],{angle:'另一个不同的选题'})).draft;
   await worker.wake();await worker.wake();
   const usage=store.overview(config).usage;
-  assert.equal(usage.attempts24h,5);assert.equal(usage.analysisAttempts24h,4);assert.equal(usage.editorialAttempts24h,1);
-  assert.equal(analysisCalls,4);assert.equal(writingCalls,1);assert.equal(store.getEditorial(waiting.id).status,'queued');
+  assert.equal(usage.attempts24h,8);assert.equal(usage.autoAttempts24h,1);assert.equal(usage.analysisAttempts24h,6);assert.equal(usage.editorialAttempts24h,2);
+  assert.equal(analysisCalls,6);assert.equal(writingCalls,2);assert.equal(store.getEditorial(waiting.id).status,'ready');
   assert.equal(worker.createEditorial(request(articles[0])).cached,true);
   assert.equal(store.getArticle(articles[0].id).status,'analyzed');assert.deepEqual(store.getArticle(articles[0].id).analysis,output().result);
 });
@@ -197,11 +201,11 @@ test('analysis and writing share the cross-connection running gate and unknown b
   }finally{other.close();}
 });
 
-test('automatic analysis refill accounts for queued writing and a template does not wake unrelated models',async t=>{
+test('manual writing is excluded from automatic capacity and templates do not wake the queue',async t=>{
   const {store,config}=fixture(t,{autoAnalyze:true,dailyLimit:2}),source=researched(store),worker=new Worker(store,config,{editor:async()=>written()});
   worker.createEditorial(request(source));for(let i=2;i<=5;i++)add(store,i,{backfill:false});
   worker.refill();const overview=store.overview(config);
-  assert.equal(overview.stats.editorialQueued,1);assert.equal(overview.stats.queued,1);
+  assert.equal(overview.stats.editorialQueued,1);assert.equal(overview.stats.autoQueued,2);
   let wakes=0;worker.started=true;worker.wake=()=>{wakes++;return Promise.resolve();};
   const template=worker.createEditorial(request(source,{mode:'template'}));
   assert.equal(template.draft.status,'ready');assert.equal(wakes,0);

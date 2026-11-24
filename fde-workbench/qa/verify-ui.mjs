@@ -44,8 +44,10 @@ try {
   const fixture = store.upsertArticle({url:'https://example.org/fde-ui-fixture',title:'界面样例：售后知识检索试点',sourceName:'界面验收样例（虚构）',language:'zh',publishedAt:'2026-11-01',body:sampleBody,status:'analyzed'}).article;
   const analysis = {relevance:'relevant',category:'case',score:72,stage:'pilot',stageEvidence:'团队先做了小范围试点。',title:'界面样例：售后知识检索试点',summary:'本条是界面验收的虚构资料，不是真实客户案例。样例展示售后知识检索从授权文档整理到小范围试点的研究结构，便于核对原文入口、阶段证据和个人笔记。没有生产上线证据，也没有量化效果。',problem:'售后员工查找授权文档中的信息需要多个步骤。此为界面样例。',solution:'整理授权文档，通过 RAG 检索辅助查找，再由员工核对原文。',outcome:'仅描述小范围试点；原文未披露量化成效。',lessons:['先明确可用文档与权限，再验证检索和人工复核流程。'],limitations:['这是虚构界面样例，不能作为真实客户实施证据。'],evidence:[{quote:'团队先做了小范围试点。',claim:'样例只支持试点阶段，不能推断生产上线。'}],ideas:[{title:'从售后知识检索看试点前的准备工作',angle:'以文档权限、原文追溯和人工验收为提纲；写作前需要真实案例补证。'}]};
   store.db.prepare("UPDATE articles SET analysis_json=?,editorial_status='shortlisted' WHERE id=?").run(JSON.stringify(analysis),fixture.id);
-  store.upsertArticle({url:'https://example.org/fde-ui-pending',title:'界面样例：待研究的 AI 交付教程',sourceName:'界面验收样例（虚构）',language:'en',body:sampleBody,status:'candidate'});
-  worker = new Worker(store, config);
+  const pendingTitle='界面样例：待研究的 AI 交付教程';
+  const pending=store.upsertArticle({url:'https://example.org/fde-ui-pending',title:pendingTitle,sourceName:'界面验收样例（虚构）',language:'en',
+    body:'The fictional AI delivery pilot gave the support team a local search tool. Reviewers checked output against the authorized source before using it. This sample has no measured outcomes.',status:'candidate'}).article;
+  worker = new Worker(store, config, {collector:async()=>({added:0,failed:0})});
   report.cleanup.workerStopped = false;
   server = createApp(store, worker, config);
   report.phase = 'server-start';
@@ -138,6 +140,22 @@ try {
   assert.match(await page.locator('#article-list').innerText(),/没有符合条件/);
   await afterArticleAction(() => page.locator('#clear-filters').click(), { count: 2, caption: '共 2 篇资料' });
   checked('无结果筛选有清晰空状态并能重置');
+  await afterArticleAction(() => page.locator('#filter-status').selectOption('candidate'), { status:'candidate', count:1, caption:'找到 1 篇资料' });
+  const articleList=page.locator('#article-list');
+  assert.equal(await articleList.getByRole('button',{name:'AI 分析',exact:true}).isDisabled(),true);
+  await articleList.getByRole('button',{name:pendingTitle,exact:true}).click();
+  await page.getByText('查看中文译文',{exact:true}).click();
+  const translation=page.getByRole('button',{name:'AI 翻译成中文',exact:true});
+  await translation.waitFor({state:'visible'});
+  assert.equal(await translation.isDisabled(),true);
+  await page.locator('#close-detail').click();
+  await afterArticleAction(() => page.locator('#filter-editorial').selectOption('new'), { status:'candidate', editorialStatus:'new', count:1, caption:'找到 1 篇资料' });
+  await afterArticleAction(() => articleList.getByRole('button',{name:'标为已整理',exact:true}).click(), { status:'candidate', editorialStatus:'new', count:0, caption:'找到 0 篇资料' });
+  await afterArticleAction(() => page.locator('#filter-editorial').selectOption('organized'), { status:'candidate', editorialStatus:'organized', count:1, caption:'找到 1 篇资料' });
+  assert.equal(store.getArticle(pending.id).editorialStatus,'organized');
+  assert.equal(store.getArticle(pending.id).status,'candidate');
+  await afterArticleAction(() => page.locator('#clear-filters').click(), { count:2, caption:'共 2 篇资料' });
+  checked('待分析与待整理可独立筛选，标为已整理不会分析，模型关闭时英文只可查询译文状态');
   await page.locator('#open-import').click();
   await page.locator('#import-url').fill('https://example.org/fde-ui-import');
   await page.locator('#import-heading').fill('界面样例：手动导入的实施经验');
@@ -147,7 +165,7 @@ try {
   await page.waitForFunction(()=>document.getElementById('detail-title')?.textContent==='界面样例：手动导入的实施经验');
   await waitForArticleList({ count: 3, caption: '共 3 篇资料' });
   assert.equal(store.findUrl('https://example.org/fde-ui-import').body,sampleBody);
-  assert.equal(await page.locator('#detail-dialog').getByRole('button',{name:'加入分析队列',exact:true}).isDisabled(),true);
+  assert.equal(await page.locator('#detail-dialog').getByRole('button',{name:'AI 分析',exact:true}).isDisabled(),true);
   assert.equal(await page.getByRole('button',{name:'导出 Markdown',exact:true}).isDisabled(),true);
   assert.equal(store.db.prepare('SELECT count(*) n FROM attempts').get().n,0);
   checked('粘贴正文可手动入库，模型关闭时不触发请求且未分析导出禁用');
@@ -157,7 +175,8 @@ try {
   await (await sourcesResponse).finished();
   await page.waitForFunction(()=>document.getElementById('source-list').getAttribute('aria-busy')==='false'
     && document.querySelectorAll('#source-list .source-card').length>0);
-  assert.equal(await page.locator('#collect-now').isDisabled(),true);
+  assert.match(await page.locator('#collection-notice').innerText(),/定时采集已关闭/);
+  assert.equal(await page.locator('#collect-now').isEnabled(),true);
   assert.ok((await page.locator('.source-card').count())>0);
   const manual=page.locator('.source-card').filter({hasText:'Datawhale FDE100'});
   assert.match(await manual.innerText(),/人工阅读/);
@@ -174,7 +193,18 @@ try {
   await (await enabledResponse).finished();
   await page.locator('.source-card').filter({hasText:'美团技术团队'}).getByText('已启用',{exact:true}).waitFor();
   assert.equal(store.sources().find(s=>s.id==='meituan-engineering').enabled,true);
-  checked('来源可启停并恢复，人工阅读入口明确，采集关闭按钮禁用');
+  await page.locator('#collection-days').fill('14');
+  await page.locator('#collection-limit').fill('12');
+  await page.getByRole('button',{name:'保存采集设置'}).click();
+  await page.getByText('采集设置已保存。',{exact:true}).waitFor();
+  const limits=store.collectionLimits();
+  assert.equal(limits.lookbackDays,14);
+  assert.equal(limits.dailyLimit,12);
+  const collectionResponse=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/collect' && r.request().method()==='POST');
+  await page.getByRole('button',{name:'检查信源更新',exact:true}).click();
+  assert.equal((await collectionResponse).status(),202);
+  await page.locator('.source-card').filter({hasText:'美团技术团队'}).getByText(/上次检查/).waitFor();
+  checked('来源可启停，采集范围和上限可保存，定时关闭时登录用户仍可按需检查');
   const usageResponse = page.waitForResponse(r => new URL(r.url()).pathname==='/api/overview' && r.request().method()==='GET' && r.status()===200);
   await page.locator('#tab-usage').click();
   await (await usageResponse).finished();

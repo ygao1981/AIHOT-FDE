@@ -7,9 +7,10 @@ const state = {
   offset: 0, limit: 50, filters: { q: '', status: '', editorialStatus: '' },
   listRequest: 0, detailRequest: 0, currentArticle: null, noteDirty: false,
   drafts: new Map(), queueing: new Set(), refreshing: false, toastTimer: null, searchTimer: null,
+  collection: null, sourceRequest: 0, startingCollection: false,
 };
 const STATUS = { candidate: '待分析', queued: '排队中', analyzing: '分析中', analyzed: '已分析', skipped: '已跳过', failed: '分析未完成', needs_body: '待补正文' };
-const EDITORIAL = { new: '待整理', shortlisted: '已选题', drafting: '写作中', published: '已发布', archived: '已归档' };
+const EDITORIAL = { new: '待整理', organized: '已整理', shortlisted: '已选题', drafting: '写作中', published: '已发布', archived: '已归档' };
 const CATEGORY = { case: '落地案例', architecture: '工程方案', tutorial: '实操教程', delivery: '交付方法', roi: '成本效果', retrospective: '项目复盘' };
 const STAGE = { proposal: '方案阶段', demo: '演示阶段', pilot: '试点阶段', production: '生产使用', not_disclosed: '阶段未披露' };
 const ERROR_MESSAGES = {
@@ -18,7 +19,7 @@ const ERROR_MESSAGES = {
   origin: '请求来源校验未通过，请从研究台的正式地址重新打开。', invalid_origin: '请求来源校验未通过，请从研究台的正式地址重新打开。',
   rate_limit: '操作过于频繁，请稍等片刻再试。', rate_limited: '操作过于频繁，请稍等片刻再试。',
   needs_body: '正文不足。请补充原文正文，再加入分析队列。', disabled: '分析尚未启用，请检查部署配置。',
-  analysis_disabled: '分析尚未启用，请检查部署配置。', collect_disabled: '自动采集尚未启用。你仍可以手动导入资料。',
+  analysis_disabled: '分析尚未启用，请检查部署配置。',
   retry_confirmation: '之前的请求可能已消耗额度。请确认用量后，再决定是否重试。',
   not_found: '没有找到这条资料，请刷新后重试。', busy: '相关任务正在处理，请稍后再试。',
   storage_limit: '资料数量已达上限，请先导出并整理旧资料。',
@@ -26,6 +27,7 @@ const ERROR_MESSAGES = {
   not_candidate: '资料未通过本地相关性规则，未调用模型。你仍可阅读、补充正文和保存笔记。',
   invalid_notes: '笔记最多 10000 个字符，请缩短后保存。',
   too_large: '提交的内容过长，请保留与研究相关的正文后再试。',
+  invalid_auto_limit: '请输入 1–50 之间的整数。',
   invalid_config: '运行配置不完整，请检查部署设置后再试。',
   timeout: '连接超时。操作可能仍在处理，请刷新状态后再决定是否重试。',
   network: '暂时无法连接研究台，请检查网络后重试。',
@@ -148,6 +150,7 @@ function showLogin(errorText = '') {
 }
 function expireSession() {
   preserveNotes(); state.authenticated = false; state.overview = null; state.listRequest++; state.detailRequest++;
+  state.collection = null; state.sourceRequest++; $('collection-fields').disabled = true; renderCollectionActivity();
   for (const id of ['detail-dialog', 'import-dialog']) if ($(id).open) $(id).close();
   syncDialogState(); showLogin('登录已过期，请重新输入访问口令。未保存的笔记暂留在当前页面，请不要关闭页面。');
 }
@@ -169,17 +172,13 @@ function renderOverview() {
   for (const key of ['total', 'candidate', 'analyzed', 'shortlisted']) $(`stat-${key}`).textContent = count(stats[key]);
   $('export-all').disabled = !(number(stats.analyzed) > 0);
   $('export-all').title = number(stats.analyzed) > 0 ? '导出已有分析且未归档的研究资料。' : '完成资料分析后可导出研究结果。';
-  const analysisText = !config.analysisEnabled ? '分析未启用。可以先收集资料、阅读原文并记录个人笔记。' : config.autoAnalyze ? '自动分析已启用。信源采集到的符合条件新资料会进入队列，并受用量上限约束；手动导入由你安排分析。' : '当前为手动分析。收集资料后，点击“加入分析队列”才会安排模型处理。';
+  const analysisText = !config.analysisEnabled ? '模型分析已关闭。启用后可在待分析资料上点击「AI 分析」。' : config.autoAnalyze ? '自动分析已启用，最多按「用量」设置的次数处理新资料。也可点击「AI 分析」手动处理单篇。' : '手动分析已启用。点击「AI 分析」处理这篇资料，由你决定何时使用账号额度。';
   $('analysis-mode').textContent = analysisText;
   $('pause-banner').hidden = !paused;
   $('pause-reason').textContent = paused ? message({ message: paused }, '请检查用量和运行状态，再恢复分析。') : '';
-  $('collect-now').disabled = !config.collectEnabled;
-  $('collect-now').title = config.collectEnabled ? '' : '采集尚未启用，可先手动导入资料。';
-  $('collection-notice').replaceChildren(node('p', { text: !config.collectEnabled
-    ? '采集尚未启用。下方保留来源入口，你可以先阅读原文并手动导入资料。'
-    : config.autoAnalyze && config.analysisEnabled
-      ? '点击检查后会收集已启用来源的更新。自动分析已开启，通过相关性检查的新资料可能产生模型用量。'
-      : '点击检查后只收集已启用来源的更新，不会因此调用分析模型。需要研究的资料由你手动加入分析队列。' }));
+  const collectionMode = config.collectEnabled ? '定时采集已开启。' : '定时采集已关闭，可以手动检查信源更新。';
+  const modelMode = config.autoAnalyze && config.analysisEnabled ? '符合条件的新资料可能触发自动分析。' : '自动分析已关闭，采集不会调用模型。';
+  $('collection-notice').firstElementChild.textContent = `${collectionMode}${modelMode}`;
 }
 async function switchView(view, updateHash = true) {
   const current = ['library', 'sources', 'usage'].includes(view) ? view : 'library';
@@ -248,16 +247,27 @@ function articleCard(article) {
   const side = node('div', { class: 'article-side' }, statusBadge(article.status), badge(EDITORIAL[article.editorialStatus] || '待整理', article.editorialStatus === 'new' ? 'outline' : 'editorial'), article.personalNotes ? node('span', { class: 'note-indicator', text: '已有个人笔记' }) : null);
   const buttons = node('div', { class: 'article-actions' }, action(a ? '查看研究' : '查看资料', () => openDetail(article.id), { class: 'small', icon: 'arrow' }));
   if (!a) buttons.append(queueButton(article));
+  if (state.filters.editorialStatus === 'new') {
+    if (article.status === 'analyzed' && a?.relevance === 'relevant') {
+      buttons.append(node('a', { href: `/editorial.html?article=${encodeURIComponent(article.id)}`, class: 'button small' }, '整理素材'));
+    }
+    buttons.append(action('标为已整理', event => updateEditorial(event.currentTarget, article, 'organized'), { class: 'small' }));
+  }
   const originalLink = externalLink('阅读原文', article.url); if (originalLink) buttons.append(originalLink);
   return node('article', { class: 'article-card' }, main, side, buttons);
 }
-function queueButton(article, options = {}) {
+function isAutomaticQueue(article) {
+  return article.status === 'queued' && ['auto', 'legacy'].includes(article.queueOrigin);
+}
+function queueButton(article) {
   if (article.status === 'needs_body') return action('补充正文', () => openImport(article), { class: 'small' });
   if (article.status === 'skipped') return action('已被规则过滤', () => {}, { class: 'small', disabled: true, title: '未调用模型。可补充相关正文，或继续阅读和记录笔记。' });
-  const pending = ['queued', 'analyzing'].includes(article.status) || state.queueing.has(article.id);
+  const automatic = isAutomaticQueue(article);
+  const pending = article.status === 'analyzing' || (article.status === 'queued' && !automatic) || state.queueing.has(article.id);
   const enabled = Boolean(state.overview?.config?.analysisEnabled);
-  const label = pending ? (article.status === 'analyzing' ? '正在分析' : '已加入队列') : article.analysis ? '重新分析' : article.status === 'failed' ? '确认后重试' : '加入分析队列';
-  return action(label, event => queueArticle(article, event.currentTarget), { class: options.primary ? 'primary small' : 'small', disabled: pending || !enabled, title: !enabled ? '分析尚未启用，请先检查部署配置。' : undefined });
+  const label = pending ? (article.status === 'analyzing' ? '正在分析' : '已加入队列') : automatic ? '改为手动分析' : article.analysis ? '重新分析' : article.status === 'failed' ? '确认后重试' : 'AI 分析';
+  const primary = enabled && !pending && (article.status === 'candidate' || automatic);
+  return action(label, event => queueArticle(article, event.currentTarget), { class: primary ? 'primary small' : 'small', disabled: pending || !enabled, title: !enabled ? '模型分析已关闭。' : undefined });
 }
 async function queueArticle(article, button, forceRetry = false) {
   const retry = forceRetry || Boolean(article.analysis) || article.status === 'failed';
@@ -267,7 +277,7 @@ async function queueArticle(article, button, forceRetry = false) {
   let confirmRetry = false;
   try {
     const result = await api(`/api/articles/${encodeURIComponent(article.id)}/queue`, { method: 'POST', body: retry ? { acceptExtraUsage: true } : {} });
-    toast(result.cached ? '已复用已有研究结果，没有发起新的模型请求。' : result.queued ? '已加入分析队列。处理结果会自动更新。' : '资料状态已更新。');
+    toast(result.cached ? '已复用已有研究结果，没有发起新的模型请求。' : result.queued ? (state.overview?.paused ? '已加入手动队列。模型任务已暂停，恢复后才会处理。' : '已加入手动分析队列。结果会自动更新。') : '资料状态已更新。');
     await loadOverview({ quiet: true }); await loadArticles({ quiet: true });
     if (state.currentArticle?.id === article.id && $('detail-dialog').open) await refreshDetail();
   } catch (error) {
@@ -325,6 +335,47 @@ function detailList(values, fallback) {
   const valid = items(values).filter(v => typeof v === 'string' && v.trim());
   return valid.length ? node('ul', { class: 'detail-list' }, valid.map(v => node('li', { text: v }))) : node('p', { text: fallback });
 }
+function translationPanel(article) {
+  const panel = node('details', { class: 'body-details' }, node('summary', { text: '查看中文译文' }));
+  const content = node('div', { 'aria-live': 'polite' });
+  panel.append(content);
+  const path = `/api/articles/${encodeURIComponent(article.id)}/translation`;
+  let loading = false;
+  async function update(options) {
+    if (loading || !panel.open || !panel.isConnected) return;
+    loading = true;
+    try {
+      const translated = await api(path, options);
+      if (!panel.isConnected || !panel.open) return;
+      if (translated.status === 'completed' && translated.result) {
+        content.replaceChildren(node('h3', { text: translated.result.title }),
+          node('p', { class: 'form-hint', text: article.bodyKind === 'feed_excerpt' ? '译文仅覆盖已收录的订阅摘要。全文请查原文。' : '译文对应研究台已收录的正文。引用请核对英文原文。' }),
+          node('pre', { text: translated.result.body }));
+        return;
+      }
+      if (translated.status === 'running') {
+        content.replaceChildren(node('p', { text: '正在翻译。结果保存后会自动显示。' }));
+        setTimeout(() => update(), 2000);
+        return;
+      }
+      const retry = translated.status === 'unknown' || translated.status === 'failed';
+      const enabled = Boolean(state.overview?.config?.analysisEnabled);
+      content.replaceChildren(node('p', { class: 'form-hint', text: retry ? '上次翻译结果不明确。请先核对用量。' : enabled ? '手动翻译会记入模型用量。' : '模型已关闭。启用模型后可手动翻译。' }),
+        action(retry ? '确认后重新翻译' : 'AI 翻译成中文', event => {
+          if (retry && !window.confirm('上次翻译可能已消耗额度。确认发起一次新翻译吗？')) return;
+          busyButton(event.currentTarget, true, '正在安排…');
+          void update({ method: 'POST', body: retry ? { acceptExtraUsage: true } : {} });
+        }, { class: 'small', disabled: !enabled }));
+    } catch (error) {
+      if (!panel.isConnected || !panel.open || !state.authenticated) return;
+      content.replaceChildren(node('p', { role: 'status', text: message(error) }), action('查看翻译状态', () => update(), { class: 'small' }));
+    } finally {
+      loading = false;
+    }
+  }
+  panel.addEventListener('toggle', () => { if (panel.open && !loading) void update(); });
+  return panel;
+}
 function renderDetail() {
   const article = state.currentArticle; if (!article) return;
   const a = article.analysis;
@@ -335,7 +386,8 @@ function renderDetail() {
     node('div', { class: 'detail-actions' }, externalLink('阅读原文', article.url, 'button small'), action('导出 Markdown', event => exportResearch(article.id, event.currentTarget), { class: 'small', icon: 'download', disabled: !a, title: !a ? '完成分析后可导出研究结果。' : undefined }), queueButton(article), a?.relevance === 'relevant' && article.status === 'analyzed' && article.editorialStatus !== 'archived' ? node('a', { href: `/editorial.html?article=${encodeURIComponent(article.id)}`, class: 'button small' }, '写公众号') : null, article.status !== 'needs_body' ? action('补充正文', () => openImport(article), { class: 'small text-button' }) : null));
   const select = node('select', { id: 'detail-editorial', onChange: event => updateEditorial(event.currentTarget) }, Object.entries(EDITORIAL).map(([value, label]) => node('option', { value, text: label })));
   select.value = article.editorialStatus || 'new';
-  const editorial = node('div', { class: 'detail-status' }, node('div', { class: 'select-field' }, node('label', { for: 'detail-editorial', text: '选题进度' }), select), node('p', { class: 'form-hint', text: '只记录个人进度，不会向外部平台发布。' }));
+  const editorial = node('div', { class: 'detail-status' }, node('div', { class: 'select-field' }, node('label', { for: 'detail-editorial', text: '选题进度' }), select),
+    node('p', { class: 'form-hint', text: '待整理的资料还需核对原文和归纳要点。完成后可标为已整理，再决定是否列入选题。' }));
   const content = [heading, editorial];
   if (a) {
     if (a.relevance !== 'relevant') content.push(node('div', { class: 'notice warning' }, node('p', { text: a.relevance === 'unrelated' ? '本次分析认为资料与研究方向关联较弱。请阅读原文后自行决定是否保留。' : '本次分析未能确认资料与研究方向的关联。请核对原文后再使用。' })));
@@ -365,18 +417,19 @@ function renderDetail() {
   content.push(section('个人笔记', [node('label', { for: 'personal-notes', class: 'sr-only', text: '个人笔记内容' }), notes,
     node('div', { class: 'notes-actions' }, node('span', { id: 'notes-state', class: 'notes-state', role: 'status', text: state.noteDirty ? '草稿尚未保存' : savedNotes ? '已保存' : '最多 10000 个字符' }), node('button', { id: 'save-notes', type: 'button', class: 'button small primary', disabled: !state.noteDirty, onClick: saveNotes }, '保存笔记'))]));
   const body = text(article.body, text(article.bodyExcerpt));
+  if (article.canTranslate) content.push(translationPanel(article));
   content.push(node('details', { class: 'body-details' }, node('summary', { text: '查看已收录正文' }), body ? node('pre', { text: body }) : node('p', { class: 'form-hint', text: '尚未收录正文，请阅读原文或补充正文。' })));
   $('detail-content').replaceChildren(...content);
 }
-async function updateEditorial(select) {
-  const article = state.currentArticle; if (!article) return;
-  const previous = article.editorialStatus; select.disabled = true;
+async function updateEditorial(control, article = state.currentArticle, value = control.value) {
+  if (!article) return;
+  const previous = article.editorialStatus; control.disabled = true;
   try {
-    const response = await api(`/api/articles/${encodeURIComponent(article.id)}`, { method: 'PATCH', body: { editorialStatus: select.value } });
-    if (state.currentArticle?.id === article.id) state.currentArticle.editorialStatus = response.editorialStatus || select.value;
-    toast('选题进度已保存。'); await loadOverview({ quiet: true }); await loadArticles({ quiet: true });
-  } catch (error) { select.value = previous; if (state.authenticated) toast(message(error)); }
-  finally { if (select.isConnected) select.disabled = false; }
+    const response = await api(`/api/articles/${encodeURIComponent(article.id)}`, { method: 'PATCH', body: { editorialStatus: value } });
+    if (state.currentArticle?.id === article.id) state.currentArticle.editorialStatus = response.editorialStatus || value;
+    toast(value === 'organized' ? '已标为已整理。' : '选题进度已保存。'); await loadOverview({ quiet: true }); await loadArticles({ quiet: true });
+  } catch (error) { if (control.tagName === 'SELECT') control.value = previous; if (state.authenticated) toast(message(error)); }
+  finally { if (control.isConnected) control.disabled = false; }
 }
 async function saveNotes() {
   const article = state.currentArticle; if (!article) return;
@@ -426,15 +479,34 @@ async function submitImport(event) {
   finally { busyButton($('import-submit'), false, '保存资料'); }
 }
 
-async function loadSources() {
-  const target = $('source-list'); target.setAttribute('aria-busy', 'true'); target.replaceChildren(loading('正在读取信源…'));
+function renderCollectionActivity() {
+  const collection = state.collection, button = $('collect-now');
+  const busy = state.startingCollection || collection?.collecting;
+  const atLimit = collection && collection.addedToday >= collection.dailyLimit;
+  const enabled = collection?.items.some(source => source.enabled);
+  button.disabled = !enabled || !!busy || !!atLimit;
+  button.title = atLimit ? '今天已达到采集上限。' : collection && !enabled ? '请先启用一个信源。' : '';
+  $('collect-now-label').textContent = busy ? '正在检查…' : '检查信源更新';
+  $('collection-summary').textContent = collection ?
+    `今天已从信源新增 ${count(collection.addedToday)} 篇，上限 ${count(collection.dailyLimit)} 篇。${atLimit ? '今天已达到上限。' : ''}` : '正在读取采集进度…';
+}
+async function loadSources({ quiet = false } = {}) {
+  const request = ++state.sourceRequest, target = $('source-list');
+  if (!quiet) { target.setAttribute('aria-busy', 'true'); target.replaceChildren(loading('正在读取信源…')); }
   try {
-    const response = await api('/api/sources'); if (!state.authenticated) return;
+    const response = await api('/api/sources'); if (!state.authenticated || request !== state.sourceRequest) return;
     const sources = items(response.items);
+    state.collection = { ...response, items: sources };
+    for (const [id, setting] of [['collection-days', response.lookbackDays], ['collection-limit', response.dailyLimit]]) {
+      const input = $(id), value = String(setting);
+      if (input.value === input.defaultValue) input.value = value;
+      input.defaultValue = value;
+    }
+    $('collection-fields').disabled = false; renderCollectionActivity();
     $('sources-count').textContent = `${count(sources.length)} 个来源，${count(sources.filter(s => s.enabled).length)} 个已启用`;
     target.replaceChildren(...(sources.length ? sources.map(sourceCard) : [emptyState('还没有配置来源', '可以先手动导入资料，再按研究方向配置固定信源。', action('导入资料', () => openImport()))]));
-  } catch (error) { if (state.authenticated) target.replaceChildren(emptyState('信源暂时没有加载出来', message(error), action('重新加载', loadSources))); }
-  finally { target.setAttribute('aria-busy', 'false'); }
+  } catch (error) { if (!quiet && state.authenticated && request === state.sourceRequest) target.replaceChildren(emptyState('信源暂时没有加载出来', message(error), action('重新加载', loadSources))); }
+  finally { if (request === state.sourceRequest) target.setAttribute('aria-busy', 'false'); }
 }
 function sourceCard(source) {
   const manual = source.kind === 'manual' || ['disabled', 'watch'].includes(source.disposition);
@@ -442,7 +514,7 @@ function sourceCard(source) {
   const header = node('div', { class: 'source-card-header' }, node('h2', { text: text(source.name, '资料来源') }), manual ? badge('人工阅读', 'outline') : node('label', { class: 'switch-label' }, checkbox, node('span', { text: '自动检查' })));
   const description = Array.isArray(source.description) ? source.description.join('；') : text(source.description, text(source.notes, '请打开来源，判断是否适合当前研究方向。'));
   const meta = node('div', { class: 'source-meta' }, badge(language(source.language), 'outline'), source.region ? badge(source.region, 'outline') : null, !manual ? badge(source.enabled ? '已启用' : '已停用', source.enabled ? 'success' : '') : null);
-  const checked = manual ? '可阅读后手动导入' : source.lastCheckedAt ? `上次检查 ${date(source.lastCheckedAt, true)} · 获取 ${count(source.lastCount)} 条` : '尚未检查';
+  const checked = manual ? '可阅读后手动导入' : source.lastCheckedAt ? `上次检查 ${date(source.lastCheckedAt, true)} · 新增 ${count(source.lastCount)} 篇` : '尚未检查';
   return node('article', { class: 'source-card' }, header, meta, node('p', { class: 'source-description', text: description }), source.lastError ? node('p', { class: 'source-error', text: '上次检查未完成。可以稍后重试，或打开来源手动收录。' }) : null, node('div', { class: 'source-footer' }, node('span', { text: checked }), externalLink('打开来源', source.homepage || source.url)));
 }
 async function toggleSource(source, input) {
@@ -452,11 +524,22 @@ async function toggleSource(source, input) {
   finally { if (input.isConnected) input.disabled = false; }
 }
 async function collectNow() {
-  if (!state.overview?.config?.collectEnabled) return;
-  const button = $('collect-now'); busyButton(button, true, '正在安排检查…');
-  try { await api('/api/collect', { method: 'POST', body: {} }); toast('已安排检查信源更新。请稍后刷新研究库查看新资料。'); await loadOverview({ quiet: true }); await loadSources(); }
+  state.startingCollection = true; renderCollectionActivity();
+  try { const result = await api('/api/collect', { method: 'POST', body: {} }); toast(result.message); }
   catch (error) { if (state.authenticated) toast(message(error)); }
-  finally { busyButton(button, false, '检查信源更新'); button.disabled = !state.overview?.config?.collectEnabled; }
+  finally { if (state.authenticated) await loadSources({ quiet: true }); state.startingCollection = false; renderCollectionActivity(); }
+}
+async function saveCollectionSettings(event) {
+  event.preventDefault();
+  const button = $('save-collection'), feedback = $('collection-feedback');
+  const body = { lookbackDays: $('collection-days').valueAsNumber, dailyLimit: $('collection-limit').valueAsNumber };
+  busyButton(button, true, '正在保存…'); feedback.hidden = true;
+  try {
+    await api('/api/sources/settings', { method: 'POST', body });
+    feedback.className = ''; feedback.textContent = '采集设置已保存。';
+    await loadSources({ quiet: true });
+  } catch (error) { feedback.className = 'form-error'; feedback.textContent = message(error); }
+  finally { feedback.hidden = !state.authenticated; busyButton(button, false); }
 }
 
 function usageCard(title, value, hint, small = false) {
@@ -469,12 +552,14 @@ function renderUsage() {
   const costKnown = usage.costKnown === true;
   const mode = config.provider === 'api' ? 'API 模式' : config.provider === 'codex' ? '本机 Codex 模式' : '暂未接入模型';
   const cards = node('div', { class: 'usage-grid' },
-    usageCard('过去 24 小时模型任务', `${count(usage.attempts24h)} 次`, `研究分析与公众号写作共用 ${count(config.dailyLimit)} 次上限，失败和未知回执也计入。`),
+    usageCard('过去 24 小时模型任务', `${count(usage.attempts24h)} 次`, '研究分析、公众号写作和翻译的总次数，包含失败和结果未知的尝试。'),
     usageCard('本月已记录输入 / 输出', `${count(usage.inputTokens)} / ${count(usage.outputTokens)}`, '单位为 token。未返回完整用量的请求，不代表没有消耗。', true),
     usageCard(costKnown ? '本月 API 估算费用' : '当前接入的费用', costKnown ? money(usage.monthCostUsd) : '金额未知', costKnown ? '单位为美元，按配置单价估算；不含 Codex 账号中无法折算的消耗。' : config.provider === 'codex' ? '本机工具不提供可可靠换算的美元账单。尝试次数不是费用。' : '尚未接入 API 费用统计。', true));
+  $('auto-limit').defaultValue = String(config.dailyLimit ?? '');
+  $('auto-limit-summary').textContent = `${config.autoAnalyze && config.analysisEnabled ? '自动分析已开启' : '自动分析已关闭'}。过去 24 小时已用 ${count(usage.autoAttempts24h)} 次，上限 ${count(config.dailyLimit)} 次。手动任务单独由你决定，统一记入总用量。`;
   const settings = [
     ['接入方式', mode], ['任务模型', config.provider === 'off' ? '未启用' : text(config.model, config.provider === 'codex' ? '使用账号默认模型' : '未设置')],
-    ['资料采集', config.collectEnabled ? '已启用' : '未启用'], ['模型任务', config.analysisEnabled ? '已启用' : '未启用'],
+    ['定时采集', config.collectEnabled ? '已启用' : '未启用'], ['模型任务', config.analysisEnabled ? '已启用' : '未启用'],
     ['自动分析', config.autoAnalyze && config.analysisEnabled ? '已启用' : '未启用，手动选择'],
     ['当前处理', paused ? '已暂停' : config.analysisEnabled ? '按队列处理' : '等待启用分析'],
   ];
@@ -495,6 +580,25 @@ async function controlAnalysis(actionName, button) {
   try { await api('/api/control', { method: 'POST', body: { action: actionName } }); await loadOverview(); toast(actionName === 'pause' ? '已暂停启动新的研究分析和写作任务。' : '已恢复处理模型任务队列。'); }
   catch (error) { if (state.authenticated) toast(message(error)); }
   finally { if (button?.isConnected) busyButton(button, false); }
+}
+async function saveAutomaticLimit(event) {
+  event.preventDefault();
+  const input = $('auto-limit'), button = $('save-auto-limit'), feedback = $('auto-limit-state');
+  const limit = Number(input.value);
+  busyButton(button, true, '正在保存…');
+  feedback.hidden = true;
+  try {
+    await api('/api/control', { method: 'POST', body: { action: 'set-auto-daily-limit', limit } });
+    await loadOverview();
+    feedback.className = '';
+    feedback.textContent = '自动分析上限已保存。';
+  } catch (error) {
+    feedback.className = 'form-error';
+    feedback.textContent = message(error);
+  } finally {
+    feedback.hidden = !state.authenticated;
+    busyButton(button, false);
+  }
 }
 async function exportResearch(id, button) {
   busyButton(button, true, '正在导出…');
@@ -561,6 +665,7 @@ $('refresh-usage').addEventListener('click', async event => {
   try { await loadOverview(); } catch (error) { if (state.authenticated) showWorkspaceError(error); }
   finally { busyButton(button, false, '刷新用量'); }
 });
+$('auto-limit-form').addEventListener('submit', saveAutomaticLimit);
 $('retry-workspace').addEventListener('click', async () => { try { await loadOverview(); await switchView(state.view, false); } catch (error) { if (state.authenticated) showWorkspaceError(error); } });
 $('export-all').addEventListener('click', event => exportResearch(null, event.currentTarget));
 $('open-import').addEventListener('click', () => openImport());
@@ -576,6 +681,7 @@ for (const id of ['detail-dialog', 'import-dialog']) $(id).addEventListener('cli
   if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) id === 'detail-dialog' ? closeDetail() : closeImport();
 });
 $('collect-now').addEventListener('click', collectNow);
+$('collection-form').addEventListener('submit', saveCollectionSettings);
 $('resume-banner').addEventListener('click', event => controlAnalysis('resume', event.currentTarget));
 window.addEventListener('beforeunload', event => { if (state.noteDirty || state.drafts.size) { event.preventDefault(); event.returnValue = ''; } });
 setInterval(async () => {
@@ -585,6 +691,7 @@ setInterval(async () => {
     const pending = state.items.some(a => ['queued', 'analyzing'].includes(a.status));
     await loadOverview({ quiet: true });
     if (state.view === 'library' && (pending || number(state.overview?.stats?.queued) > 0)) await loadArticles({ quiet: true });
+    if (state.view === 'sources' && state.collection?.collecting) await loadSources({ quiet: true });
     if ($('detail-dialog').open && state.currentArticle && ['queued', 'analyzing'].includes(state.currentArticle.status) && !state.noteDirty && !state.queueing.has(state.currentArticle.id)) await refreshDetail();
   } catch { /* A transient polling failure does not replace the user's work. Manual refresh remains available. */ }
   finally { state.refreshing = false; }

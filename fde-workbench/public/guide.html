@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="robots" content="noindex, nofollow">
+  <title>使用说明 · FDE 研究台</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/guide.css">
+</head>
+<body>
+  <a class="skip-link" href="#guide-main">跳到使用说明</a>
+  <header class="guide-header">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">F</span><span>FDE 研究台</span></a>
+    <nav class="guide-actions" aria-label="工作区导航">
+      <a href="/">研究库</a>
+      <a href="/editorial.html">公众号草稿</a>
+    </nav>
+  </header>
+  <main id="guide-main" class="guide" tabindex="-1">
+    <div class="guide-intro">
+      <h1>使用说明</h1>
+      <p>从收录一篇案例开始。核对证据、整理研究卡，再把值得写的观点做成公众号草稿。</p>
+    </div>
+    <div class="guide-layout">
+      <nav class="guide-contents" aria-label="本页目录">
+        <h2>本页目录</h2>
+        <a href="#start">启动与登录</a>
+        <a href="#research">收录、分析与整理</a>
+        <a href="#translate">看英文资料的译文</a>
+        <a href="#draft">写稿、排版与导出</a>
+        <a href="#usage">模型额度与排查</a>
+        <a href="#backup">备份与停止</a>
+      </nav>
+      <article class="guide-body" aria-label="操作步骤">
+        <section id="start" aria-labelledby="start-title">
+          <h2 id="start-title">启动与登录</h2>
+          <ol>
+            <li>在 Windows 桌面双击「FDE 研究台」，等待浏览器打开。如果浏览器没有自动打开，点下方链接。</li>
+            <li>输入部署时设定的研究台访问口令。口令在启动目录的 <code>.env</code> 中由部署者管理。</li>
+          </ol>
+          <p><a class="button primary" href="/">打开研究台</a></p>
+        </section>
+        <section id="research" aria-labelledby="research-title">
+          <h2 id="research-title">收录、分析与整理</h2>
+          <ol>
+            <li>点「导入资料」并填原文链接。如果网页读不全，用「补充正文」粘贴有权使用的正文，保留日期、具体数据和适用条件。</li>
+            <li>在「分析进度」筛选「待分析」，选择一篇点「AI 分析」。完成后打开「查看研究」，核对引文、数字和部署阶段。</li>
+            <li>保存个人笔记。在「选题进度」筛选「待整理」。符合条件的研究卡可点「整理素材」。核对完成后手动点「标为已整理」。</li>
+          </ol>
+          <dl class="guide-statuses">
+            <div><dt>待分析</dt><dd>已收录，尚未安排模型生成研究卡。</dd></div>
+            <div><dt>待整理</dt><dd>还需要人工核对原文、归纳要点或决定用途。已分析的资料也可以待整理。</dd></div>
+            <div><dt>已整理</dt><dd>你已核对并手动标记。之后再决定是否列入选题。</dd></div>
+          </dl>
+          <p>在「信源 → 采集范围与条数」设置最近几天和每天最多新增几篇。默认采集最近 30 天（含今天），每天最多新增 50 篇。重复资料和手动导入不占采集条数。</p>
+          <p>点「检查信源更新」即可检查已启用的来源。日期超出范围或不明的资料可手动导入。自动分析关闭时，采集不会启动模型。</p>
+        </section>
+        <section id="translate" aria-labelledby="translate-title">
+          <h2 id="translate-title">看英文资料的译文</h2>
+          <p>在英文资料详情展开「查看中文译文」。点「AI 翻译成中文」会使用一次模型任务，生成后再次查看会复用已保存的译文。若只收录了订阅摘要，译文也只覆盖摘要。引用时回到英文原文核对。</p>
+        </section>
+        <section id="draft" aria-labelledby="draft-title">
+          <h2 id="draft-title">写稿、排版与导出</h2>
+          <ol>
+            <li>进入「公众号草稿」，选 1–3 篇有原文证据的研究卡，填写作角度。用「整理素材稿」汇总，消耗 0 次模型额度。也可以点「AI 写作」安排一次任务。</li>
+            <li>改标题和正文，标清来源转述、我的解读、行动建议，点「保存并更新预览」。如果别的窗口已保存新版本，先保留本页需要的文字，再重新载入并合并。</li>
+            <li>切换「纯文字版」或「图文版」，主题可选「清爽白纸」和「深色卡片」。选「复制文字版排版」或「下载两版素材包」。包内有 TXT、Markdown、两版 HTML 和图文使用的 PNG。</li>
+            <li>在微信公众平台粘贴正文，按图文版的位置上传本地 PNG，手机预览确认后由你发布。发出后可在研究台手动标为「已发布」。</li>
+          </ol>
+        </section>
+        <section id="usage" aria-labelledby="usage-title">
+          <h2 id="usage-title">模型额度与排查</h2>
+          <p class="guide-callout">手动分析、翻译和写作由你根据账号用量决定。在「用量 → 自动分析额度」可设置滚动 24 小时内的自动尝试上限，默认 5 次。</p>
+          <p>阅读、笔记、整理素材稿、保存、换主题、复制和下载均不消耗模型额度。用完全相同的资料、角度和配置再次提交写作，会复用原稿及人工修改。</p>
+          <dl class="guide-statuses">
+            <div><dt>AI 按钮不可用</dt><dd>先到「用量」查看启用状态。模型开关由部署配置管理，开启后重启研究台才生效。</dd></div>
+            <div><dt>自动分析已满或排队</dt><dd>可在「用量」查看自动次数与上限。对队列中的一篇资料，点「改为手动分析」可以手动安排。</dd></div>
+            <div><dt>任务未完成或结果未知</dt><dd>先核对账号和用量，再到「用量」恢复处理。未知任务不会自动重发，明确重试会消耗新次数。</dd></div>
+          </dl>
+          <p><a class="button" href="/#usage">打开用量</a></p>
+        </section>
+        <section id="backup" aria-labelledby="backup-title">
+          <h2 id="backup-title">备份与停止</h2>
+          <p>资料库默认在运行目录的 <code>.data</code>。在 <code>fde-workbench</code> 目录用 Node 24 环境运行 <code>npm.cmd run backup</code>，将资料、草稿、私人笔记和用量回执备份到资料目录下的 <code>backups</code>。</p>
+          <p>保存当前编辑后，在研究台运行窗口按 <kbd>Ctrl</kbd> + <kbd>C</kbd> 停止。只关浏览器标签页，研究台会继续运行。</p>
+        </section>
+      </article>
+    </div>
+  </main>
+</body>
+</html>

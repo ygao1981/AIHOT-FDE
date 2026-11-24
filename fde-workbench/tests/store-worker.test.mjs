@@ -2,11 +2,76 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Store } from '../src/store.mjs';
 import { Worker } from '../src/worker.mjs';
+import { translationTask } from '../src/translation.mjs';
 import { analysisKey,prepareArticle } from '../src/analysis.mjs';
 import { fixture,add,output } from './helpers.mjs';
 import { acquireLock } from '../src/main.mjs';
 import { importArticle } from '../src/collect.mjs';
 
+test('translation joins artificial splits without losing original paragraph boundaries', () => {
+  const body='A'.repeat(2600)+' manually reviewed '+'B'.repeat(2500)+'\n\n'+'C'.repeat(1100);
+  const task=translationTask({title:'Fictional source',language:'en',body},{});
+  assert.equal(task.input.segments.length,3);
+  const chinese=task.validate({title:'测试原文',segments:['随后由一位','复核员复查。','下一段。']});
+  assert.equal(chinese.body,'随后由一位复核员复查。\n\n下一段。');
+  const mixed=task.validate({title:'测试原文',segments:['先核对 API','schema。','下一段。']});
+  assert.equal(mixed.body,'先核对 API schema。\n\n下一段。');
+});
+
+const englishBody = 'The support team connected the RAG workflow to existing enterprise records. It limited the pilot to one service queue and kept manual review. '.repeat(28);
+
+test('manual English translation shares the single model slot and preserves the research card', async t => {
+  const {store,config}=fixture(t,{provider:'codex',dailyLimit:1});
+  const original=add(store,81,{title:'Enterprise RAG support pilot',language:'en',body:englishBody});
+  store.db.prepare("UPDATE articles SET status='analyzed',analysis_json=?,analysis_key=?,personal_notes=? WHERE id=?")
+    .run(JSON.stringify(output().result),'existing-research','只保留在私库的笔记',original.id);
+  const before=store.getArticle(original.id), waiting=add(store,82);
+  const pending=Promise.withResolvers();
+  let calls=0;
+  const worker=new Worker(store,config,{translator:async(_config,task)=>{
+    calls++;
+    assert.equal(task.name,'fde_translation');
+    assert.doesNotMatch(JSON.stringify(task.input),/只保留在私库的笔记/);
+    return pending.promise;
+  },analyzer:async()=>output()});
+  assert.equal(worker.translate(original.id).status,'running');
+  assert.equal(worker.translate(original.id).status,'running');
+  worker.enqueue(waiting.id);
+  assert.equal(await worker.analyzeOne(),'blocked');
+  await Promise.resolve();
+  assert.equal(calls,1);
+  pending.resolve({...output(),result:{title:'企业检索客服试点',body:'仅在一个客服队列试点，保留人工审核。'},costUsd:null});
+  await worker.analysisTask;
+  assert.equal(worker.translate(original.id).status,'completed');
+  assert.deepEqual(store.getArticle(original.id),before);
+  assert.deepEqual([store.overview(config).usage.attempts24h,store.overview(config).usage.translationAttempts24h],[1,1]);
+  assert.equal(await worker.analyzeOne(),'progressed');
+  assert.equal(store.getArticle(waiting.id).status,'analyzed');
+  assert.equal(store.overview(config).usage.autoAttempts24h,0);
+  await worker.stop();
+});
+
+test('translation requires complete coverage and failed receipts block automatic retries', async t => {
+  const {store,config}=fixture(t,{provider:'codex'});
+  const article=add(store,91,{title:'An English customer case',language:'en',body:englishBody});
+  const task=translationTask(article,config);
+  assert.ok(task.input.segments.length>1);
+  assert.throws(()=>task.validate({title:'标题',segments:['只返回首段，省略了剩余输入。']}),{code:'invalid_result'});
+  const segments=task.input.segments.map((_,index)=>`第 ${index + 1} 个片段已翻译。`);
+  const value=task.validate({title:'标题',segments});
+  assert.equal(value.body,segments.join(''));
+  let calls=0;
+  const worker=new Worker(store,config,{translator:async()=>{calls++;throw Object.assign(new Error('failure'),{code:'cli_timeout_unknown'});}});
+  worker.translate(article.id);
+  await worker.analysisTask;
+  assert.equal(worker.translationStatus(article.id).status,'unknown');
+  assert.equal(store.getArticle(article.id).status,'candidate');
+  assert.equal(store.overview(config).usage.attempts24h,1);
+  assert.throws(()=>worker.translate(article.id),{code:'retry_confirmation'});
+  assert.equal(calls,1);
+  assert.ok(store.setting('analysis_pause'));
+  await worker.stop();
+});
 test('busy-time enqueue and repeated notifications drain promptly with one model at a time',async t=>{
   const {store,config}=fixture(t),first=Promise.withResolvers(),release=Promise.withResolvers();
   let calls=0,active=0,maximum=0;
@@ -43,9 +108,9 @@ test('a failed analysis stops the drain and resume processes only the remaining 
   assert.equal(calls,2);assert.equal(store.getArticle(a.id).status,'failed');assert.equal(store.getArticle(b.id).status,'analyzed');
 });
 test('daily and monthly blocks end the drain without spinning or making a model request',async t=>{
-  const {store,config}=fixture(t,{dailyLimit:1});let calls=0;
+  const {store,config}=fixture(t,{autoAnalyze:true,dailyLimit:1});let calls=0;
   const worker=new Worker(store,config,{analyzer:async()=>{calls++;return output();}});
-  worker.enqueue(add(store).id);worker.enqueue(add(store,2).id);
+  add(store);add(store,2);store.autoQueue(2);
   await worker.wake();await worker.wake();assert.equal(calls,1);
   config.dailyLimit=2;config.monthlyBudgetUsd=0.000001;
   await worker.wake();assert.equal(calls,1);assert.equal(store.overview(config).usage.attempts24h,1);
@@ -107,12 +172,39 @@ test('failure pauses all new analysis and preserves its budget; explicit retry c
   store.setSetting('analysis_pause',null);worker.enqueue(a.id,true);await worker.analyzeOne();
   assert.equal(calls,2);assert.equal(store.overview(config).usage.attempts24h,2);
 });
-test('daily limit counts failed attempts and changing config takes effect without a stale second budget',async t=>{
-  const {store,config}=fixture(t,{dailyLimit:1});let calls=0;
-  const worker=new Worker(store,config,{analyzer:async()=>{calls++;return output();}});
-  const a=add(store),b=add(store,2);worker.enqueue(a.id);worker.enqueue(b.id);await worker.analyzeOne();await worker.analyzeOne();
+test('an unknown automatic attempt counts toward the saved limit across connections',async t=>{
+  const {store,config,dir}=fixture(t,{autoAnalyze:true,dailyLimit:1});let calls=0;
+  const worker=new Worker(store,config,{analyzer:async()=>{
+    if(++calls===1)throw Object.assign(new Error('test failure'),{code:'timeout'});
+    return output();
+  }});
+  const a=add(store,1,{priority:5}),b=add(store,2);
+  store.autoQueue(2);await worker.wake();
+  assert.equal(store.getArticle(a.id).status,'failed');
+  assert.ok(store.setting('analysis_pause'));
+  store.setSetting('analysis_pause',null);await worker.wake();
   assert.equal(calls,1);assert.equal(store.getArticle(b.id).status,'queued');
-  config.dailyLimit=2;await worker.analyzeOne();assert.equal(calls,2);
+  assert.equal(store.overview(config).usage.autoAttempts24h,1);
+  store.setAutomaticDailyLimit(2);
+  const other=new Store(dir);try{assert.equal(other.automaticDailyLimit(config),2);}finally{other.close();}
+  await worker.wake();assert.equal(calls,2);
+  assert.equal(store.overview(config).usage.autoAttempts24h,2);
+  assert.equal(store.getArticle(a.id).status,'failed');
+});
+test('manual analysis can promote a queued automatic item while automation is off or full',async t=>{
+  const {store,config}=fixture(t,{autoAnalyze:true,dailyLimit:1});
+  const titles=[],worker=new Worker(store,config,{analyzer:async(_config,article)=>{titles.push(article.title);return output();}});
+  const first=add(store,21,{priority:5}),waiting=add(store,22,{priority:4});
+  store.autoQueue(2);await worker.wake();
+  assert.equal(store.getArticle(waiting.id).queueOrigin,'auto');
+  const explicit=add(store,23,{priority:1});worker.enqueue(explicit.id);await worker.wake();
+  assert.deepEqual(titles,[first.title,explicit.title]);
+  config.autoAnalyze=false;
+  assert.equal(store.getArticle(waiting.id).status,'queued');
+  worker.enqueue(waiting.id);worker.enqueue(waiting.id);await worker.wake();
+  assert.deepEqual(titles,[first.title,explicit.title,waiting.title]);
+  assert.equal(store.overview(config).usage.autoAttempts24h,1);
+  assert.equal(store.overview(config).usage.attempts24h,3);
 });
 test('monthly reservation prevents an unaffordable request before sending',async t=>{
   const {store,config}=fixture(t,{monthlyBudgetUsd:0.000001});let calls=0;

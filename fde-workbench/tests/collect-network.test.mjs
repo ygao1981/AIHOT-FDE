@@ -8,7 +8,7 @@ import tls from 'node:tls';
 import { once } from 'node:events';
 import { parseFeed,parseList,extractArticle,publicationDate,readSource,collectSource,importArticle } from '../src/collect.mjs';
 import { canonicalUrl,isPublicAddress,fetchText,closeFetcher } from '../src/fetch.mjs';
-import { readSourceProxyUrl } from '../src/config.mjs';
+import { readSourceProxyConfig, readSourceProxyUrl } from '../src/config.mjs';
 import { fixture,body } from './helpers.mjs';
 
 const source={id:'test-source',name:'测试源',kind:'rss',url:'https://example.com/feed',allowedHosts:['example.com'],priority:5};
@@ -63,6 +63,10 @@ test('the explicit proxy configuration accepts only a local HTTP endpoint with a
   for(const value of ['http://proxy.test:24567','http://localhost:24567','http://127.1:24567','http://127.0.0.1','http://127.0.0.1:65536','http://127.0.0.1:0','https://127.0.0.1:24567','http://user:synthetic@127.0.0.1:24567','http://127.0.0.1:24567?other=1','http://127.0.0.1:24567/private']) {
     assert.throws(()=>readSourceProxyUrl(value),{code:'invalid_config'});
   }
+  assert.deepEqual(readSourceProxyConfig({FDE_SOURCE_PROXY_URL:'http://127.0.0.1:24567',
+    FDE_SOURCE_PROXY_FALLBACK_URLS:'http://127.0.0.1:24567/, http://[::1]:24568, http://127.0.0.1:24569, http://[::1]:24568'}),
+  {sourceProxyUrl:'http://127.0.0.1:24567',sourceProxyFallbackUrls:['http://[::1]:24568','http://127.0.0.1:24569']});
+  assert.throws(()=>readSourceProxyConfig({FDE_SOURCE_PROXY_FALLBACK_URLS:'http://proxy.test:24567'}),{code:'invalid_config'});
 });
 
 const proxySource={...source,disposition:'auto',url:'https://source.test/feed',allowedHosts:['source.test']};
@@ -74,8 +78,16 @@ async function listen(server) {
   server.listen(0,'127.0.0.1');
   await once(server,'listening');
 }
+async function unusedProxyUrl() {
+  const unused=httpServer();
+  await listen(unused);
+  const url='http://127.0.0.1:'+unused.address().port;
+  await new Promise(resolve=>unused.close(resolve));
+  return url;
+}
 async function connectFixture(t,{trustCertificate=true}={}) {
   const requests=[], authorities=[], sockets=new Set();
+  const publishedAt=new Date().toISOString();
   const origin=httpsServer({key,cert},(req,res)=>{
     requests.push(req.url);
     if(req.url==='/feed') {
@@ -83,7 +95,7 @@ async function connectFixture(t,{trustCertificate=true}={}) {
       res.end('<rss><channel><item><title>AI 交付案例</title><link>https://source.test/story</link></item></channel></rss>');
     } else {
       res.setHeader('Content-Type','text/html');
-      res.end(html());
+      res.end(html().replace('2026-01-02T10:00:00+08:00',publishedAt));
     }
   });
   const proxy=httpServer((_req,res)=>{res.writeHead(405);res.end();});
@@ -118,11 +130,11 @@ async function connectFixture(t,{trustCertificate=true}={}) {
     await closeFetcher();
     await Promise.all([origin,proxy].map(server=>new Promise(resolve=>server.close(resolve))));
   });
-  return {proxyUrl:'http://127.0.0.1:'+proxy.address().port,requests,authorities};
+  return {proxyUrl:'http://127.0.0.1:'+proxy.address().port,requests,authorities,publishedAt};
 }
 
 test('the audited feed and detail use explicit CONNECT with a verified certificate and deduplicate',async t=>{
-  const {proxyUrl,requests,authorities}=await connectFixture(t);
+  const {proxyUrl,requests,authorities,publishedAt}=await connectFixture(t);
   const {store,config}=fixture(t,{sourceProxyUrl:proxyUrl});
   const previous=process.env.NO_PROXY;
   process.env.NO_PROXY='*';
@@ -135,7 +147,7 @@ test('the audited feed and detail use explicit CONNECT with a verified certifica
   assert.deepEqual(requests,['/feed','/story','/feed']);
   assert.ok(authorities.length>0&&authorities.every(authority=>authority==='source.test:443'));
   const item=store.listArticles().items[0];
-  assert.equal(item.publishedAt,'2026-01-02T02:00:00.000Z');
+  assert.equal(item.publishedAt,publishedAt);
   assert.equal(item.bodyKind,'page');
   assert.equal(store.overview(config).usage.attempts24h,0);
   await assert.rejects(readSource({...proxySource,disposition:'watch'},{fetcher,sourceProxyUrl:proxyUrl}),{code:'blocked_url'});
@@ -143,9 +155,23 @@ test('the audited feed and detail use explicit CONNECT with a verified certifica
 });
 test('an explicit proxy does not accept an untrusted HTTPS certificate',async t=>{
   const {proxyUrl,requests,authorities}=await connectFixture(t,{trustCertificate:false});
-  await assert.rejects(readSource(proxySource,{sourceProxyUrl:proxyUrl}),{code:'source_tls_failed'});
+  await assert.rejects(readSource(proxySource,{sourceProxyUrl:proxyUrl,sourceProxyFallbackUrls:[await unusedProxyUrl()]}),{code:'source_tls_failed'});
   assert.deepEqual(authorities,['source.test:443']);
   assert.deepEqual(requests,[]);
+});
+test('audited collection uses a configured backup when the primary loopback proxy is offline',async t=>{
+  const {proxyUrl,requests}=await connectFixture(t);
+  const sourceProxyUrl=await unusedProxyUrl();
+  const options={sourceProxyUrl,sourceProxyFallbackUrls:[await unusedProxyUrl(),proxyUrl]};
+  const {store,config}=fixture(t,options);
+  const fetcher=(url,network)=>fetchText(url,{...network,resolver:()=>assert.fail('unexpected direct lookup')});
+  assert.equal((await collectSource(store,proxySource,config,{fetcher})).added,1);
+  assert.deepEqual(requests,['/feed','/story']);
+  let fetches=0;
+  await assert.rejects(fetchText(proxySource.url,{...options,allowedHosts:proxySource.allowedHosts,fetchImpl:async()=>{
+    fetches++;return new Response('Forbidden',{status:403});
+  }}),{code:'source_http'});
+  assert.equal(fetches,1);
 });
 test('the inherited proxy honors NO_PROXY and rejects a known nonpublic DNS answer',async t=>{
   const {proxyUrl,requests}=await connectFixture(t);
@@ -189,14 +215,11 @@ test('proxy redirects reapply the scheme, port, hostname and literal address che
   await closeFetcher();
 });
 test('an unavailable explicit proxy never retries by direct DNS or transfers a manual URL',async t=>{
-  const unused=httpServer();
-  await listen(unused);
-  const proxyUrl='http://127.0.0.1:'+unused.address().port;
-  await new Promise(resolve=>unused.close(resolve));
+  const proxyUrl=await unusedProxyUrl(), sourceProxyFallbackUrls=[await unusedProxyUrl()];
   t.after(closeFetcher);
-  const options={allowedHosts:proxySource.allowedHosts,sourceProxyUrl:proxyUrl,resolver:()=>assert.fail('unexpected direct lookup')};
+  const options={allowedHosts:proxySource.allowedHosts,sourceProxyUrl:proxyUrl,sourceProxyFallbackUrls,resolver:()=>assert.fail('unexpected direct lookup')};
   await assert.rejects(fetchText(proxySource.url,options),{code:'source_proxy_failed'});
-  const {store,config}=fixture(t,{sourceProxyUrl:proxyUrl});
+  const {store,config}=fixture(t,{sourceProxyUrl:proxyUrl,sourceProxyFallbackUrls});
   await assert.rejects(importArticle(store,{url:proxySource.url},config,{
     fetcher:(url,options)=>fetchText(url,{...options,resolver:fakeIp,fetchImpl:()=>assert.fail('manual URL reached network')}),
   }),{code:'blocked_url'});
@@ -212,7 +235,7 @@ test('feed parsing accepts RSS and Atom, rejects ordinary HTML and XML entity de
 test('list entries keep each card date instead of the page first date',()=>{
   const page='<a href="/post/a"><h2>第一篇</h2><time datetime="2026-01-02"></time></a><a href="/post/b"><h2>第二篇</h2><time datetime="2026-03-04"></time></a>';
   const list=parseList(page,{...source,linkSelector:'a',titleSelector:'h2',dateSelector:'time'});
-  assert.deepEqual(list.map(x=>x.publishedAt),['2026-01-02','2026-03-04']);
+  assert.deepEqual(list.map(x=>x.publishedAt),['2026-03-04','2026-01-02']);
 });
 test('article publication dates do not come from dateModified or arbitrary prose',()=>{
   const result=extractArticle('<html><head><meta property="article:modified_time" content="2026-10-10"></head><body><article><h1>测试</h1><p>2026-01-01 '+body+'</p></article></body></html>','https://example.com');
@@ -230,11 +253,38 @@ test('React-style itemProp and a declared visible publication selector preserve 
   assert.equal(chinese.publishedAt,'2026-11-17');
 });
 test('feed-body fallback is labeled partial, first collection is backfill, repeated collection deduplicates',async t=>{
-  const {store,config}=fixture(t);const rss=`<rss><channel><item><title>企业 AI 部署教程</title><link>https://example.com/a</link><description><![CDATA[<p>${body}</p>]]></description></item></channel></rss>`;
+  const {store,config}=fixture(t),publishedAt=new Date().toISOString();
+  const rss=`<rss><channel><item><title>企业 AI 部署教程</title><link>https://example.com/a</link><pubDate>${publishedAt}</pubDate><description><![CDATA[<p>${body}</p>]]></description></item></channel></rss>`;
   const fetcher=async url=>{if(url===source.url)return{text:rss,url};throw new Error('403');};
   const result=await collectSource(store,source,config,{fetcher});assert.equal(result.added,1);
-  const item=store.listArticles().items[0];assert.equal(item.bodyKind,'feed_excerpt');assert.equal(item.backfill,true);assert.equal(item.publishedAt,null);
+  const item=store.listArticles().items[0];assert.equal(item.bodyKind,'feed_excerpt');assert.equal(item.backfill,true);assert.equal(item.publishedAt,publishedAt);
   assert.equal((await collectSource(store,source,config,{fetcher})).added,0);
+});
+test('collection sorts before the source cap, uses the configured publication window and skips unknown dates',async t=>{
+  const {store,config}=fixture(t),now=new Date();
+  const previous=new Date(now);previous.setDate(now.getDate()-1);
+  const day=dt=>`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  const entries=[['before',day(previous)],...Array.from({length:30},(_,i)=>[`old-${i}`,'2025-01-01']),['today',day(now)],['undated','']];
+  const item=([slug,date])=>`<item><title>企业 AI 工程 ${slug}</title><link>https://example.com/${slug}</link>${date?`<pubDate>${date}</pubDate>`:''}</item>`;
+  let rss=`<rss><channel>${entries.map(item).join('')}</channel></rss>`;
+  const fetched=[];
+  const fetcher=async url=>{
+    if(url===source.url)return {url,text:rss};
+    fetched.push(new URL(url).pathname);
+    return {url,text:`<html><body><article>${body}</article></body></html>`};
+  };
+  store.setCollectionLimits({lookbackDays:1,dailyLimit:2});
+  assert.equal((await collectSource(store,{...source,maxItems:1},config,{fetcher})).added,1);
+  assert.deepEqual(fetched,['/today']);
+  rss=`<rss><channel>${entries.filter(([slug])=>!slug.startsWith('old-')).map(item).join('')}</channel></rss>`;
+  assert.equal((await collectSource(store,source,config,{fetcher})).added,0);
+  assert.deepEqual(fetched,['/today','/undated']);
+  store.setCollectionLimits({lookbackDays:2,dailyLimit:2});
+  assert.equal((await collectSource(store,source,config,{fetcher})).added,1);
+  assert.equal(store.collectionLimits().addedToday,2);
+  assert.equal(store.findUrl('https://example.com/undated'),null);
+  const tomorrow=new Date(now);tomorrow.setDate(now.getDate()+1);
+  assert.equal(store.collectionLimits(+tomorrow).addedToday,0);
 });
 test('manual paste works without network and without starting any analysis',async t=>{
   const {store,config}=fixture(t);let fetches=0;

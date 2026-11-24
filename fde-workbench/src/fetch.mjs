@@ -49,12 +49,26 @@ function sourceProxyDispatcher(uri) {
   if(!sourceProxies.has(uri)) sourceProxies.set(uri,new ProxyAgent({uri,requestTls:{rejectUnauthorized:true}}));
   return sourceProxies.get(uri);
 }
-export async function fetchText(value, {allowedHosts,sourceProxyUrl,maxBytes=3*1024*1024,timeoutMs=20000,fetchImpl=fetch,resolver=lookupAsync}={}) {
-  sourceProxyUrl=readSourceProxyUrl(sourceProxyUrl);
+function cannotReachProxy(error, proxyUrl) {
+  const proxy=new URL(proxyUrl),cause=error.cause;
+  return ['ECONNREFUSED','EHOSTUNREACH','ENETUNREACH'].includes(cause?.code)&&
+    cause.address===proxy.hostname.replace(/^\[|\]$/g,'')&&cause.port===Number(proxy.port||80);
+}
+const sourceProxyError=()=>new AppError('source_proxy_failed','无法通过已配置的采集代理连接信源，请检查本地代理是否在运行及信源规则。');
+export async function fetchText(value, {sourceProxyUrl,sourceProxyFallbackUrls=[],timeoutMs=20000,...options}={}) {
+  const proxies=[...new Set([sourceProxyUrl,...sourceProxyFallbackUrls].map(url=>readSourceProxyUrl(url)).filter(Boolean))];
+  const signal=AbortSignal.timeout(timeoutMs);
+  if(!proxies.length)return fetchRoute(value,{...options,signal});
+  for(const proxy of proxies){
+    try{return await fetchRoute(value,{...options,sourceProxyUrl:proxy,signal});}
+    catch(error){if(error.code!=='source_proxy_unreachable')throw error;}
+  }
+  throw sourceProxyError();
+}
+async function fetchRoute(value, {allowedHosts,sourceProxyUrl,signal,maxBytes=3*1024*1024,fetchImpl=fetch,resolver=lookupAsync}) {
   const inheritedProxy=!sourceProxyUrl&&allowedHosts?.length&&
     !!(process.env.HTTPS_PROXY||process.env.HTTP_PROXY||process.env.https_proxy||process.env.http_proxy);
-  const signal=AbortSignal.timeout(timeoutMs);
-  let current=value;
+  let current=value, receivedResponse=false;
   try {
     for(let hop=0;hop<5;hop++) {
       const abort=new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(new AppError('fetch_timeout','网页响应超时，请稍后手动重试。')),{once:true}));
@@ -67,6 +81,7 @@ export async function fetchText(value, {allowedHosts,sourceProxyUrl,maxBytes=3*1
       try {
         const response=await fetchImpl(current,{redirect:'manual',signal,dispatcher,
           headers:{'User-Agent':'FDEWorkbench/2.0 (personal research; low-frequency)','Accept':'text/html,application/xhtml+xml,application/rss+xml,application/atom+xml,application/xml,text/plain;q=0.8'}});
+        receivedResponse=true;
         if([301,302,303,307,308].includes(response.status)) {
           const location=response.headers.get('location'); await response.body?.cancel();
           if(!location)throw new AppError('invalid_redirect','网页跳转地址无效。');
@@ -82,7 +97,8 @@ export async function fetchText(value, {allowedHosts,sourceProxyUrl,maxBytes=3*1
         for await(const chunk of response.body){size+=chunk.length;if(size>maxBytes){await response.body.cancel().catch(()=>{});throw new AppError('page_too_large','页面过大，请手动选取正文。');}chunks.push(Buffer.from(chunk));}
         const bytes=Buffer.concat(chunks), charset=/charset=["']?([^;\s"']+)/i.exec(type)?.[1]||'utf-8';
         let text;try{text=new TextDecoder(charset).decode(bytes);}catch{text=bytes.toString('utf8');}
-        return {url:current,text,contentType:type,bytes:size,status:response.status};
+        return {url:current,text,contentType:type,bytes:size,status:response.status,
+          ...(sourceProxyUrl?{sourceProxyPort:Number(new URL(sourceProxyUrl).port||80)}:{})};
       } finally {
         if(!sourceProxyUrl)await dispatcher.destroy();
       }
@@ -93,7 +109,10 @@ export async function fetchText(value, {allowedHosts,sourceProxyUrl,maxBytes=3*1
     if(signal.aborted)throw new AppError('fetch_timeout','网页响应超时，请稍后手动重试。');
     if(/^(?:CERT_|ERR_TLS_CERT_|UNABLE_TO_GET_ISSUER_CERT|UNABLE_TO_VERIFY_LEAF_SIGNATURE|DEPTH_ZERO_SELF_SIGNED_CERT|SELF_SIGNED_CERT_IN_CHAIN)/.test(error.cause?.code))
       throw new AppError('source_tls_failed','信源 HTTPS 证书未通过验证，请核对原文地址及本机证书。');
-    if(sourceProxyUrl)throw new AppError('source_proxy_failed','无法通过已配置的采集代理连接信源，请检查本地代理是否在运行及信源规则。');
+    if(sourceProxyUrl){
+      if(!receivedResponse&&cannotReachProxy(error,sourceProxyUrl))throw new AppError('source_proxy_unreachable','采集代理的本机端口无法连接。');
+      throw sourceProxyError();
+    }
     throw new AppError('fetch_failed','无法读取网页，请检查网络，或粘贴正文手动收录。');
   }
 }

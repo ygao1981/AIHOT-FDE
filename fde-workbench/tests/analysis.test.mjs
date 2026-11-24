@@ -102,12 +102,20 @@ test('cache identity changes with all material model settings, excluding credent
 
 test('strict results reject missing fields, added fields, excess output and fabricated quotes', () => {
   const missing = result(); delete missing.stageEvidence;
-  for (const raw of [missing, result({ extra: true }), result({ score: '80' }), result({ summary: '长'.repeat(181) }),
+  for (const raw of [missing, result({ extra: true }), result({ score: '80' }), result({ summary: '长'.repeat(SCHEMA.properties.summary.maxLength+1) }),
     result({ ideas: [{ title: '标题', angle: '角度', url: 'https://example.org/' }] })]) {
     assert.throws(() => validateAnalysis(raw, ARTICLE), e => e.code === 'invalid_result');
   }
   assert.throws(() => validateAnalysis(result({ evidence: [{ quote: 'Profit rose 200%.', claim: '回报很高。' }] }), ARTICLE), e => e.code === 'ungrounded_evidence');
   assert.equal(SCHEMA.additionalProperties, false);
+});
+
+test('detailed research preserves the implementation narrative and the sourced scope of outcomes', () => {
+  const solution = '先将知识条目按业务负责人整理入库，检索只返回当前账号有权访问的段落。业务人员在回答卡片中核对原文，再决定接受还是转人工。'.repeat(6);
+  const outcome = '作者披露只有一组客服人员使用这套流程。原文未描述对照组和统计周期，不能据此推断全量部署的效果。';
+  const detailed = validateAnalysis(result({ solution, outcome }), ARTICLE);
+  assert.equal(detailed.solution, solution);
+  assert.match(toMarkdown(detailed, ARTICLE), /原文未描述对照组和统计周期/);
 });
 
 test('production requires a present original quote with an explicit completed deployment statement', () => {

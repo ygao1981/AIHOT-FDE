@@ -56,10 +56,10 @@ async function api(path, options = {}) {
   finally { clearTimeout(timer); }
 }
 function updateBudget() {
-  const { usage = {}, config = {}, paused } = state.overview || {};
-  $('budget-count').textContent = `滚动 24 小时已用 ${usage.attempts24h ?? '—'} / ${config.dailyLimit ?? '—'} 次模型任务`;
-  const breakdown = Number.isFinite(usage.analysisAttempts24h) ? `研究分析 ${usage.analysisAttempts24h} 次，公众号写作 ${usage.editorialAttempts24h ?? 0} 次。` : '';
-  $('budget-detail').textContent = `${breakdown}失败与未知回执同样计入。切换版式和导出不增加次数。`;
+  const { usage = {}, paused } = state.overview || {};
+  $('budget-count').textContent = `过去 24 小时共 ${usage.attempts24h ?? '—'} 次模型任务`;
+  const breakdown = Number.isFinite(usage.analysisAttempts24h) ? `研究分析 ${usage.analysisAttempts24h} 次，公众号写作 ${usage.editorialAttempts24h ?? 0} 次，翻译 ${usage.translationAttempts24h ?? 0} 次。` : '';
+  $('budget-detail').textContent = `${breakdown}手动写作由你决定，并计入用量。切换版式和导出不增加次数。`;
   $('pause-notice').hidden = !paused;
   $('pause-text').textContent = paused ? `模型任务已暂停。${message({ message: paused })} 素材稿、编辑和导出仍可使用。` : '';
   updateActions();
@@ -69,7 +69,7 @@ function updateActions() {
   const available = state.selected.size > 0 && state.selected.size <= 3 && !state.creating && !state.saving;
   $('create-template').disabled = !available;
   $('create-model').disabled = !available || !config.analysisEnabled || config.provider === 'off';
-  $('create-model').title = !config.analysisEnabled || config.provider === 'off' ? '模型尚未启用。你仍可整理不消耗额度的素材稿。' : '同一素材、角度和写作配置命中缓存时，不重复调用模型。达到上限后等待。';
+  $('create-model').title = !config.analysisEnabled || config.provider === 'off' ? '模型尚未启用。你仍可整理不消耗额度的素材稿。' : '同一素材、角度和写作配置命中缓存时，不重复调用模型。';
   $('save-draft').disabled = !ready || !state.dirty || state.saving;
   $('reload-draft').disabled = state.saving;
   $('copy-draft').disabled = !ready || state.dirty || state.saving;
@@ -229,7 +229,7 @@ async function saveDraft(event) {
 }
 async function retryDraft() {
   if(!state.current||state.current.status!=='unknown')return;
-  if(!window.confirm('上次写作可能已经消耗额度。重试会增加一次模型任务，并与研究分析共用上限。确认已核对用量并重试吗？'))return;
+  if(!window.confirm('上次写作可能已经消耗额度。重试会增加一次模型任务。确认已核对用量并重试吗？'))return;
   const id=state.current.id,request=++state.request,epoch=state.editEpoch;
   $('retry-draft').disabled=true;
   try{const response=await api(`/api/editorial/${encodeURIComponent(id)}/retry`,{method:'POST',body:{acceptExtraUsage:true}});if(request===state.request&&epoch===state.editEpoch&&state.authenticated)acceptDraft(response.draft);toast('已重新排队，原失败回执保留。当前编辑不会被替换。');await refresh();}

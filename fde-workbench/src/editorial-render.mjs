@@ -115,7 +115,10 @@ export function renderEditorial(draft, { variant = 'text', theme = 'paper' } = {
   }));
   const templateNotice = draft.spec?.mode === 'template' ? '素材整理稿：按已有研究卡拼接，请补充自己的观点并核对事实。' : '';
   const closing = '本文根据公开资料整理。事实、效果数字和部署阶段，请对照文末来源核对。';
-  const sourceLine = (source) => `[${source.id}] ${source.title}${source.sourceName ? ` · ${source.sourceName}` : ''}${source.publishedAt ? ` · ${source.publishedAt}` : ''}${source.url ? `\n${source.url}` : ''}`;
+  const sourceLine = (source) => {
+    const date = /^\d{4}-\d{2}-\d{2}(?=T|$)/u.exec(source.publishedAt)?.[0];
+    return `[${source.id}] ${source.title}${source.sourceName ? ` · ${source.sourceName}` : ''}${date ? ` · ${date}` : ''}${source.url ? `\n${source.url}` : ''}`;
+  };
   const textBlocks = [result.title, ...(templateNotice ? [templateNotice] : []), paragraphText(result.lead)];
   const mdBlocks = [`# ${markdownText(result.title)}`, ...(templateNotice ? [`> ${markdownText(templateNotice)}`] : []), markdownText(paragraphText(result.lead))];
   for (const section of result.sections) {
@@ -159,7 +162,7 @@ export function renderEditorial(draft, { variant = 'text', theme = 'paper' } = {
       });
     }
     if (result.caveats.length) blocks.push(heading('仍需留意'), ...result.caveats.map((item) => `<p style="${pStyle}">• ${escape(item)}</p>`));
-    blocks.push(heading('资料出处'), ...sources.map((source) => `<p style="margin:0 0 14px;color:#756D66;font-size:12px;line-height:1.8;word-break:break-all;">${escape(sourceLine(source)).replaceAll('\n', '<br>')}</p>`),
+    blocks.push(heading('资料出处'), ...sources.map((source) => `<p style="margin:0 0 14px;color:#756D66;font-size:12px;line-height:1.8;overflow-wrap:anywhere;">${escape(sourceLine(source)).replaceAll('\n', '<br>')}</p>`),
       `<p style="margin:26px 0 0;border-top:1px solid #E8E1D8;padding-top:16px;font-size:12px;color:#83766A;line-height:1.8;">${closing}</p>`);
     return `<section style="${bodyStyle}">${blocks.join('\n')}</section>`;
   };
@@ -168,7 +171,7 @@ export function renderEditorial(draft, { variant = 'text', theme = 'paper' } = {
     ? `${bodyMarkdown}\n\n## 配图\n\n${assets.map((asset) => `![${markdownText(asset.caption)}](${asset.filename})`).join('\n\n')}`
     : bodyMarkdown;
   const manifest = {
-    version: 1, renderer: 'fde-editorial-1', brand: BRAND, draftId: draft.id ?? null,
+    version: 1, renderer: 'fde-editorial-2', brand: BRAND, draftId: draft.id ?? null,
     revision: draft.revision ?? 0, title: result.title, mode: draft.spec?.mode ?? 'model', variant, theme,
     fingerprint: draft.fingerprint ?? null, profileVersion: draft.spec?.profileVersion ?? null,
     promptHash: draft.spec?.promptHash ?? null,
