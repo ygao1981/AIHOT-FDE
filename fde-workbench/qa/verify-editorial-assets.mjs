@@ -84,7 +84,8 @@ try {
     const items = await navigator.clipboard.read();
     return { text: await navigator.clipboard.readText(), types: items.flatMap((item) => item.types) };
   });
-  assert.equal(copied.text, plain.plainText); assert.ok(copied.types.includes('text/html'));
+  assert.equal(copied.text.replaceAll('\r\n','\n'), plain.plainText);
+  assert.ok(copied.types.includes('text/html'));
   report.passed.push('剪贴板同时包含纯文本与带样式的 HTML');
   const blocked = await page.evaluate(async () => {
     const asset = window.fixtureData.rendered.assets[0]; let rejected = 0;

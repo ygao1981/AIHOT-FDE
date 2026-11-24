@@ -47,7 +47,7 @@ try {
   const pendingTitle='界面样例：待研究的 AI 交付教程';
   const pending=store.upsertArticle({url:'https://example.org/fde-ui-pending',title:pendingTitle,sourceName:'界面验收样例（虚构）',language:'en',
     body:'The fictional AI delivery pilot gave the support team a local search tool. Reviewers checked output against the authorized source before using it. This sample has no measured outcomes.',status:'candidate'}).article;
-  worker = new Worker(store, config);
+  worker = new Worker(store, config, {collector:async()=>({added:0,failed:0})});
   report.cleanup.workerStopped = false;
   server = createApp(store, worker, config);
   report.phase = 'server-start';
@@ -175,7 +175,8 @@ try {
   await (await sourcesResponse).finished();
   await page.waitForFunction(()=>document.getElementById('source-list').getAttribute('aria-busy')==='false'
     && document.querySelectorAll('#source-list .source-card').length>0);
-  assert.equal(await page.locator('#collect-now').isDisabled(),true);
+  assert.match(await page.locator('#collection-notice').innerText(),/定时采集已关闭/);
+  assert.equal(await page.locator('#collect-now').isEnabled(),true);
   assert.ok((await page.locator('.source-card').count())>0);
   const manual=page.locator('.source-card').filter({hasText:'Datawhale FDE100'});
   assert.match(await manual.innerText(),/人工阅读/);
@@ -192,7 +193,18 @@ try {
   await (await enabledResponse).finished();
   await page.locator('.source-card').filter({hasText:'美团技术团队'}).getByText('已启用',{exact:true}).waitFor();
   assert.equal(store.sources().find(s=>s.id==='meituan-engineering').enabled,true);
-  checked('来源可启停并恢复，人工阅读入口明确，采集关闭按钮禁用');
+  await page.locator('#collection-days').fill('14');
+  await page.locator('#collection-limit').fill('12');
+  await page.getByRole('button',{name:'保存采集设置'}).click();
+  await page.getByText('采集设置已保存。',{exact:true}).waitFor();
+  const limits=store.collectionLimits();
+  assert.equal(limits.lookbackDays,14);
+  assert.equal(limits.dailyLimit,12);
+  const collectionResponse=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/collect' && r.request().method()==='POST');
+  await page.getByRole('button',{name:'检查信源更新',exact:true}).click();
+  assert.equal((await collectionResponse).status(),202);
+  await page.locator('.source-card').filter({hasText:'美团技术团队'}).getByText(/上次检查/).waitFor();
+  checked('来源可启停，采集范围和上限可保存，定时关闭时登录用户仍可按需检查');
   const usageResponse = page.waitForResponse(r => new URL(r.url()).pathname==='/api/overview' && r.request().method()==='GET' && r.status()===200);
   await page.locator('#tab-usage').click();
   await (await usageResponse).finished();

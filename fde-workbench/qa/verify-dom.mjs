@@ -47,7 +47,8 @@ try {
       if(options.method==='PATCH')Object.assign(skipped,JSON.parse(options.body));
       return Response.json(skipped);
     }
-    if(path==='/api/sources')return Response.json({items:[{id:'manual-sample',name:'人工阅读样例',url:'https://example.org/feed',homepage:'https://example.org/',kind:'manual',language:'zh',enabled:false,description:'用于人工核对的入口。'}]});
+    if(path==='/api/sources')return Response.json({lookbackDays:30,dailyLimit:50,addedToday:0,collecting:false,
+      items:[{id:'manual-sample',name:'人工阅读样例',url:'https://example.org/feed',homepage:'https://example.org/',kind:'manual',language:'zh',enabled:false,description:'用于人工核对的入口。'}]});
     throw new Error(`Unexpected mock request: ${path}`);
   };
   const context=createContext({window,document,Node:window.Node,URL,URLSearchParams,AbortController,Intl,Date,Response,fetch,location:{hash:'#library'},history:{replaceState(){}},setTimeout:trackedTimeout,clearTimeout:clearTrackedTimeout,setInterval(){},console});
@@ -74,7 +75,8 @@ try {
   assert.equal(document.querySelector('#source-list input'),null);
   assert.equal(document.querySelector('#source-list a').getAttribute('href'),'https://example.org/');
   assert.equal(document.querySelector('#collect-now').disabled,true);
-  checked('人工来源仅有阅读入口；打开首页；采集关闭时按钮不可用');
+  assert.match(document.querySelector('#collection-summary').textContent,/已从信源新增 0 篇，上限 50 篇/);
+  checked('人工来源仍可阅读，页面显示采集进度，无启用信源时不能批量检查');
   await runInContext("switchView('usage')",context);
   assert.match(document.querySelector('#usage-content').textContent,/金额未知/);
   assert.match(document.querySelector('#usage-content').textContent,/本月另有 API 估算费用/);
