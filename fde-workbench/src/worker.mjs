@@ -5,9 +5,10 @@ import { translationTask } from './translation.mjs';
 import { AppError } from './config.mjs';
 
 export class Worker {
-  constructor(store,config,{analyzer=runAnalysis,editor=runEditorial,translator=runStructured,collector=collectSource}={}) {
+  constructor(store,config,{analyzer=runAnalysis,editor=runEditorial,translator=runStructured,collector=collectSource,discovery}={}) {
     this.store=store;this.config=config;this.analyzer=analyzer;this.editor=editor;this.collector=collector;
     this.translator=translator;
+    this.discovery=discovery;
     this.busy=false;this.collecting=false;this.stopped=false;this.started=false;
     this.timer=null;this.retainedAt=0;this.analysisTask=null;this.wakeRequested=false;
   }
@@ -159,6 +160,9 @@ export class Worker {
     this.refill();
     // Collection is ordinary I/O; a slow source must not delay already queued analysis.
     if(this.config.collectEnabled&&!this.collecting)void this.collect().catch(()=>{});
+    if(this.config.collectEnabled&&!this.discoveryTask&&this.discovery){
+      this.discoveryTask=this.discovery.refreshWatched().catch(()=>{}).finally(()=>{this.discoveryTask=null;});
+    }
     await this.wake();
   }
   start(){
@@ -167,5 +171,5 @@ export class Worker {
     const loop=()=>{if(this.stopped)return;void this.tick().catch(()=>{});this.timer=setTimeout(loop,60000);};
     this.timer=setTimeout(loop,1000);
   }
-  async stop(){this.stopped=true;clearTimeout(this.timer);await this.analysisTask;while(this.busy||this.collecting)await new Promise(r=>setTimeout(r,100));}
+  async stop(){this.stopped=true;clearTimeout(this.timer);await Promise.all([this.analysisTask,this.discoveryTask]);while(this.busy||this.collecting)await new Promise(r=>setTimeout(r,100));}
 }

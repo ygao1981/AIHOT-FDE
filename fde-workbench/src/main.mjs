@@ -7,6 +7,7 @@ import { Store } from './store.mjs';
 import { Worker } from './worker.mjs';
 import { createApp } from './server.mjs';
 import { closeFetcher } from './fetch.mjs';
+import { Discovery } from './discovery.mjs';
 
 export function acquireLock(dataDir) {
   mkdirSync(dataDir,{recursive:true,mode:0o700});
@@ -23,7 +24,8 @@ export async function start(config=loadConfig()) {
   const release=acquireLock(config.dataDir);let store,server,worker;
   try{
     store=new Store(config.dataDir,readSources());store.recoverInterrupted();
-    worker=new Worker(store,config);server=createApp(store,worker,config);
+    const discovery=new Discovery(store,config);
+    worker=new Worker(store,config,{discovery});server=createApp(store,worker,config,{discovery});
     await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(config.port,config.host,resolve);});
     worker.start();
     console.log(`FDE 研究台已启动：${config.baseUrl}。采集${config.collectEnabled?'已开启':'关闭'}，分析${config.analysisEnabled?'已开启':'关闭'}。`);

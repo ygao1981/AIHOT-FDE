@@ -39,6 +39,7 @@ export function loadConfig(env = process.env) {
     host: env.FDE_HOST || '127.0.0.1', port, baseUrl: baseUrl.origin,
     dataDir: resolve(ROOT, env.FDE_DATA_DIR || '.data'), accessToken: env.FDE_ACCESS_TOKEN || '',
     ...readSourceProxyConfig(env),
+    githubDiscussionsToken: env.FDE_GITHUB_DISCUSSIONS_TOKEN || '',
     collectEnabled: env.FDE_COLLECT_ENABLED === 'true', analysisEnabled: env.FDE_ANALYSIS_ENABLED === 'true',
     autoAnalyze: env.FDE_AUTO_ANALYZE === 'true', provider,
     dailyLimit: number(env, 'FDE_DAILY_LIMIT', 5, 1, MAX_AUTO_DAILY_LIMIT),

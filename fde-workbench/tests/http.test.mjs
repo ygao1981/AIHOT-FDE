@@ -19,7 +19,7 @@ async function app(t,overrides={},deps={}) {
 }
 test('private APIs require login; health contains no credentials; session uses HttpOnly',async t=>{
   const ctx=await app(t);assert.equal((await ctx.request('/api/articles')).status,401);
-  assert.deepEqual(await(await ctx.request('/api/health')).json(),{ok:true,version:'2.2.1'});
+  assert.deepEqual(await(await ctx.request('/api/health')).json(),{ok:true,version:'2.3.0'});
   const login=await ctx.request('/api/login',{method:'POST',body:JSON.stringify({token:ctx.config.accessToken})});
   assert.equal(login.status,200);assert.match(login.headers.get('set-cookie'),/HttpOnly/);
   const cookie=login.headers.get('set-cookie').split(';')[0];
@@ -30,6 +30,21 @@ test('cross-origin mutations and incorrect tokens are rejected',async t=>{
   const ctx=await app(t);
   assert.equal((await ctx.request('/api/login',{method:'POST',body:'{"token":"wrong"}',headers:{Origin:'https://untrusted.example'}})).status,403);
   assert.equal((await ctx.request('/api/login',{method:'POST',body:'{"token":"wrong"}'})).status,401);
+});
+test('discovery and original-source linking remain authenticated and never invoke a model',async t=>{
+  const ctx=await app(t);
+  for(const leaf of ['catalog','hn','github','leads'])assert.equal((await ctx.request('/api/discovery/'+leaf)).status,401);
+  const login=await ctx.request('/api/login',{method:'POST',body:JSON.stringify({token:ctx.config.accessToken})});
+  const cookie=login.headers.get('set-cookie').split(';')[0];
+  const draft={url:'https://x.com/fixture/status/1234567',relatedUrl:'https://example.com/engineering',points:580};
+  const post=(leaf,body,origin)=>ctx.request('/api/discovery/'+leaf,{method:'POST',headers:{Cookie:cookie,...(origin?{Origin:origin}:{})},body:JSON.stringify(body)});
+  assert.equal((await post('leads',draft,'https://untrusted.example')).status,403);
+  assert.equal((await post('leads',draft)).status,200);
+  const read=await ctx.request('/api/discovery/leads',{headers:{Cookie:cookie}});
+  const list=await read.json();
+  assert.equal(list.items[0].mentions[0].points,null);
+  assert.equal((await post('watch',{repo:'datawhalechina/all-in-rag',enabled:true})).status,200);
+  assert.equal(ctx.calls,0);
 });
 test('the automatic limit is a private setting and saving it does not enable automation',async t=>{
   const ctx=await app(t,{provider:'codex',autoAnalyze:false});

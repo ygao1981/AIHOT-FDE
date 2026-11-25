@@ -27,6 +27,7 @@
       <nav class="guide-contents" aria-label="本页目录">
         <h2>本页目录</h2>
         <a href="#start">启动与登录</a>
+        <a href="#discovery">发现线索</a>
         <a href="#research">收录、分析与整理</a>
         <a href="#translate">看英文资料的译文</a>
         <a href="#draft">写稿、排版与导出</a>
@@ -41,6 +42,16 @@
             <li>输入部署时设定的研究台访问口令。口令在启动目录的 <code>.env</code> 中由部署者管理。</li>
           </ol>
           <p><a class="button primary" href="/">打开研究台</a></p>
+        </section>
+        <section id="discovery" aria-labelledby="discovery-title">
+          <h2 id="discovery-title">发现线索</h2>
+          <ol>
+            <li>打开「发现线索」。用 Hacker News 按工程主题、日期、积分和评论数搜索。用 GitHub 检查所选仓库的更新，保存值得追的条目。</li>
+            <li>在「X 原生搜索」选主题或重点作者，用自己的浏览器查看结果，再粘贴帖子链接、摘录和工程原文。</li>
+            <li>在「线索池」核对各个讨论引用的是不是同一篇原文。找到原文后点「关联原文」，再按需要点「收录工程原文」。互动数据缺失会显示未知。</li>
+          </ol>
+          <p>三个渠道的搜索、初筛和保存不使用模型额度。定时跟踪 GitHub 仓库需同时开启定时采集。网页上的 GitHub 讨论区链接可直接打开。</p>
+          <p><a class="button" href="/#discovery">打开发现线索</a></p>
         </section>
         <section id="research" aria-labelledby="research-title">
           <h2 id="research-title">收录、分析与整理</h2>

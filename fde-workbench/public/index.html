@@ -8,6 +8,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>FDE 研究台</title>
   <link rel="stylesheet" href="/style.css">
+  <script src="/discovery.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -56,6 +57,7 @@
       <a class="brand" href="#library"><span class="brand-mark" aria-hidden="true">F</span><span>FDE 研究台<small>个人研究工作台</small></span></a>
       <nav class="main-tabs" role="tablist" aria-label="工作区导航">
         <button id="tab-library" type="button" role="tab" aria-selected="true" aria-controls="view-library" data-view="library"><svg class="icon" aria-hidden="true"><use href="#i-library"/></svg>研究库</button>
+        <button id="tab-discovery" type="button" role="tab" aria-selected="false" aria-controls="view-discovery" tabindex="-1" data-view="discovery"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>发现线索</button>
         <button id="tab-sources" type="button" role="tab" aria-selected="false" aria-controls="view-sources" tabindex="-1" data-view="sources"><svg class="icon" aria-hidden="true"><use href="#i-sources"/></svg>信源</button>
         <button id="tab-usage" type="button" role="tab" aria-selected="false" aria-controls="view-usage" tabindex="-1" data-view="usage"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>用量</button>
       </nav>
@@ -90,6 +92,87 @@
         <div class="list-caption"><span id="result-count" role="status">正在读取资料…</span><span>每篇保留原文入口</span></div>
         <div id="article-list" class="article-list" aria-busy="true"></div>
         <div id="pagination" class="pagination" hidden><span id="page-label"></span><div><button id="previous-page" class="button small" type="button">上一页</button><button id="next-page" class="button small" type="button">下一页</button></div></div>
+      </section>
+
+      <section id="view-discovery" class="view" role="tabpanel" aria-labelledby="tab-discovery" hidden>
+        <div class="page-heading"><div><h1>发现线索</h1><p class="page-lead">按工程主题找资料。保存讨论和原文链接，核对后再收入研究库。</p></div>
+          <button id="show-lead-pool" type="button" class="button">查看线索池</button></div>
+        <div id="discovery-tools" class="panel">
+          <div class="discovery-channels" role="group" aria-label="发现渠道">
+            <button type="button" class="button small" data-discovery="hn" aria-pressed="true">Hacker News</button>
+            <button type="button" class="button small" data-discovery="github" aria-pressed="false">GitHub</button>
+            <button type="button" class="button small" data-discovery="x" aria-pressed="false">X 原生搜索</button>
+          </div>
+          <form id="discovery-hn" autocomplete="off">
+            <div class="discovery-fields">
+              <div class="form-field"><label for="hn-topic">工程主题</label><select id="hn-topic"></select></div>
+              <div class="form-field discovery-grow"><label for="hn-query">搜索词</label><input type="search" id="hn-query" maxlength="160" required></div>
+              <div class="form-field"><label for="hn-sort">排序</label><select id="hn-sort"><option value="latest">最近发布</option><option value="relevant">搜索相关度</option></select></div>
+            </div>
+            <div class="discovery-fields">
+              <div class="form-field"><label for="hn-from">开始日期</label><input type="date" id="hn-from"></div>
+              <div class="form-field"><label for="hn-to">结束日期（含当天）</label><input type="date" id="hn-to"></div>
+              <div class="form-field"><label for="hn-points">最低积分</label><input type="number" id="hn-points" min="0" max="10000" value="0"></div>
+              <div class="form-field"><label for="hn-comments">最少评论</label><input type="number" id="hn-comments" min="0" max="10000" value="0"></div>
+              <button id="hn-submit" type="submit" class="button primary">搜索 Hacker News</button>
+            </div>
+            <p class="form-hint">未填日期时看最近 30 天。指定日期按 UTC 计算。</p>
+          </form>
+          <form id="discovery-github" hidden>
+            <div class="discovery-fields">
+              <div class="form-field discovery-grow"><label for="github-repo">跟踪仓库</label><select id="github-repo" required></select></div>
+              <div class="form-field"><label for="github-kind">活动类型</label><select id="github-kind">
+                <option value="all">全部活动</option><option value="repository">仓库概况</option><option value="issue">Issue</option><option value="discussion">Discussion</option><option value="pull">PR</option><option value="release">Release</option><option value="doc">实质文档更新</option>
+              </select></div>
+              <div class="form-field"><label for="github-days">最近多少天</label><input type="number" id="github-days" value="30" min="1" max="365" required></div>
+              <button id="github-submit" type="submit" class="button primary">检查仓库更新</button>
+            </div>
+            <div id="github-links" class="discovery-actions"></div>
+            <label class="discovery-watch"><input id="github-watch" type="checkbox">定时跟踪此仓库</label>
+            <p id="github-watch-status" class="form-hint" role="status"></p>
+            <p id="github-hint" class="form-hint"></p>
+          </form>
+          <div id="discovery-x" hidden>
+            <div class="discovery-fields">
+              <div class="form-field"><label for="x-topic">工程主题</label><select id="x-topic"></select></div>
+              <div class="form-field"><label for="x-author">按作者搜索</label><select id="x-author"><option value="">不限作者</option></select></div>
+              <div class="form-field discovery-grow"><label for="x-query">X 搜索式</label><input type="search" id="x-query" maxlength="280"></div>
+            </div>
+            <div class="discovery-actions">
+              <a id="x-open-search" class="button primary" href="https://x.com/search-advanced" target="_blank" rel="noopener noreferrer">在 X 搜索</a>
+              <a class="source-link" href="https://x.com/search-advanced" target="_blank" rel="noopener noreferrer">高级搜索</a>
+            </div>
+            <details class="discovery-authors"><summary>重点作者</summary><ul id="x-authors"></ul></details>
+            <form id="x-save" class="discovery-x-save">
+              <h2>收录 X 帖子</h2>
+              <div class="discovery-fields">
+                <div class="form-field discovery-grow"><label for="x-post">帖子链接</label><input type="url" id="x-post" maxlength="4096" required placeholder="https://x.com/…/status/…"></div>
+                <div class="form-field discovery-grow"><label for="x-original">工程原文链接（选填）</label><input type="url" id="x-original" maxlength="4096" placeholder="https://…"></div>
+              </div>
+              <div class="form-field"><label for="x-excerpt">正文或摘录（选填）</label><textarea id="x-excerpt" maxlength="16000" rows="4" placeholder="粘贴有权使用的文字"></textarea></div>
+              <div class="discovery-actions"><button id="x-submit" class="button primary" type="submit">保存到线索池</button><span id="x-feedback" role="status"></span></div>
+            </form>
+          </div>
+        </div>
+
+        <div id="discovery-results" class="discovery-results" hidden>
+          <div class="discovery-heading"><h2>发现结果</h2><button id="save-discovery-batch" class="button small" type="button" hidden>保存本页线索</button></div>
+          <p id="discovery-report" role="status"></p>
+          <ul id="discovery-warnings" hidden></ul>
+          <div id="discovery-list" class="discovery-list"></div>
+          <div id="discovery-pages" class="pagination" hidden><span id="discovery-page-label"></span><div>
+            <button id="discovery-prev" class="button small" type="button">上一页</button><button id="discovery-next" class="button small" type="button">下一页</button>
+          </div></div>
+        </div>
+
+        <section id="lead-pool" class="discovery-results" aria-labelledby="lead-pool-heading" tabindex="-1">
+          <div class="discovery-heading"><h2 id="lead-pool-heading">线索池</h2><button id="refresh-leads" type="button" class="button small">刷新线索</button></div>
+          <p id="lead-report" role="status"></p>
+          <div id="lead-list" class="discovery-list"></div>
+          <div id="lead-pages" class="pagination" hidden><span id="lead-page-label"></span><div>
+            <button id="lead-prev" class="button small" type="button">上一页</button><button id="lead-next" class="button small" type="button">下一页</button>
+          </div></div>
+        </section>
       </section>
 
       <section id="view-sources" class="view" role="tabpanel" aria-labelledby="tab-sources" hidden>

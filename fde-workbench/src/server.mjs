@@ -8,6 +8,7 @@ import { toMarkdown } from './analysis.mjs';
 import { EDITORIAL_PROFILE, validateEditorial } from './editorial.mjs';
 import { canTranslate } from './translation.mjs';
 import { renderEditorial } from './editorial-render.mjs';
+import { Discovery } from './discovery.mjs';
 
 function equal(a,b) { const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&timingSafeEqual(x,y); }
 function send(res,status,data) {res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));}
@@ -19,7 +20,7 @@ async function readJson(req) {
   try{const value=JSON.parse(text||'{}');if(!value||typeof value!=='object'||Array.isArray(value))throw new Error();return value;}
   catch{throw new AppError('invalid_json','提交内容格式不正确，请重新尝试。');}
 }
-export function createApp(store,worker,config,{importer=importArticle}={}) {
+export function createApp(store,worker,config,{importer=importArticle,discovery=new Discovery(store,config)}={}) {
   if(config.accessToken.length<32)throw new AppError('missing_access_token','请先运行 npm run init，配置至少 32 字符的登录口令。');
   const allowedHosts=new Set([new URL(config.baseUrl).host,`127.0.0.1:${config.port}`,`localhost:${config.port}`,`[::1]:${config.port}`]);
   const sign=s=>createHmac('sha256',config.accessToken).update(s).digest('hex');
@@ -48,8 +49,9 @@ export function createApp(store,worker,config,{importer=importArticle}={}) {
         if(!bearer && (!origin||!allowedHosts.has(new URL(origin).host)||!['http:','https:'].includes(new URL(origin).protocol)))
           throw new AppError('invalid_origin','请求来源不匹配，请从本站页面操作。',403);
       }
-      if(path==='/api/health'&&method==='GET')return send(res,200,{ok:true,version:'2.2.1'});
+      if(path==='/api/health'&&method==='GET')return send(res,200,{ok:true,version:'2.3.0'});
       const assets={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/style.css':'style.css',
+        '/discovery.js':'discovery.js',
         '/editorial.html':'editorial.html','/editorial.js':'editorial.js','/editorial.css':'editorial.css','/editorial-assets.js':'editorial-assets.js',
         '/guide.html':'guide.html','/guide.css':'guide.css'};
       if(assets[path]&&method==='GET') {
@@ -73,6 +75,13 @@ export function createApp(store,worker,config,{importer=importArticle}={}) {
       if(!authenticated(req))throw new AppError('login_required','请先登录个人研究台。',401);
       if(path==='/api/logout'&&method==='POST'){res.setHeader('Set-Cookie','fde_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(res,200,{ok:true});}
       if(path==='/api/overview'&&method==='GET')return send(res,200,store.overview(config));
+      if(path==='/api/discovery/catalog'&&method==='GET')return send(res,200,discovery.catalog());
+      if(path==='/api/discovery/hn'&&method==='GET')return send(res,200,await discovery.hn(url.searchParams));
+      if(path==='/api/discovery/github'&&method==='GET')return send(res,200,await discovery.github(Object.fromEntries(url.searchParams)));
+      if(path==='/api/discovery/leads'&&method==='GET')return send(res,200,discovery.leads(url.searchParams));
+      if(path==='/api/discovery/leads'&&method==='POST')return send(res,200,discovery.save(await readJson(req)));
+      if(path==='/api/discovery/link'&&method==='POST'){discovery.link(await readJson(req));return send(res,200,{ok:true});}
+      if(path==='/api/discovery/watch'&&method==='POST'){discovery.watch(await readJson(req));return send(res,200,{ok:true});}
       if(path==='/api/editorial'&&method==='GET')return send(res,200,{items:store.listEditorial(),profile:EDITORIAL_PROFILE});
       if(path==='/api/editorial'&&method==='POST') {
         const result=await worker.createEditorial(await readJson(req));

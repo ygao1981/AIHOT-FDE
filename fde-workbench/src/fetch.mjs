@@ -65,7 +65,7 @@ export async function fetchText(value, {sourceProxyUrl,sourceProxyFallbackUrls=[
   }
   throw sourceProxyError();
 }
-async function fetchRoute(value, {allowedHosts,sourceProxyUrl,signal,maxBytes=3*1024*1024,fetchImpl=fetch,resolver=lookupAsync}) {
+async function fetchRoute(value, {allowedHosts,sourceProxyUrl,signal,maxBytes=3*1024*1024,fetchImpl=fetch,resolver=lookupAsync,followRedirects=true}) {
   const inheritedProxy=!sourceProxyUrl&&allowedHosts?.length&&
     !!(process.env.HTTPS_PROXY||process.env.HTTP_PROXY||process.env.https_proxy||process.env.http_proxy);
   let current=value, receivedResponse=false;
@@ -84,6 +84,7 @@ async function fetchRoute(value, {allowedHosts,sourceProxyUrl,signal,maxBytes=3*
         receivedResponse=true;
         if([301,302,303,307,308].includes(response.status)) {
           const location=response.headers.get('location'); await response.body?.cancel();
+          if(!followRedirects)throw new AppError('invalid_redirect','接口返回了意外的跳转地址。');
           if(!location)throw new AppError('invalid_redirect','网页跳转地址无效。');
           try { current=new URL(location,current).href; }
           catch { throw new AppError('invalid_redirect','网页跳转地址无效。'); }

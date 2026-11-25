@@ -2,7 +2,17 @@
 
 本目录服务于个人 FDE 落地研究和公众号选题。FDE 在这里指深入客户业务现场、把 AI 方案变成可运行系统的工程与交付工作。资料应帮助回答：哪个业务环节存在问题、团队如何实施、如何评估、上线后如何运行，以及哪些做法失败了。
 
-本轮核查 **27 个一手资料入口，默认启用 9 个**。另外保留 13 个关注项、3 个手动入口、2 个暂不可用入口。默认自动源包括 6 个 RSS/Atom 和 3 个静态 HTML 列表。没有接入泛 AI 新闻聚合，也没有把开发者社区上的任意用户文章当成云厂商官方技术结论。
+2.3.0 有 **32 个信源，默认启用 13 个**。新增 Uber、Cloudflare、Simon Willison 和 Shreya Shankar，Datawhale Happy-LLM 增加人工入口。主题搜索、作者、跟踪仓库和文档路径见免费发现配置。 [免费发现说明](DISCOVERY.md) [主题与仓库目录](../config/discovery.json)
+
+| 新增入口 | 关注方向 | 日期与证据 |
+| --- | --- | --- |
+| [Uber AI / ML 工程](https://www.uber.com/us/en/blog/engineering/uber-ai/) | 评测、权限、内部系统集成 | 列表卡片给出日期，原文可读。合作公告与项目实施报告分别使用 |
+| [Cloudflare Agents](https://blog.cloudflare.com/tag/agents/) | Agent 运行、委派、权限与部署 | 官方 RSS 与原文样本均可读。技术图和示例可作为架构证据 |
+| [Simon Willison](https://simonwillison.net/atom/entries/) | 公开可复现工具、LLM 工程、个人实测 | 长文 Atom 保留发布日。作者试验结论仍受样本和环境限制 |
+| [Shreya Shankar](https://www.sh-reya.com/blog/) | 定性评测、人机复核、实验设计 | 列表与正文均含原文日期。近期窗口可能没有新作，扩大范围后可找过往教程 |
+| [Datawhale Happy-LLM](https://github.com/datawhalechina/happy-llm) | 中文教材与开源项目练习 | 源码与章节人工阅读。GitHub 跟踪同目录的实质文档更新 |
+
+以下保留 2.2.x 的核查基线。旧目录核查 27 个一手资料入口，默认启用 9 个，其余有 13 个关注项、3 个手动入口和 2 个暂不可用入口。
 
 核查日期为 **2026-11-20，UTC**。每次请求的精确时间、最终 URL、HTTP 状态、响应哈希、条目数与样本日期证据见 [`../config/source-audit.json`](../config/source-audit.json)。可执行的配置种子见 [`../config/sources.json`](../config/sources.json)。这些是一次可复核的观察，不是长期可用性承诺。VPS 网络出口不同，上线前必须复测。
 
