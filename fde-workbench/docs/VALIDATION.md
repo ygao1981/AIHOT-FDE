@@ -1,5 +1,25 @@
 # 验证记录
 
+## 2.3.0 免费信源发现与线索池
+
+Windows x64、Node 24.22.3。2.3.0 实机运行提交 `b2438aa`，沿用本机采集代理和账号认证。真实发现均为资料请求，模型回执新增 0。
+
+| 验收项 | 实际结果 |
+| --- | --- |
+| 工程博客 | [RUN] 默认 13 个入口均可解析。在 21 篇真实样本中，20 篇读到原文正文，Palantir 一篇使用官方订阅摘录，21 篇有发布日期。同一批原文按旧、新筛选各有 20 篇进入候选。新增的四个博客各抽验 3 篇，12 篇均读到原文或发布者日期 |
+| Hacker News | [RUN] 以 LLM 评测、RAG、生产 Agent、工业及人工复核五组查询，范围 2026-08-25 至 11-25，至少 3 分和 1 条评论。检查首批合计 81 条，按同一原文去重后 77 组，重复率 4.9%。44 条通过工程优先规则，56 条提供外部原文链接。原文链接和规则命中均需独立核对 |
+| GitHub | [RUN] 最终抽样公开 REST 读取 All-in-RAG、Hello-Agents、vLLM，59 条仓库活动中 40 条命中工程规则，保留 15 条项目原文地址。专项核对到 vLLM 一条真实代码及文档差异。已登录的官方 `gh` 以同一查询取回 Datawhale 两条公开 Discussion。本机未配置工作台 Discussion 凭据。实机匿名出口用尽后，客户端保留限流提示并等待上游窗口 |
+| X 与线索池 | [RUN] Edge 隔离库验证主题、重点作者和原生搜索链接，粘贴测试帖子和原文后，与同一 HN 原文合并为一组。X 日期、互动与评论按未知显示。本人 X 登录后的搜索结果尚待本人查看。本机已保存 Langfuse AI Gateway 与 AI Engineer Notebooks 两条公开线索，重复保存新增 0 |
+| 初筛与证据 | [RUN] 初始 HN 样本 64 条进入工程优先，复核标题后将融资、纯讨论和缺少工程上下文的泛主题下调，最终 44 条进入工程优先。真实代码教程仍可收录。公开教程、厂商自述与生产数据分别核对 |
+| 备份、回归 | [RUN] 在 schema 3 快照副本和实库核验增量迁移，原有资料、草稿、信源状态和 10 条用量回执字段均保留，其中 2 条 unknown。新版备份包含 2 条新线索，完整性和外键检查通过。43 个文件通过语法检查，141 项自动测试、Edge 桌面与窄屏、公众号导出回归通过，生产依赖审计 0 已知漏洞 |
+| 模型开关 | [RUN] 修复本机过期的 Codex CLI 可执行路径。原专用登录目录通过 `doctor -- --codex` 诊断，版本为 `0.171.0-alpha.13.2`。自动上限为滚动 24 小时 5 次，自动分析及定时采集关闭。本次无真实模型任务 |
+
+人工核对的证据样本：
+
+- Uber 工程团队给出技能调用量与评测流程。百万次指一个月的技能调用量，证据来自实施团队自报。 [Uber 工程文章](https://www.uber.com/us/en/blog/optimizing-ubers-agent-skills/)
+- Cloudflare 说明 Agent 权限和可信委派设计。Shreya 报告定性分析的多组个人实验。两者可用于方法与边界说明。 [Cloudflare 原文](https://blog.cloudflare.com/trusted-agent-delegation/) [Shreya 原文](https://www.sh-reya.com/blog/ai-qual-analysis/)
+- HN 投稿对应可检查的 Langfuse 网关项目和 AI Engineer Notebooks 教程。vLLM 的提交差异可复核编码器缓存事件及相关文档，不外推客户上线或收益。 [Langfuse 网关](https://github.com/langfuse/langfuse/tree/main/ai-gateway) [AI Engineer Notebooks](https://github.com/calmrocks/ai-engineer-notebooks) [vLLM 提交](https://github.com/vllm-project/vllm/commit/c2cc003c5b644095cabcd5212d2967546ce344f8)
+
 ## 2.2.1 Windows 验收
 
 2026-11-24，Windows x64，Node 24.22.3，运行代码 `ed55c01`，HTTP 端口 3210。本机启用手动分析，关闭自动分析和定时采集。真实采集使用信源页对应的认证接口，另在 Edge 隔离库验证页面操作。
