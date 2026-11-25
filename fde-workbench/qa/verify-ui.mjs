@@ -9,6 +9,7 @@ import { loadConfig, readSources } from '../src/config.mjs';
 import { Store } from '../src/store.mjs';
 import { Worker } from '../src/worker.mjs';
 import { createApp } from '../src/server.mjs';
+import { Discovery } from '../src/discovery.mjs';
 
 const outputParent = process.env.FDE_QA_OUTPUT_DIR ? resolve(process.env.FDE_QA_OUTPUT_DIR) : tmpdir();
 mkdirSync(outputParent, { recursive: true });
@@ -49,7 +50,18 @@ try {
     body:'The fictional AI delivery pilot gave the support team a local search tool. Reviewers checked output against the authorized source before using it. This sample has no measured outcomes.',status:'candidate'}).article;
   worker = new Worker(store, config, {collector:async()=>({added:0,failed:0})});
   report.cleanup.workerStopped = false;
-  server = createApp(store, worker, config);
+  const original='https://example.org/engineering-original';
+  const discovery=new Discovery(store,config,{fetcher:async value=>{
+    const upstream=new URL(value);
+    if(upstream.hostname==='hn.algolia.com')return {text:JSON.stringify({nbHits:1,nbPages:1,
+      hits:[{objectID:'12345678',title:'Fictional AI evaluation tutorial',url:original,points:17,num_comments:2,created_at:new Date().toISOString()}]})};
+    if(upstream.pathname==='/repos/datawhalechina/all-in-rag')return {text:JSON.stringify({
+      html_url:'https://github.com/datawhalechina/all-in-rag',full_name:'datawhalechina/all-in-rag',
+      description:'Fictional RAG evaluation tutorial',stargazers_count:7,
+    })};
+    assert.fail('unexpected discovery request');
+  }});
+  server = createApp(store, worker, config, {discovery});
   report.phase = 'server-start';
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(config.port, '127.0.0.1', resolve); });
   report.cleanup.serverStopped = false;
@@ -215,7 +227,36 @@ try {
   assert.match(await page.locator('#usage-content').innerText(),/API/);
   await page.screenshot({path:`${outputDir}/desktop-usage.png`,fullPage:true});
   checked('用量显示未知金额，次数和 token 不冒充美元');
+  await page.locator('#tab-discovery').click();
+  await page.locator('#hn-query').fill('AI evaluation');
+  await page.getByRole('button',{name:'搜索 Hacker News'}).click();
+  await page.getByText('Fictional AI evaluation tutorial',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'保存线索',exact:true}).click();
+  await page.locator('#lead-list .lead-entry').waitFor();
+  await page.getByRole('button',{name:'GitHub',exact:true}).click();
+  await page.locator('#github-kind').selectOption('repository');
+  await page.getByRole('button',{name:'检查仓库更新'}).click();
+  await page.locator('#discovery-list').getByText('datawhalechina/all-in-rag',{exact:true}).waitFor();
+  await page.getByRole('checkbox',{name:'定时跟踪此仓库'}).check();
+  await page.getByText('已加入跟踪。定时采集当前关闭，可手动检查。',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'X 原生搜索'}).click();
+  await page.locator('#x-author').selectOption('simonw');
+  const searchLink=new URL(await page.getByRole('link',{name:'在 X 搜索'}).getAttribute('href'));
+  assert.equal(searchLink.origin,'https://x.com');
+  assert.match(searchLink.searchParams.get('q'),/from:simonw$/);
+  await page.locator('#x-post').fill('https://x.com/fixture/status/1234567');
+  await page.locator('#x-original').fill(original+'?utm_medium=fictional');
+  await page.locator('#x-excerpt').fill('用于界面测试的虚构工程片段。');
+  await page.getByRole('button',{name:'保存到线索池'}).click();
+  await page.getByText('查看 2 条来源',{exact:true}).click();
+  assert.match(await page.locator('#lead-list').innerText(),/X 帖子.*互动 未知/);
+  assert.equal(await page.locator('#lead-list .lead-entry').count(),1);
+  await page.screenshot({path:`${outputDir}/desktop-discovery.png`,fullPage:true});
   await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>window.scrollTo(0,0));
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.screenshot({path:`${outputDir}/mobile-discovery.png`,fullPage:true});
+  checked('发现页可按主题搜索、跟踪仓库、粘贴 X 线索并按原文合并，窄屏可操作');
   await afterArticleAction(() => page.locator('#tab-library').click(), { count: 3, caption: '共 3 篇资料' });
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:`${outputDir}/mobile-library.png`,fullPage:true});

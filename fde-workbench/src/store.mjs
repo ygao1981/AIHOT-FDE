@@ -3,6 +3,7 @@ import { mkdirSync, chmodSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { AppError, MAX_AUTO_DAILY_LIMIT } from './config.mjs';
+import { researchKey } from './research-url.mjs';
 
 const EDITORIAL = ['new', 'organized', 'shortlisted', 'drafting', 'published', 'archived'];
 const MODEL_WINDOW_MS = 86400000;
@@ -26,7 +27,7 @@ export class Store {
     chmodSync(this.path, 0o600);
     this.db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
     const version = this.db.prepare('PRAGMA user_version').get().user_version;
-    if (version > 3) { this.db.close(); throw new AppError('newer_database', '数据库版本高于本程序，请使用对应的新版本。'); }
+    if (version > 4) { this.db.close(); throw new AppError('newer_database', '数据库版本高于本程序，请使用对应的新版本。'); }
     if (version === 0) this.db.exec(`BEGIN IMMEDIATE;
       CREATE TABLE articles (
         id TEXT PRIMARY KEY, url TEXT NOT NULL UNIQUE, title TEXT NOT NULL, source_id TEXT NOT NULL,
@@ -80,6 +81,29 @@ export class Store {
       this.db.close();
       throw new AppError('migration_failed','资料库升级未完成，请保留数据库与备份，并检查文件权限和可用空间。');
     }
+    if(version<4)try{
+      this.transaction(()=>{
+        this.db.exec(`
+          ALTER TABLE articles ADD COLUMN research_key TEXT;
+          CREATE INDEX articles_research_key ON articles(research_key);
+          CREATE TABLE lead_mentions(
+            mention_key TEXT PRIMARY KEY, url TEXT NOT NULL,
+            related_url TEXT, related_key TEXT,
+            channel TEXT NOT NULL CHECK(channel IN ('x','hn','github')),
+            kind TEXT NOT NULL, title TEXT NOT NULL, excerpt TEXT NOT NULL,
+            published_at TEXT, activity_at TEXT, points INTEGER, comments INTEGER,
+            priority INTEGER NOT NULL, created_at TEXT NOT NULL, checked_at TEXT NOT NULL
+          );
+          CREATE INDEX lead_mentions_groups ON lead_mentions(COALESCE(related_key,mention_key));
+        `);
+        const update=this.db.prepare('UPDATE articles SET research_key=? WHERE id=?');
+        for(const {id,url} of this.db.prepare('SELECT id,url FROM articles').all())update.run(researchKey(url),id);
+        this.db.exec('PRAGMA user_version=4');
+      });
+    }catch{
+      this.db.close();
+      throw new AppError('migration_failed','资料库升级未完成，请保留数据库与备份，并检查文件权限和可用空间。');
+    }
     this.catalog = catalog;
     for (const s of catalog) this.db.prepare('INSERT OR IGNORE INTO source_state(id,enabled) VALUES(?,?)').run(s.id, s.enabled ? 1 : 0);
   }
@@ -125,6 +149,11 @@ export class Store {
   }
   getArticle(id) { return present(this.db.prepare('SELECT * FROM articles WHERE id=?').get(id), true); }
   findUrl(url) { return present(this.db.prepare('SELECT * FROM articles WHERE url=?').get(url), true); }
+  findResearchArticle(url) {
+    const row=this.db.prepare(`SELECT id,title FROM articles WHERE research_key=?
+      ORDER BY analysis_json IS NULL,created_at LIMIT 1`).get(researchKey(url));
+    return row?{id:row.id,title:row.title}:null;
+  }
   upsertArticle(a, {updateExisting = false, maxArticles = 10000} = {}) {
     const old = this.findUrl(a.url);
     const body = String(a.body || '').slice(0, 120000), bodyHash = hashBody(body), timestamp = nowIso();
@@ -139,11 +168,56 @@ export class Store {
     if (this.db.prepare('SELECT count(*) n FROM articles').get().n >= maxArticles)
       throw new AppError('storage_limit', '资料数量已达上限，请先导出并整理旧资料。', 409);
     const id = randomUUID();
-    this.db.prepare(`INSERT INTO articles(id,url,title,source_id,source_name,language,published_at,body,body_kind,body_hash,status,backfill,priority,created_at,updated_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, a.url, String(a.title || a.url).slice(0,300), a.sourceId || 'manual', a.sourceName || '手动收录',
+    this.db.prepare(`INSERT INTO articles(id,url,research_key,title,source_id,source_name,language,published_at,body,body_kind,body_hash,status,backfill,priority,created_at,updated_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, a.url, researchKey(a.url), String(a.title || a.url).slice(0,300), a.sourceId || 'manual', a.sourceName || '手动收录',
       a.language || 'unknown', a.publishedAt || null, body, a.bodyKind || 'page', bodyHash, a.status || (body.length >= 180 ? 'candidate' : 'needs_body'), a.backfill ? 1 : 0,
       a.priority || 3, timestamp, timestamp);
     return {article:this.getArticle(id), created:true};
+  }
+  saveLeadMentions(items) {
+    return this.transaction(()=>{
+      const find=this.db.prepare('SELECT 1 FROM lead_mentions WHERE mention_key=?');
+      const group=this.db.prepare('SELECT 1 FROM lead_mentions WHERE COALESCE(related_key,mention_key)=? LIMIT 1');
+      const write=this.db.prepare(`INSERT INTO lead_mentions(mention_key,url,related_url,related_key,channel,kind,title,excerpt,
+        published_at,activity_at,points,comments,priority,created_at,checked_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(mention_key) DO UPDATE SET
+        related_url=COALESCE(lead_mentions.related_url,excluded.related_url),related_key=COALESCE(lead_mentions.related_key,excluded.related_key),
+        title=CASE WHEN excluded.excerpt<>'' OR lead_mentions.excerpt='' THEN excluded.title ELSE lead_mentions.title END,
+        excerpt=COALESCE(NULLIF(excluded.excerpt,''),lead_mentions.excerpt),published_at=COALESCE(excluded.published_at,lead_mentions.published_at),
+        activity_at=COALESCE(excluded.activity_at,lead_mentions.activity_at),points=excluded.points,comments=excluded.comments,
+        priority=CASE WHEN excluded.excerpt='' AND lead_mentions.excerpt<>'' THEN lead_mentions.priority ELSE excluded.priority END,
+        checked_at=excluded.checked_at`);
+      let added=0,duplicates=0,linked=0;
+      const stamp=nowIso();
+      for(const item of items) {
+        const key=researchKey(item.url),related=item.relatedUrl?researchKey(item.relatedUrl):null;
+        if(find.get(key))duplicates++;
+        else{added++;if(group.get(related||key)||this.findResearchArticle(item.relatedUrl||item.url))linked++;}
+        write.run(key,item.url,item.relatedUrl??null,related,item.channel,item.kind,item.title,item.excerpt??'',
+          item.publishedAt??null,item.activityAt??null,item.points??null,item.comments??null,item.priority,stamp,stamp);
+      }
+      return {added,duplicates,linked};
+    });
+  }
+  linkLeadMention(url,relatedUrl) {
+    const result=this.db.prepare('UPDATE lead_mentions SET related_url=?,related_key=? WHERE mention_key=?')
+      .run(relatedUrl,researchKey(relatedUrl),researchKey(url));
+    if(!result.changes)throw new AppError('not_found','这条线索已找不到，请刷新线索池。',404);
+  }
+  listLeadGroups(offset=0) {
+    const size=24;
+    const groups=this.db.prepare(`SELECT COALESCE(related_key,mention_key) AS key,MAX(priority) AS priority,
+      MAX(COALESCE(activity_at,published_at,created_at)) AS latest,COUNT(*) AS mentionCount
+      FROM lead_mentions GROUP BY 1 ORDER BY priority DESC,latest DESC,key LIMIT ? OFFSET ?`).all(size+1,offset);
+    const members=this.db.prepare(`SELECT url,related_url AS relatedUrl,channel,kind,title,excerpt,
+      published_at AS publishedAt,activity_at AS activityAt,points,comments,priority,checked_at AS checkedAt
+      FROM lead_mentions WHERE COALESCE(related_key,mention_key)=? ORDER BY related_url IS NULL,priority DESC,checked_at DESC,url LIMIT 20`);
+    return {items:groups.slice(0,size).map(group=>{
+      const mentions=members.all(group.key);
+      const relatedUrl=mentions[0].relatedUrl;
+      return {relatedUrl,priority:group.priority,mentionCount:group.mentionCount,mentions,
+        article:this.findResearchArticle(relatedUrl||mentions[0].url)};
+    }),hasMore:groups.length>size};
   }
   listArticles({q='',status='',editorialStatus='',limit=50,offset=0} = {}) {
     const where = ['1=1'], args = [];

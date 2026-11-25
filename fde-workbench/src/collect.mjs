@@ -4,6 +4,8 @@ import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { canonicalUrl, fetchText } from './fetch.mjs';
 import { AppError } from './config.mjs';
 import { precheck, prepareArticle } from './analysis.mjs';
+import { researchPriority } from './relevance.mjs';
+import { isXUrl } from './research-url.mjs';
 
 const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
 const asArray=v=>v===undefined||v===null?[]:Array.isArray(v)?v:[v];
@@ -24,8 +26,9 @@ export function publicationDate(value) {
   }
   if(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(text) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(text))return publicationDate(text.slice(0,10));
   // English month dates without clock time have day precision only.
-  const d=new Date(text);if(Number.isNaN(+d)||d.getUTCFullYear()<1990||+d>Date.now()+86400000)return null;
-  return /\d{1,2}:\d{2}/.test(text)?d.toISOString():d.toISOString().slice(0,10);
+  const hasTime=/\d{1,2}:\d{2}/.test(text);
+  const d=new Date(hasTime?text:text+' UTC');if(Number.isNaN(+d)||d.getUTCFullYear()<1990||+d>Date.now()+86400000)return null;
+  return hasTime?d.toISOString():d.toISOString().slice(0,10);
 }
 function metaDate(document,source={}) {
   for(const selector of ['meta[property="article:published_time"]','meta[name="datePublished"]','meta[itemprop="datePublished"]','meta[name="pubdate"]','meta[name="dcterms.date"]']){
@@ -114,7 +117,7 @@ export async function collectSource(store,source,config,{fetcher=fetchText}={}) 
     const limits=store.collectionLimits();
     if(limits.addedToday>=limits.dailyLimit)break;
     if(e.publishedAt&&!inCollectionRange(e.publishedAt,limits))continue;
-    if(store.findUrl(e.url))continue;
+    if(store.findResearchArticle(e.url))continue;
     let article={...e},bodyKind='page';
     try{
       const page=await fetcher(e.url,detailOptions);
@@ -133,13 +136,21 @@ export async function collectSource(store,source,config,{fetcher=fetchText}={}) 
     const admitted=precheck(prepareArticle({title:article.title,url:e.url,body:article.body},config.maxInputChars));
     const state=admitted==='candidate'?'candidate':admitted==='needs_body'?'needs_body':'skipped';
     const result=store.upsertArticle({...article,url:e.url,sourceId:source.id,sourceName:source.name,language:source.language||'unknown',bodyKind,
-      backfill:first||old,priority:source.priority||3,status:state},{maxArticles:config.maxArticles});
+      backfill:first||old,priority:researchPriority(article)===0?1:source.priority||3,status:state},{maxArticles:config.maxArticles});
     if(result.created){added++;if(bodyKind==='missing')failed++;}
   }
   return {added,failed,found:entries.length};
 }
 export async function importArticle(store,input,config,{fetcher=fetchText}={}) {
-  const url=canonicalUrl(input.url), supplied=typeof input.body==='string'&&input.body.trim();
+  let url=canonicalUrl(input.url);
+  const supplied=typeof input.body==='string'&&input.body.trim();
+  if(!supplied&&isXUrl(url))throw new AppError('x_manual_only','请在「发现线索」保存帖子，或在此粘贴有权使用的正文。');
+  const existing=store.findResearchArticle(url);
+  if(existing){
+    const article=store.getArticle(existing.id);
+    if(!supplied)return {article,created:false};
+    url=article.url;
+  }
   let article={url,title:typeof input.title==='string'?input.title.trim():'',body:supplied?input.body.trim().slice(0,120000):'',publishedAt:null};
   if(!supplied){const page=await fetcher(url);article={...article,...extractArticle(page.text,page.url)};}
   if(!article.title)article.title=url;

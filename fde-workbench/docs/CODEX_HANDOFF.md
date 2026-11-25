@@ -3,8 +3,8 @@
 ## 当前入口
 
 - 仓库：`https://github.com/ygao1981/AIHOT-FDE`
-- 本轮分支：`codex/fde-editorial-workbench`；基于 PR #5 的 `8d0df4506a86a2981c55798300884415c4190903`，保留 CLI 与代理修复。
-- 运行目录：`fde-workbench/`，版本 2.2.0，SQLite schema 2。
+- 免费信源分支为 `codex/fde-free-discovery`，基于 [Windows 2.2.1 草稿 PR](https://github.com/ygao1981/AIHOT-FDE/pull/7) 的 `2b68fc5`。
+- 运行目录为 `fde-workbench/`，版本 2.3.0，SQLite schema 4。
 - 产品：个人 FDE 研究与公众号草稿，Node 24.x + SQLite，Windows 本机优先。
 - 默认采集、模型和自动分析关闭；公众号素材稿和排版可以零模型使用。
 
@@ -14,8 +14,8 @@
 
 1. 根 CHECKPOINT、根与子目录 AGENTS、子目录 README。
 2. `WECHAT_DESIGN_REVIEW.md`、`EDITORIAL_WORKFLOW.md`：个人规则、开源工具审查与实际功能边界。
-3. `ARCHITECTURE.md`、`MODEL_USAGE.md`：单 worker、同一账本、分析与写作合计每日5次。
-4. `OPERATIONS.md` 的 2.2.0 升级章节：必须用旧代码先备份，再切新代码；回滚须有旧 schema 快照。
+3. `DISCOVERY.md`、`MODEL_USAGE.md`。搜索与采集由普通程序处理。滚动 24 小时次数上限只计自动分析，手动任务写入同一账本。
+4. `OPERATIONS.md`。用旧代码先备份，再切换新代码。回滚使用旧 schema 快照。
 5. `VALIDATION.md`：真实运行过的检查和仍需本机验收的项目。
 6. `WINDOWS_LOCAL.md` 与已有代理配置；未改采集则不重复新装 VPN、调整系统 DNS 或重审所有来源。
 7. `CODEX_WECHAT_PROMPT.md`：本轮完整可复制升级、零模型验收与真实写作提示词。

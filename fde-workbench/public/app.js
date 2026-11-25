@@ -151,6 +151,7 @@ function showLogin(errorText = '') {
 function expireSession() {
   preserveNotes(); state.authenticated = false; state.overview = null; state.listRequest++; state.detailRequest++;
   state.collection = null; state.sourceRequest++; $('collection-fields').disabled = true; renderCollectionActivity();
+  resetDiscovery();
   for (const id of ['detail-dialog', 'import-dialog']) if ($(id).open) $(id).close();
   syncDialogState(); showLogin('登录已过期，请重新输入访问口令。未保存的笔记暂留在当前页面，请不要关闭页面。');
 }
@@ -181,10 +182,11 @@ function renderOverview() {
   $('collection-notice').firstElementChild.textContent = `${collectionMode}${modelMode}`;
 }
 async function switchView(view, updateHash = true) {
-  const current = ['library', 'sources', 'usage'].includes(view) ? view : 'library';
+  const views = ['library', 'discovery', 'sources', 'usage'];
+  const current = views.includes(view) ? view : 'library';
   state.view = current;
   if (updateHash && location.hash !== `#${current}`) history.replaceState(null, '', `#${current}`);
-  for (const name of ['library', 'sources', 'usage']) {
+  for (const name of views) {
     $(`view-${name}`).hidden = name !== current;
     $(`tab-${name}`).setAttribute('aria-selected', String(name === current));
     $(`tab-${name}`).tabIndex = name === current ? 0 : -1;
@@ -192,6 +194,7 @@ async function switchView(view, updateHash = true) {
   if (!state.authenticated) return;
   try {
     if (current === 'library') await loadArticles();
+    else if (current === 'discovery') await openDiscovery();
     else if (current === 'sources') await loadSources();
     else { renderUsage(); await loadOverview(); }
   } catch (error) { if (state.authenticated) showWorkspaceError(error); }
@@ -448,17 +451,17 @@ async function saveNotes() {
   finally { if (button?.isConnected) { busyButton(button, false, '保存笔记'); button.disabled = !state.noteDirty; } }
 }
 
-function openImport(article) {
+function openImport(article, {fromLead = false} = {}) {
   $('import-error').hidden = true;
   if (article) {
     $('import-url').value = article.url || ''; $('import-heading').value = article.title || ''; $('import-body').value = '';
-    $('import-title').textContent = '补充原文正文';
+    $('import-title').textContent = fromLead ? '收录工程原文' : '补充原文正文';
   } else {
     $('import-title').textContent = '导入资料';
   }
   $('import-dialog').querySelector('.dialog-footer > p').textContent = '先保存资料，分析由你手动安排。';
   if (!$('import-dialog').open) $('import-dialog').showModal(); syncDialogState();
-  (article ? $('import-body') : $('import-url')).focus();
+  (article && !fromLead ? $('import-body') : $('import-url')).focus();
 }
 function closeImport() { $('import-dialog').close(); syncDialogState(); }
 async function submitImport(event) {
@@ -472,6 +475,7 @@ async function submitImport(event) {
     toast(result.created === false ? '资料已在研究库中；如提交了新正文，相关内容已更新。' : '资料已保存到研究库。');
     await loadOverview({ quiet: true });
     state.offset = 0; await loadArticles({ quiet: true });
+    if (state.view === 'discovery') await loadLeads();
     const imported = result.article || result.item || result;
     if ($('detail-dialog').open && state.currentArticle?.url === url) await refreshDetail();
     else if (imported?.id && state.view === 'library') await openDetail(imported.id);
@@ -681,6 +685,7 @@ for (const id of ['detail-dialog', 'import-dialog']) $(id).addEventListener('cli
   if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) id === 'detail-dialog' ? closeDetail() : closeImport();
 });
 $('collect-now').addEventListener('click', collectNow);
+wireDiscovery();
 $('collection-form').addEventListener('submit', saveCollectionSettings);
 $('resume-banner').addEventListener('click', event => controlAnalysis('resume', event.currentTarget));
 window.addEventListener('beforeunload', event => { if (state.noteDirty || state.drafts.size) { event.preventDefault(); event.returnValue = ''; } });

@@ -7,6 +7,7 @@
 ## 能做什么
 
 - 从已核验的 RSS、Atom 和静态网页列表采集文章，保留原文链接和来源日期。
+- 在「发现线索」使用 X 原生搜索、Hacker News 搜索和 GitHub 仓库跟踪。保存讨论和原文的关联，核对后再收入研究库。
 - 用本地规则筛除明显无关内容，支持人工补充链接与正文。
 - 从待分析资料手动安排 AI 分析。官方 API 或已登录 ChatGPT 的官方 Codex CLI 可用一次模型任务生成结构化研究结果。
 - 记录业务问题、实施方案、阶段依据、效果、经验、限制和原文引文。
@@ -22,7 +23,7 @@
 
 ## 五分钟本地启动
 
-当前版本 **2.2.1**。在已有工作台上先用旧代码备份，切换后 SQLite 增量升级到 schema 3。手动任务由你决定，自动分析的次数可在「用量」设置。 [升级说明](docs/OPERATIONS.md#221-手动与自动分析的用量设置) [公众号工具比较](docs/WECHAT_DESIGN_REVIEW.md)
+当前版本 **2.3.0**。在已有工作台上先用旧代码备份，切换后 SQLite 增量升级到 schema 4。手动任务由你决定，自动分析的次数可在「用量」设置。 [升级说明](docs/OPERATIONS.md#230-线索池升级) [发现与线索池](docs/DISCOVERY.md)
 
 需要 Node.js **24.22.1 或更新的 24.x**。本版在 24.22.3 验证。先从仓库根目录进入本目录：
 
@@ -66,6 +67,7 @@ npm start
 | Windows 本机 / 外部脚本接入 | [WINDOWS_LOCAL](docs/WINDOWS_LOCAL.md)、[EVENT_INTAKE](docs/EVENT_INTAKE.md) |
 | 系统设计与模块职责 | [ARCHITECTURE](docs/ARCHITECTURE.md) |
 | 信源选择、偏差和实际核验 | [SOURCES](docs/SOURCES.md)、[机器可读审计](config/source-audit.json) |
+| 免费发现渠道、GitHub 跟踪与线索关联 | [DISCOVERY](docs/DISCOVERY.md) |
 | API / Plus CLI、用量与失败处理 | [MODEL_USAGE](docs/MODEL_USAGE.md) |
 | 本机 / VPS / 可选 Docker | [DEPLOYMENT](docs/DEPLOYMENT.md) |
 | 研究与公众号选题 | [EDITORIAL_WORKFLOW](docs/EDITORIAL_WORKFLOW.md) |

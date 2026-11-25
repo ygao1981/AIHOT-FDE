@@ -1,5 +1,22 @@
 {
   "schemaVersion": 1,
+  "discoveryExpansion": {
+    "checkedAt": "2026-11-25T10:37:42.639Z",
+    "catalogSize": 32,
+    "defaultSourceChecksPassed": 13,
+    "newSourceSamples": [
+      {"sourceId":"uber-ai-engineering","listed":8,"sampleUrl":"https://www.uber.com/us/en/blog/optimizing-ubers-agent-skills/","bodyChars":21865,"publishedAt":"2026-11-23","dateEvidence":"publisher listing card"},
+      {"sourceId":"cloudflare-agents-engineering","listed":8,"sampleUrl":"https://blog.cloudflare.com/kitesurf-open-source/","bodyChars":4782,"publishedAt":"2026-11-13T20:20:21.646Z","dateEvidence":"original page metadata"},
+      {"sourceId":"simon-willison-engineering","listed":8,"sampleUrl":"https://simonwillison.net/2026/Nov/24/llm-inflection-points/","bodyChars":6969,"publishedAt":"2026-11-24T23:02:07.000Z","dateEvidence":"publisher Atom published"},
+      {"sourceId":"shreya-shankar-engineering","listed":8,"sampleUrl":"https://www.sh-reya.com/blog/ai-qual-analysis/","bodyChars":27467,"publishedAt":"2026-05-21T00:00:00.000Z","dateEvidence":"original page metadata"},
+      {"sourceId":"datawhale-happy-llm","sampleUrl":"https://github.com/datawhalechina/happy-llm/tree/main/docs","kind":"manual","dateEvidence":"repository documentation history"}
+    ],
+    "channels": {
+      "x": {"mode":"native_search_manual_intake","terms":"https://x.com/en/tos"},
+      "hackerNews": {"mode":"algolia_public_search","docs":"https://hn.algolia.com/api"},
+      "github": {"mode":"public_rest_and_optional_authenticated_discussions","docs":"https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions"}
+    }
+  },
   "checkedAt": "2026-11-20T13:21:12+00:00",
   "timeZone": "UTC",
   "scope": "27 public first-party source entries; native HTTP feed/list plus sample body/date checks. Not a guarantee of continuous availability or an independent audit of claimed business outcomes.",

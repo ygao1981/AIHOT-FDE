@@ -53,6 +53,7 @@ try {
   };
   const context=createContext({window,document,Node:window.Node,URL,URLSearchParams,AbortController,Intl,Date,Response,fetch,location:{hash:'#library'},history:{replaceState(){}},setTimeout:trackedTimeout,clearTimeout:clearTrackedTimeout,setInterval(){},console});
   window.confirm=()=>true;
+  runInContext(readFileSync(`${root}/public/discovery.js`,'utf8'),context);
   await runInContext(readFileSync(`${root}/public/app.js`,'utf8'),context);
   assert.equal(document.querySelectorAll('.article-card').length,1);
   assert.equal(document.querySelectorAll('img[src="x"]').length,0);

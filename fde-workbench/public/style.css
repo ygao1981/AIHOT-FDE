@@ -189,6 +189,34 @@ select { min-height: 42px; max-width: 100%; padding: 8px 29px 8px 10px; border: 
 .collection-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; border: 0; padding: 0; margin: 12px 0; min-width: 0; }
 .collection-fields .form-field { flex: 1 1 135px; max-width: 190px; margin: 0; }
 .collection-panel > .form-error { color: var(--danger); }
+.discovery-channels, .discovery-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.discovery-channels { gap: 8px; margin-bottom: 6px; }
+.discovery-channels [aria-pressed="true"] { color: var(--accent); background: var(--accent-wash); border-color: var(--accent); }
+.discovery-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 14px 0 10px; }
+.discovery-fields .form-field { flex: 1 1 125px; min-width: 0; max-width: 210px; margin: 0; }
+.discovery-fields .discovery-grow { flex: 3 1 250px; max-width: none; }
+.discovery-fields select { width: 100%; min-height: 43px; }
+.discovery-actions { margin-top: 10px; }
+.discovery-results { margin: 27px 0 34px; scroll-margin-top: 24px; }
+.discovery-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.discovery-heading h2, .discovery-x-save h2 { font-size: 19px; }
+#discovery-report, #lead-report, #discovery-warnings, #x-feedback { color: var(--muted); font-size: 14px; margin: 8px 0; }
+.discovery-list { border-top: 1px solid var(--line); margin-top: 13px; }
+.discovery-entry { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 22px; padding: 15px 0; border-bottom: 1px solid var(--line); }
+.discovery-entry h3 { font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+.discovery-entry-main { flex: 1 1 290px; min-width: 0; }
+.discovery-entry-side { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.discovery-meta { color: var(--muted); font-size: 12px; margin: 3px 0; }
+.discovery-excerpt { color: var(--muted); font-size: 14px; line-height: 1.6; margin-top: 7px; overflow-wrap: anywhere; max-width: 75ch; white-space: pre-wrap; }
+.discovery-authors, .discovery-x-save, .lead-mentions, .lead-link-editor { margin-top: 14px; }
+.discovery-authors ul, .lead-mentions ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.discovery-authors li, .lead-mentions li { margin-bottom: 12px; overflow-wrap: anywhere; }
+.discovery-authors li span { margin-left: 8px; color: var(--muted); font-size: 13px; }
+.discovery-x-save { border-top: 1px solid var(--line); padding-top: 16px; }
+.discovery-watch { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; }
+.lead-link-editor .form-field { margin: 8px 0 0; max-width: 600px; }
+.lead-link-editor .button { margin-top: 7px; }
+.lead-mentions summary, .discovery-authors summary, .lead-link-editor summary { cursor: pointer; color: var(--accent); font-size: 13px; }
 .budget-label { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-top: 24px; font-size: 13px; }
 .budget-label strong { font-variant-numeric: tabular-nums; }
 progress { appearance: none; display: block; width: 100%; height: 9px; overflow: hidden; margin: 10px 0; border: 0; border-radius: 9px; background: #eaf0eb; accent-color: var(--accent); }
@@ -276,6 +304,7 @@ textarea { resize: vertical; }
   .header-actions .button { font-size: 12px; padding: 7px 10px; min-height: 40px; }
   .main-tabs { order: 3; flex-basis: 100%; gap: 6px; }
   .main-tabs button { flex: 1; min-height: 40px; font-size: 13px; }
+  .main-tabs button { gap: 4px; padding-inline: 5px; }
   .main-content { padding: 25px 18px 0; }
   .page-heading { align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 22px; }
   .page-heading h1 { font-size: 26px; }

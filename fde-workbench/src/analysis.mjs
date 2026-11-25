@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join, isAbsolute } from 'node:path';
 import { fetch as officialFetch, EnvHttpProxyAgent } from 'undici';
 import { resolveCodexCommand, buildCodexEnvironment, terminateCodexProcess } from './codex-process.mjs';
+import { researchPriority } from './relevance.mjs';
 
 export const VERSION = 'fde-workbench-analysis-v2';
 const CATEGORIES = ['case', 'architecture', 'tutorial', 'delivery', 'roi', 'retrospective'];
@@ -106,12 +107,7 @@ export function prepareArticle(article, maxInputChars = 16000) {
 
 export function precheck(article) {
   if (normalized(article?.body).length < 180) return 'needs_body';
-  const title = String(article.title || '').toLowerCase();
-  if (/\b(?:hiring|job opening|funding round|webinar registration)\b|招聘|融资快讯|直播预告|课程优惠/.test(title)) return 'skip';
-  const hay = `${title}\n${article.body}`;
-  const ai = /\b(?:fde|ai|llm|rag|agents?|langgraph|dify|mcp)\b|人工智能|大模型|智能体|知识库|检索增强/i.test(hay);
-  const practice = /\b(?:deploy\w*|production|enterprise|customer|case stud\w*|tutorial|workflow|implement\w*|evaluation|lessons?|postmortem|integration|pilot|poc)\b|落地|部署|实战|教程|复盘|交付|工程|企业|客户|工作流|验收|评测/i.test(hay);
-  return ai && practice ? 'candidate' : 'skip';
+  return researchPriority(article)>=2 ? 'candidate' : 'skip';
 }
 
 export function analysisKey(article, config = {}) {
