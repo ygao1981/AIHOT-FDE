@@ -54,7 +54,8 @@ try {
   const discovery=new Discovery(store,config,{fetcher:async value=>{
     const upstream=new URL(value);
     if(upstream.hostname==='hn.algolia.com')return {text:JSON.stringify({nbHits:1,nbPages:1,
-      hits:[{objectID:'12345678',title:'Fictional AI evaluation tutorial',url:original,points:17,num_comments:2,created_at:new Date().toISOString()}]})};
+      hits:[{objectID:'12345678',title:'Fictional AI evaluation tutorial',url:original,points:17,num_comments:2,
+        created_at:new Date(Date.now()-120000).toISOString()}]})};
     if(upstream.pathname==='/repos/datawhalechina/all-in-rag')return {text:JSON.stringify({
       html_url:'https://github.com/datawhalechina/all-in-rag',full_name:'datawhalechina/all-in-rag',
       description:'Fictional RAG evaluation tutorial',stargazers_count:7,
@@ -101,7 +102,7 @@ try {
     // The caption can retain an earlier result while the new list is still loading.
     await waitForArticleList(expected);
   };
-  await page.goto(config.baseUrl);
+  await page.goto(config.baseUrl+'/#library');
   await page.locator('#login-screen').waitFor({state:'visible'});
   await page.screenshot({path:`${outputDir}/desktop-login.png`,fullPage:true});
   await page.locator('#login-token').fill('deliberately-wrong-test-token');
@@ -251,10 +252,69 @@ try {
   await page.getByText('查看 2 条来源',{exact:true}).click();
   assert.match(await page.locator('#lead-list').innerText(),/X 帖子.*互动 未知/);
   assert.equal(await page.locator('#lead-list .lead-entry').count(),1);
+  await page.locator('#topic-subscriptions > summary').click();
+  await page.waitForFunction(()=>document.querySelector('#subscription-topic').options.length===10);
+  await page.locator('#subscription-topic').selectOption('evals');
+  await page.locator('#subscription-keyword').fill('LLM evaluation tutorial');
+  await page.locator('#subscription-hours').fill('12');
+  await page.locator('#subscription-save').click();
+  await page.getByText('已保存主题订阅。',{exact:true}).waitFor();
+  await page.locator('#subscription-run').click();
+  await page.locator('#subscription-list').getByText(/获取 1 条，符合规则 1 条，新增 0 条/).waitFor();
+  assert.equal(store.db.prepare('SELECT count(*) n FROM lead_mentions').get().n,2);
+  checked('十个可配置订阅，保存自定义关键词、间隔并检查同一线索不重复收录');
+  await page.locator('#topic-subscriptions > summary').click();
   await page.screenshot({path:`${outputDir}/desktop-discovery.png`,fullPage:true});
+  await page.locator('#tab-today').click();
+  const dailyLead=page.locator('.daily-entry').filter({hasText:'Fictional AI evaluation tutorial'});
+  const dailyArticle=page.locator('.daily-entry').filter({hasText:'界面样例：售后知识检索试点'});
+  await dailyLead.waitFor();
+  assert.match(await page.locator('#daily-counts').innerText(),/新发现线索\s+1/);
+  assert.match(await page.locator('#daily-runtime').innerText(),/自动分析已关闭.*5 \/ 5/);
+  await dailyLead.getByText('排序依据与出处',{exact:true}).click();
+  await dailyLead.getByText(/积分 17，评论 2/).waitFor();
+  await dailyLead.getByText(/互动 未知，评论 未知/).waitFor();
+  assert.match(await dailyArticle.innerText(),/历史资料/);
+  await dailyArticle.getByRole('button',{name:'查看研究卡'}).click();
+  assert.match(await page.locator('#detail-content').innerText(),/这是用于界面验收|业务问题/);
+  await page.locator('#close-detail').click();
+  await dailyLead.getByRole('button',{name:'收藏',exact:true}).click();
+  await dailyLead.getByRole('button',{name:'已收藏',exact:true}).waitFor();
+  await dailyLead.getByRole('button',{name:'已收藏',exact:true}).click();
+  await dailyLead.getByRole('button',{name:'收藏',exact:true}).waitFor();
+  await dailyLead.getByText('更多反馈',{exact:true}).click();
+  const theory=dailyLead.getByRole('button',{name:'偏理论，暂不关注',exact:true});
+  await theory.click();
+  await dailyLead.locator('button[aria-pressed="true"]').filter({hasText:'偏理论'}).waitFor();
+  await theory.click();
+  await dailyLead.locator('button[aria-pressed="false"]').filter({hasText:'偏理论'}).waitFor();
+  await page.locator('.daily-entry').filter({hasText:pendingTitle}).getByRole('button',{name:'加入公众号选题'}).click();
+  await page.locator('.daily-entry').filter({hasText:pendingTitle}).getByText('已列入公众号选题',{exact:true}).waitFor();
+  assert.equal(store.getArticle(pending.id).editorialStatus,'shortlisted');
+  await page.locator('#research-preferences > summary').click();
+  await page.locator('#pref-weight-knowledge').fill('4');
+  await page.locator('#preferences-save').click();
+  await page.getByText('已保存研究偏好。',{exact:true}).waitFor();
+  await page.locator('#preferences-reset').click();
+  await page.getByText('已恢复默认权重。',{exact:true}).waitFor();
+  await page.locator('#research-preferences > summary').click();
+  await page.locator('#daily-day').fill('2000-01-01');
+  await page.getByText('所选日期没有新增资料或线索。',{exact:true}).waitFor();
+  const dailyDownload=page.waitForEvent('download');
+  await page.locator('#daily-export').click();
+  const markdownDownload=await dailyDownload;
+  await markdownDownload.saveAs(`${outputDir}/fixture-daily.md`);
+  assert.match(readFileSync(`${outputDir}/fixture-daily.md`,'utf8'),/2000-01-01 每日研究简报/);
+  await page.locator('#daily-today').click();
+  await dailyLead.waitFor();
+  await page.evaluate(()=>window.scrollTo(0,0));
+  await page.screenshot({path:`${outputDir}/desktop-daily.png`,fullPage:true});
   await page.setViewportSize({width:390,height:844});
   await page.evaluate(()=>window.scrollTo(0,0));
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.screenshot({path:`${outputDir}/mobile-daily.png`,fullPage:true});
+  checked('每日看板日期、空状态、历史简报下载、原文分组与研究卡、双向反馈、选题和偏好，桌面与窄屏可操作');
+  await page.locator('#tab-discovery').click();
   await page.screenshot({path:`${outputDir}/mobile-discovery.png`,fullPage:true});
   checked('发现页可按主题搜索、跟踪仓库、粘贴 X 线索并按原文合并，窄屏可操作');
   await afterArticleAction(() => page.locator('#tab-library').click(), { count: 3, caption: '共 3 篇资料' });

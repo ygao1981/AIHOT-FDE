@@ -2,13 +2,14 @@
   "topics": [
     {"id":"deployment","label":"企业 AI 上线","hn":"LLM production","x":"(\"AI agents\" OR LLM) (\"in production\" OR deployment OR 上线)"},
     {"id":"integration","label":"系统集成与交付","hn":"agent integration","x":"(\"AI agent\" OR 智能体) (integration OR \"legacy system\" OR 系统集成 OR 交付)"},
-    {"id":"rag","label":"RAG 与知识库","hn":"RAG","x":"(RAG OR 检索增强) (retrieval OR evaluation OR 权限 OR 知识库)"},
-    {"id":"permissions","label":"权限与数据隔离","hn":"agent permissions","x":"(\"AI agent\" OR LLM OR 智能体) (permissions OR \"access control\" OR 数据隔离)"},
+    {"id":"rag","label":"RAG 与知识库","hn":"\"RAG\"","x":"(RAG OR 检索增强) (retrieval OR evaluation OR 权限 OR 知识库)"},
+    {"id":"permissions","label":"权限与数据隔离","hn":"MCP gateway","x":"(\"AI agent\" OR LLM OR 智能体) (permissions OR \"access control\" OR 数据隔离)"},
     {"id":"evals","label":"评测与可观测性","hn":"LLM evals","x":"(LLM OR 智能体) (evals OR observability OR 评测 OR 可观测性)"},
     {"id":"cost","label":"成本与性能","hn":"LLM inference cost","x":"(LLM OR inference OR 大模型) (latency OR \"token cost\" OR 成本 OR 延迟)"},
     {"id":"recovery","label":"故障恢复与复盘","hn":"agent reliability","x":"(LLM OR \"AI agent\") (postmortem OR retries OR rollback OR 故障恢复 OR 回滚)"},
     {"id":"review","label":"人工审批与复核","hn":"human in the loop agent","x":"(agent OR 智能体) (\"human in the loop\" OR approvals OR 人工审批 OR 人工复核)"},
-    {"id":"industrial","label":"工业应用与现场交付","hn":"AI manufacturing","x":"(AI OR 智能体) (manufacturing OR maintenance OR 制造 OR 工业 OR 质检)"}
+    {"id":"industrial","label":"工业应用与现场交付","hn":"industrial automation","x":"(AI OR 智能体) (manufacturing OR warehouse OR maintenance OR 制造 OR 仓储 OR 质检)"},
+    {"id":"delivery","label":"客户协作与 FDE 交付","hn":"enterprise agent integration","x":"(\"forward deployed engineer\" OR \"AI implementation\" OR AI交付) (customer OR integration OR 复盘 OR 验收)"}
   ],
   "authors": [
     {"handle":"simonw","name":"Simon Willison","focus":"LLM 工具、工程实践","site":"https://simonwillison.net/about/"},
@@ -18,13 +19,13 @@
     {"handle":"chipro","name":"Chip Huyen","focus":"生产机器学习与 AI 工程","site":"https://huyenchip.com/"}
   ],
   "repositories": [
-    {"repo":"datawhalechina/all-in-rag","label":"Datawhale All-in-RAG","path":"docs"},
+    {"repo":"datawhalechina/all-in-rag","label":"Datawhale All-in-RAG","path":"docs","watchByDefault":true},
     {"repo":"datawhalechina/hello-agents","label":"Datawhale Hello-Agents","path":"docs"},
     {"repo":"datawhalechina/happy-llm","label":"Datawhale Happy-LLM","path":"docs"},
     {"repo":"alibaba/spring-ai-alibaba","label":"Spring AI Alibaba","path":"docs"},
     {"repo":"langchain-ai/langgraph","label":"LangGraph","path":"docs"},
     {"repo":"openai/openai-agents-python","label":"OpenAI Agents SDK","path":"docs"},
-    {"repo":"agentscope-ai/agentscope","label":"AgentScope","path":"docs"},
-    {"repo":"vllm-project/vllm","label":"vLLM","path":"docs"}
+    {"repo":"agentscope-ai/agentscope","label":"AgentScope","path":"docs","watchByDefault":true},
+    {"repo":"vllm-project/vllm","label":"vLLM","path":"docs","watchByDefault":true}
   ]
 }

@@ -161,7 +161,7 @@ export class Worker {
     // Collection is ordinary I/O; a slow source must not delay already queued analysis.
     if(this.config.collectEnabled&&!this.collecting)void this.collect().catch(()=>{});
     if(this.config.collectEnabled&&!this.discoveryTask&&this.discovery){
-      this.discoveryTask=this.discovery.refreshWatched().catch(()=>{}).finally(()=>{this.discoveryTask=null;});
+      this.discoveryTask=this.discovery.refresh().catch(()=>{}).finally(()=>{this.discoveryTask=null;});
     }
     await this.wake();
   }

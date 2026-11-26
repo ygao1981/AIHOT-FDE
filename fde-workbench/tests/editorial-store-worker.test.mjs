@@ -52,7 +52,7 @@ test('schema 1 migrates without changing five historical receipts, three researc
     settings:old.prepare('SELECT * FROM settings').all(),sources:old.prepare('SELECT * FROM source_state').all()};old.close();
   const store=new Store(directory);
   try{
-    assert.equal(store.db.prepare('PRAGMA user_version').get().user_version,4);
+    assert.equal(store.db.prepare('PRAGMA user_version').get().user_version,5);
     for(const [index,{queue_origin,research_key,...article}] of store.db.prepare('SELECT * FROM articles ORDER BY id').all().entries()){
       assert.deepEqual(article,{...before.articles[index]});assert.equal(queue_origin,null);
       assert.equal(research_key,`example.com/legacy-${index+1}`);

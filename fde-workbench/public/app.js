@@ -152,6 +152,7 @@ function expireSession() {
   preserveNotes(); state.authenticated = false; state.overview = null; state.listRequest++; state.detailRequest++;
   state.collection = null; state.sourceRequest++; $('collection-fields').disabled = true; renderCollectionActivity();
   resetDiscovery();
+  resetDaily();
   for (const id of ['detail-dialog', 'import-dialog']) if ($(id).open) $(id).close();
   syncDialogState(); showLogin('登录已过期，请重新输入访问口令。未保存的笔记暂留在当前页面，请不要关闭页面。');
 }
@@ -182,8 +183,8 @@ function renderOverview() {
   $('collection-notice').firstElementChild.textContent = `${collectionMode}${modelMode}`;
 }
 async function switchView(view, updateHash = true) {
-  const views = ['library', 'discovery', 'sources', 'usage'];
-  const current = views.includes(view) ? view : 'library';
+  const views = ['today', 'library', 'discovery', 'sources', 'usage'];
+  const current = views.includes(view) ? view : 'today';
   state.view = current;
   if (updateHash && location.hash !== `#${current}`) history.replaceState(null, '', `#${current}`);
   for (const name of views) {
@@ -195,6 +196,7 @@ async function switchView(view, updateHash = true) {
   try {
     if (current === 'library') await loadArticles();
     else if (current === 'discovery') await openDiscovery();
+    else if (current === 'today') await loadDaily();
     else if (current === 'sources') await loadSources();
     else { renderUsage(); await loadOverview(); }
   } catch (error) { if (state.authenticated) showWorkspaceError(error); }
@@ -686,6 +688,7 @@ for (const id of ['detail-dialog', 'import-dialog']) $(id).addEventListener('cli
 });
 $('collect-now').addEventListener('click', collectNow);
 wireDiscovery();
+wireDaily();
 $('collection-form').addEventListener('submit', saveCollectionSettings);
 $('resume-banner').addEventListener('click', event => controlAnalysis('resume', event.currentTarget));
 window.addEventListener('beforeunload', event => { if (state.noteDirty || state.drafts.size) { event.preventDefault(); event.returnValue = ''; } });

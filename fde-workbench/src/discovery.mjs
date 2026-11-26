@@ -6,6 +6,7 @@ import { AppError } from './config.mjs';
 import { canonicalUrl, fetchText } from './fetch.mjs';
 import { researchPriority } from './relevance.mjs';
 import { isXUrl, researchKey, xPostUrl } from './research-url.mjs';
+import { TopicSubscriptions } from './subscriptions.mjs';
 
 const CATALOG=JSON.parse(readFileSync(new URL('../config/discovery.json',import.meta.url),'utf8'));
 const GITHUB='https://api.github.com';
@@ -15,7 +16,7 @@ const DISCUSSIONS_QUERY=`query($owner:String!,$name:String!){
   repository(owner:$owner,name:$name){
     isPrivate
     discussions(first:12,orderBy:{field:UPDATED_AT,direction:DESC}){
-      nodes{title url createdAt updatedAt bodyText comments{totalCount}}
+      nodes{title url createdAt updatedAt bodyText author{login} comments{totalCount} answer{authorAssociation}}
     }
   }
 }`;
@@ -57,7 +58,7 @@ function relatedUrl(input,mentionUrl) {
   return url;
 }
 
-function item({url,relatedUrl:original=null,channel,kind,title,excerpt='',publishedAt,activityAt,points,comments}) {
+function item({url,relatedUrl:original=null,channel,kind,title,excerpt='',publishedAt,activityAt,points,comments,author,signal}) {
   url=publicUrl(url);
   title=compact(title,300);
   if(!url||!title)return null;
@@ -65,9 +66,10 @@ function item({url,relatedUrl:original=null,channel,kind,title,excerpt='',publis
   let priority=kind==='doc'?2:researchPriority({title,body:excerpt,trustedProject:channel==='github'});
   if(channel==='hn'&&/^Ask HN:/i.test(title))priority=Math.min(1,priority);
   if(channel==='hn'&&/^Launch HN:/i.test(title))priority=Math.min(2,priority);
+  if(channel==='github'&&signal)priority=Math.max(2,priority);
   return {url,relatedUrl:publicUrl(original),channel,kind,title,excerpt,publishedAt:date(publishedAt),
     activityAt:date(activityAt),points:metric(points),comments:metric(comments),
-    priority};
+    priority,author:compact(author,80)||null,signal:signal||null};
 }
 
 function uniqueItems(items) {
@@ -96,25 +98,41 @@ function significantDocFiles(files,path) {
   }).slice(0,5);
 }
 
+function hasReproduction(body) {
+  const clean=String(body||'').replace(/<!--[\s\S]*?-->/g,'');
+  const heading=/(?:^|\n)[ \t]*(?:#{1,6}[ \t]+)?(?:steps to reproduce|minimal (?:example|reproducer)|reproduction(?: steps)?|复现步骤|最小复现)(?:[ \t]*[:：][ \t]*|[ \t]*\r?\n)/i.exec(clean);
+  if(!heading)return false;
+  const notes=clean.slice(heading.index+heading[0].length).split(/\r?\n\s*#{1,6}\s+/,1)[0];
+  return notes.split(/\r?\n/).some(line=>{
+    const text=line.replace(/^[\s#>*\d.、()-]+/,'').trim();
+    return !/^(?:请|please\b|例如[：:]|example:|(?:no response|n\/a|none|todo|无|暂无)(?:$|[\s。,.：:]))/i.test(text)&&
+      (/[\u4e00-\u9fff]{8}/u.test(text)||text.length>=18);
+  });
+}
+
 export class Discovery {
   constructor(store,config,{fetcher=fetchText,transport=fetch}={}) {
     this.store=store;this.config=config;this.fetcher=fetcher;this.transport=transport;
     this.cache=new Map();
     this.githubBusy=false;
     this.hnBusy=false;
+    this.subscriptions=new TopicSubscriptions(store,CATALOG.topics,options=>this.hnPage(options));
   }
 
   catalog() {
     const repositories=CATALOG.repositories.map(entry=>({...entry,
-      watching:this.store.setting('discovery_watch:'+entry.repo)==='true',
+      watching:(this.store.setting('discovery_watch:'+entry.repo)??String(Boolean(entry.watchByDefault)))==='true',
       checkedAt:this.store.setting('discovery_checked:'+entry.repo),
+      attemptedAt:this.store.setting('discovery_attempted:'+entry.repo),
     }));
     return {...CATALOG,repositories,githubDiscussions:Boolean(this.config.githubDiscussionsToken)};
   }
 
   async api(url,{github=false,query}={}) {
-    if(github&&Date.now()<Number(this.store.setting('github_discovery_wait_until')))
-      throw new AppError('github_rate_limit','GitHub 要求降低频率。请稍后再检查仓库更新。',429);
+    const cooldown=github?'github_discovery_wait_until':'hn_discovery_wait_until';
+    const limit=()=>new AppError(github?'github_rate_limit':'hn_rate_limit',
+      github?'GitHub 要求降低频率。请在限流解除后重新检查。':'Hacker News 要求降低频率。请在限流解除后重新检查。',429);
+    if(Date.now()<Number(this.store.setting(cooldown)))throw limit();
     const address=new URL(url);
     // The destinations and the optional token are confined to these endpoints.
     if(address.origin!==(github?GITHUB:HN)||(query&&(!github||address.pathname!=='/graphql')))
@@ -131,13 +149,16 @@ export class Discovery {
             headers['Content-Type']='application/json';
           }
           const response=await this.transport(target,{...options,headers,...(query?{method:'POST',body:JSON.stringify(query)}:{})});
+          const retryAfter=response.headers.get('retry-after');
+          const retry=retryAfter===null?0:/^\d+$/.test(retryAfter)?Date.now()+Number(retryAfter)*1000:Date.parse(retryAfter)||0;
+          if(!github&&(response.status===429||response.status===503&&retry))
+            this.store.setSetting(cooldown,Math.max(Date.now()+60000,retry));
           if(github){
             const exhausted=response.headers.get('x-ratelimit-remaining')==='0';
-            const retry=Number(response.headers.get('retry-after'))||0;
             const reset=exhausted?(Number(response.headers.get('x-ratelimit-reset'))||0)*1000:0;
             if(exhausted||retry||[403,429].includes(response.status)) {
-              const resume=Math.max(Date.now()+60000,Date.now()+retry*1000,reset);
-              this.store.setSetting('github_discovery_wait_until',resume);
+              const resume=Math.max(Date.now()+60000,retry,reset);
+              this.store.setSetting(cooldown,resume);
             }
           }
           return response;
@@ -146,8 +167,7 @@ export class Discovery {
       try{return JSON.parse(response.text);}
       catch{throw new AppError('invalid_discovery_response','上游返回的内容暂时无法读取。',502);}
     }catch(error){
-      if(github&&Date.now()<Number(this.store.setting('github_discovery_wait_until'))&&error.code==='source_http')
-        throw new AppError('github_rate_limit','GitHub 暂时拒绝请求。已暂停下一次检查，请稍后重试。',429);
+      if(Date.now()<Number(this.store.setting(cooldown))&&error.code==='source_http')throw limit();
       throw error;
     }
   }
@@ -175,11 +195,16 @@ export class Discovery {
     const start=from?+calendarDate(from):currentDay-29*86400000;
     const end=(to?+calendarDate(to):currentDay)+86400000;
     if(start>=end)throw new AppError('invalid_discovery_date','开始日期应早于或等于结束日期。');
-    const url=new URL(HN+'/api/v1/'+(params.get('sort')==='relevant'?'search':'search_by_date'));
-    const numericFilters=[`created_at_i>=${Math.floor(start/1000)}`,`created_at_i<${Math.floor(end/1000)}`];
+    return this.hnPage({term,points,comments,page,start:Math.floor(start/1000),end:Math.floor(end/1000),sort:params.get('sort')});
+  }
+
+  async hnPage({term,points=0,comments=0,page=0,start,end,sort}) {
+    const url=new URL(HN+'/api/v1/'+(sort==='relevant'?'search':'search_by_date'));
+    const numericFilters=[`created_at_i>=${start}`,`created_at_i<${end}`];
     if(points)numericFilters.push('points>='+points);
     if(comments)numericFilters.push('num_comments>='+comments);
     url.search=new URLSearchParams({query:term,tags:'story',numericFilters:numericFilters.join(','),hitsPerPage:'20',page:String(page)});
+    if(term.includes('"'))url.searchParams.set('advancedSyntax','true');
     const cacheKey='hn '+url.href;
     const existing=this.cached(cacheKey);
     if(existing)return existing;
@@ -191,9 +216,12 @@ export class Discovery {
       const items=uniqueItems(data.hits.filter(hit=>/^\d+$/.test(hit.objectID)).map(hit=>{
         const platformUrl='https://news.ycombinator.com/item?id='+hit.objectID;
         return item({channel:'hn',kind:'story',url:platformUrl,relatedUrl:hit.url===platformUrl?null:hit.url,
-          title:hit.title,excerpt:localText(hit.story_text),publishedAt:hit.created_at,points:hit.points,comments:hit.num_comments});
+          title:hit.title,excerpt:localText(hit.story_text),publishedAt:hit.created_at||(
+            Number.isSafeInteger(hit.created_at_i)?new Date(hit.created_at_i*1000).toISOString():null),
+          points:hit.points,comments:hit.num_comments,author:hit.author});
       })).sort((a,b)=>b.priority-a.priority);
-      return this.remember(cacheKey,{items,page,total:metric(data.nbHits),hasMore:page+1<Math.min(20,data.nbPages||0)});
+      return this.remember(cacheKey,{items,page,total:metric(data.nbHits),pages:metric(data.nbPages),raw:data.hits.length,
+        pageSize:20,hasMore:page+1<Math.min(20,data.nbPages||0)});
     }finally{this.hnBusy=false;}
   }
 
@@ -209,8 +237,7 @@ export class Discovery {
     if(this.githubBusy)throw new AppError('discovery_busy','有仓库正在检查，请稍后再试。',409);
     this.githubBusy=true;
     try{
-      const {items,warnings}=await this.githubItems(selection,days,kind);
-      return this.remember(cacheKey,{items,warnings});
+      return this.remember(cacheKey,await this.githubItems(selection,days,kind));
     }finally{this.githubBusy=false;}
   }
 
@@ -220,10 +247,12 @@ export class Discovery {
     const since=new Date(Date.now()-days*86400000).toISOString();
     const want=type=>kind===type||kind==='all';
     const items=[],warnings=[];
+    let complete=true;
     const read=(path,params={})=>this.api(endpoint+path+(Object.keys(params).length?'?'+new URLSearchParams(params):''),{github:true});
     const push=(entry,type,options={})=>items.push(item({channel:'github',kind:type,url:entry.html_url,
       relatedUrl:['repository','release','doc'].includes(type)||type==='pull'&&entry.merged_at?entry.html_url:null,
-      title:entry.title,excerpt:entry.body,publishedAt:entry.created_at,activityAt:entry.updated_at,comments:entry.comments,...options}));
+      title:entry.title,excerpt:entry.body,publishedAt:entry.created_at,activityAt:entry.updated_at,comments:entry.comments,
+      author:entry.user?.login,...options}));
     const jobs=[];
     if(want('repository'))jobs.push(['仓库',async()=>{
       const entry=await read('');
@@ -232,7 +261,7 @@ export class Discovery {
     }]);
     if(want('issue'))jobs.push(['Issue',async()=>{
       for(const entry of await read('/issues',{state:'all',sort:'updated',direction:'desc',since,per_page:'20'}))
-        if(!entry.pull_request&&date(entry.updated_at)>=since)push(entry,'issue');
+        if(!entry.pull_request&&date(entry.updated_at)>=since)push(entry,'issue',{signal:hasReproduction(entry.body)?'reproduction':null});
     }]);
     if(want('pull'))jobs.push(['PR',async()=>{
       for(const entry of await read('/pulls',{state:'all',sort:'updated',direction:'desc',per_page:'12'}))
@@ -270,7 +299,8 @@ export class Discovery {
         if(!record||response.errors?.length||!record.discussions?.nodes)throw new AppError('github_discussion_unavailable','这个仓库的 Discussion 暂不可读。');
         if(record.isPrivate)return;
         for(const entry of record.discussions.nodes)
-          if(entry&&date(entry.updatedAt)>=since)push(entry,'discussion',{url:entry.url,excerpt:entry.bodyText,
+          if(entry&&date(entry.updatedAt)>=since)push(entry,'discussion',{url:entry.url,excerpt:entry.bodyText,author:entry.author?.login,
+            signal:['OWNER','MEMBER','COLLABORATOR'].includes(entry.answer?.authorAssociation)?'maintainer_answer':null,
             publishedAt:entry.createdAt,activityAt:entry.updatedAt,comments:entry.comments?.totalCount});
       }]);
       else warnings.push('Discussion 可打开仓库中的原生页面。配置只读 GitHub 凭据后可以在这里检查。');
@@ -278,12 +308,13 @@ export class Discovery {
     for(const [label,job] of jobs) {
       try{await job();}
       catch(error){
+        complete=false;
         warnings.push(`${label} ${error.code==='github_rate_limit'?'暂时达到 GitHub 请求限制，请稍后再检查。':'暂时无法读取。可以打开原项目查看。'}`);
         if(error.code==='github_rate_limit')break;
       }
     }
     const sorted=uniqueItems(items).sort((a,b)=>b.priority-a.priority||(b.activityAt||b.publishedAt||'').localeCompare(a.activityAt||a.publishedAt||''));
-    return {items:sorted,warnings};
+    return {items:sorted,warnings,complete};
   }
 
   watch({repo,enabled}) {
@@ -295,13 +326,19 @@ export class Discovery {
   async refreshWatched(now=Date.now()) {
     if(!this.config.collectEnabled||this.githubBusy||now<Number(this.store.setting('github_discovery_wait_until'))||
       now-Number(this.store.setting('discovery_last_poll'))<15*60000)return;
+    const last=entry=>entry.attemptedAt||entry.checkedAt||'';
     const due=this.catalog().repositories.filter(entry=>entry.watching&&
-      now-(Date.parse(entry.checkedAt)||0)>=12*3600000).sort((a,b)=>(a.checkedAt||'').localeCompare(b.checkedAt||''))[0];
+      now-(Date.parse(last(entry))||0)>=12*3600000).sort((a,b)=>last(a).localeCompare(last(b)))[0];
     if(!due)return;
     this.store.setSetting('discovery_last_poll',now);
+    this.store.setSetting('discovery_attempted:'+due.repo,new Date(now).toISOString());
     const result=await this.github({repo:due.repo,days:30});
     this.store.saveLeadMentions(result.items.filter(entry=>entry.priority>=2&&entry.kind!=='repository'));
-    if(result.items.length||!result.warnings.length)this.store.setSetting('discovery_checked:'+due.repo,new Date(now).toISOString());
+    if(result.complete)this.store.setSetting('discovery_checked:'+due.repo,new Date(now).toISOString());
+  }
+
+  async refresh() {
+    await Promise.allSettled([this.subscriptions.run(),this.refreshWatched()]);
   }
 
   save(body) {
@@ -316,7 +353,9 @@ export class Discovery {
       if(typeof body.url!=='string'||!body.url.trim())throw new AppError('invalid_x_link','请粘贴一条 X 帖子的完整链接。');
       const url=xPostUrl(body.url.trim()),excerpt=typeof body.excerpt==='string'?body.excerpt.trim().slice(0,16000):'';
       const title=compact(body.title,300)||(excerpt?compact(excerpt,100):'X 帖子 '+url.split('/').at(-1));
+      const handle=/^\/([\w]+)\/status\//.exec(new URL(body.url.trim()).pathname)?.[1];
       entries=[{channel:'x',kind:'post',url,relatedUrl:relatedUrl(body.relatedUrl,url),title,excerpt,
+        author:handle&&handle.toLowerCase()!=='i'?handle:null,
         priority:researchPriority({title,body:excerpt})}];
     }
     if(!entries.length)throw new AppError('empty_discovery_selection','请选择需要留下的线索。');

@@ -27,7 +27,7 @@ export class Store {
     chmodSync(this.path, 0o600);
     this.db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
     const version = this.db.prepare('PRAGMA user_version').get().user_version;
-    if (version > 4) { this.db.close(); throw new AppError('newer_database', '数据库版本高于本程序，请使用对应的新版本。'); }
+    if (version > 5) { this.db.close(); throw new AppError('newer_database', '数据库版本高于本程序，请使用对应的新版本。'); }
     if (version === 0) this.db.exec(`BEGIN IMMEDIATE;
       CREATE TABLE articles (
         id TEXT PRIMARY KEY, url TEXT NOT NULL UNIQUE, title TEXT NOT NULL, source_id TEXT NOT NULL,
@@ -100,6 +100,21 @@ export class Store {
         for(const {id,url} of this.db.prepare('SELECT id,url FROM articles').all())update.run(researchKey(url),id);
         this.db.exec('PRAGMA user_version=4');
       });
+    }catch{
+      this.db.close();
+      throw new AppError('migration_failed','资料库升级未完成，请保留数据库与备份，并检查文件权限和可用空间。');
+    }
+    if(version<5)try{
+      this.transaction(()=>this.db.exec(`
+        ALTER TABLE lead_mentions ADD COLUMN author TEXT;
+        ALTER TABLE lead_mentions ADD COLUMN signal TEXT;
+        CREATE INDEX lead_mentions_created ON lead_mentions(created_at);
+        CREATE TABLE research_feedback(
+          target_key TEXT NOT NULL,label TEXT NOT NULL,context_json TEXT NOT NULL,created_at TEXT NOT NULL,
+          PRIMARY KEY(target_key,label)
+        );
+        PRAGMA user_version=5;
+      `));
     }catch{
       this.db.close();
       throw new AppError('migration_failed','资料库升级未完成，请保留数据库与备份，并检查文件权限和可用空间。');
@@ -179,14 +194,14 @@ export class Store {
       const find=this.db.prepare('SELECT 1 FROM lead_mentions WHERE mention_key=?');
       const group=this.db.prepare('SELECT 1 FROM lead_mentions WHERE COALESCE(related_key,mention_key)=? LIMIT 1');
       const write=this.db.prepare(`INSERT INTO lead_mentions(mention_key,url,related_url,related_key,channel,kind,title,excerpt,
-        published_at,activity_at,points,comments,priority,created_at,checked_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        published_at,activity_at,points,comments,priority,created_at,checked_at,author,signal) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(mention_key) DO UPDATE SET
         related_url=COALESCE(lead_mentions.related_url,excluded.related_url),related_key=COALESCE(lead_mentions.related_key,excluded.related_key),
         title=CASE WHEN excluded.excerpt<>'' OR lead_mentions.excerpt='' THEN excluded.title ELSE lead_mentions.title END,
         excerpt=COALESCE(NULLIF(excluded.excerpt,''),lead_mentions.excerpt),published_at=COALESCE(excluded.published_at,lead_mentions.published_at),
         activity_at=COALESCE(excluded.activity_at,lead_mentions.activity_at),points=excluded.points,comments=excluded.comments,
         priority=CASE WHEN excluded.excerpt='' AND lead_mentions.excerpt<>'' THEN lead_mentions.priority ELSE excluded.priority END,
-        checked_at=excluded.checked_at`);
+        checked_at=excluded.checked_at,author=COALESCE(excluded.author,lead_mentions.author),signal=COALESCE(excluded.signal,lead_mentions.signal)`);
       let added=0,duplicates=0,linked=0;
       const stamp=nowIso();
       for(const item of items) {
@@ -194,15 +209,24 @@ export class Store {
         if(find.get(key))duplicates++;
         else{added++;if(group.get(related||key)||this.findResearchArticle(item.relatedUrl||item.url))linked++;}
         write.run(key,item.url,item.relatedUrl??null,related,item.channel,item.kind,item.title,item.excerpt??'',
-          item.publishedAt??null,item.activityAt??null,item.points??null,item.comments??null,item.priority,stamp,stamp);
+          item.publishedAt??null,item.activityAt??null,item.points??null,item.comments??null,item.priority,stamp,stamp,
+          item.author??null,item.signal??null);
       }
       return {added,duplicates,linked};
     });
   }
   linkLeadMention(url,relatedUrl) {
-    const result=this.db.prepare('UPDATE lead_mentions SET related_url=?,related_key=? WHERE mention_key=?')
-      .run(relatedUrl,researchKey(relatedUrl),researchKey(url));
-    if(!result.changes)throw new AppError('not_found','这条线索已找不到，请刷新线索池。',404);
+    const original=researchKey(relatedUrl),key=researchKey(url);
+    this.transaction(()=>{
+      const old=this.db.prepare('SELECT related_key FROM lead_mentions WHERE mention_key=?').get(key);
+      if(!old)throw new AppError('not_found','这条线索已找不到，请刷新线索池。',404);
+      this.db.prepare('UPDATE lead_mentions SET related_url=?,related_key=? WHERE mention_key=?').run(relatedUrl,original,key);
+      if(!old.related_key&&key!==original){
+        this.db.prepare(`INSERT OR IGNORE INTO research_feedback(target_key,label,context_json,created_at)
+          SELECT ?,label,context_json,created_at FROM research_feedback WHERE target_key=?`).run(original,key);
+        this.db.prepare('DELETE FROM research_feedback WHERE target_key=?').run(key);
+      }
+    });
   }
   listLeadGroups(offset=0) {
     const size=24;
@@ -210,7 +234,7 @@ export class Store {
       MAX(COALESCE(activity_at,published_at,created_at)) AS latest,COUNT(*) AS mentionCount
       FROM lead_mentions GROUP BY 1 ORDER BY priority DESC,latest DESC,key LIMIT ? OFFSET ?`).all(size+1,offset);
     const members=this.db.prepare(`SELECT url,related_url AS relatedUrl,channel,kind,title,excerpt,
-      published_at AS publishedAt,activity_at AS activityAt,points,comments,priority,checked_at AS checkedAt
+      published_at AS publishedAt,activity_at AS activityAt,points,comments,priority,checked_at AS checkedAt,author,signal
       FROM lead_mentions WHERE COALESCE(related_key,mention_key)=? ORDER BY related_url IS NULL,priority DESC,checked_at DESC,url LIMIT 20`);
     return {items:groups.slice(0,size).map(group=>{
       const mentions=members.all(group.key);
@@ -476,7 +500,9 @@ export class Store {
   }
   retention(days) {
     // Never delete analyzed material, personal notes, shortlisted topics or receipt history.
-    return this.db.prepare(`DELETE FROM articles WHERE status IN ('skipped','candidate','needs_body') AND editorial_status='new' AND personal_notes='' AND analysis_json IS NULL AND created_at<? AND NOT EXISTS(SELECT 1 FROM attempts WHERE attempts.article_id=articles.id)`).run(new Date(Date.now()-days*86400000).toISOString()).changes;
+    return this.db.prepare(`DELETE FROM articles WHERE status IN ('skipped','candidate','needs_body') AND editorial_status='new' AND personal_notes='' AND analysis_json IS NULL AND created_at<?
+      AND NOT EXISTS(SELECT 1 FROM attempts WHERE attempts.article_id=articles.id)
+      AND NOT EXISTS(SELECT 1 FROM research_feedback WHERE target_key=articles.research_key)`).run(new Date(Date.now()-days*86400000).toISOString()).changes;
   }
   exportRows() { return this.db.prepare("SELECT * FROM articles WHERE analysis_json IS NOT NULL AND editorial_status!='archived' ORDER BY created_at DESC").all().map(r=>present(r,true)); }
   async backupTo(path) { await backup(this.db,path); chmodSync(path,0o600); }

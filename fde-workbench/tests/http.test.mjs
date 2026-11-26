@@ -19,7 +19,7 @@ async function app(t,overrides={},deps={}) {
 }
 test('private APIs require login; health contains no credentials; session uses HttpOnly',async t=>{
   const ctx=await app(t);assert.equal((await ctx.request('/api/articles')).status,401);
-  assert.deepEqual(await(await ctx.request('/api/health')).json(),{ok:true,version:'2.3.0'});
+  assert.deepEqual(await(await ctx.request('/api/health')).json(),{ok:true,version:'2.3.1'});
   const login=await ctx.request('/api/login',{method:'POST',body:JSON.stringify({token:ctx.config.accessToken})});
   assert.equal(login.status,200);assert.match(login.headers.get('set-cookie'),/HttpOnly/);
   const cookie=login.headers.get('set-cookie').split(';')[0];

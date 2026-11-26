@@ -76,24 +76,29 @@ test('GitHub discovers public project artifacts and Discussion, accepts substant
     const path=new URL(value).pathname.split('/').at(-1);calls.push(path);
     const payload={
       'all-in-rag':{html_url:project,full_name:repo,private:false,description:'RAG tutorial',pushed_at:stamp,stargazers_count:321},
-      issues:[row(1),row(2,{pull_request:{}})],pulls:[row(2,{html_url:project+'/pull/2',merged_at:null}),row(3,{html_url:project+'/pull/3',merged_at:stamp})],
+      issues:[row(1,{body:'## 复现步骤\n先启用中文分词并运行评测。\n## 预期结果\n应该能召回文档。'}),
+        row(2,{pull_request:{}}),row(5,{body:'## 复现步骤\n<!-- 请贴上复现步骤或者代码 -->\n暂无\n## 预期结果\n错误应该停止出现。'})],
+      pulls:[row(2,{html_url:project+'/pull/2',merged_at:null}),row(3,{html_url:project+'/pull/3',merged_at:stamp})],
       releases:[row(0,{html_url:project+'/releases/tag/v1',name:'RAG release',draft:false,published_at:stamp})],
       commits:[{sha,html_url:project+'/commit/'+sha,commit:{message:'Add detailed directions',committer:{date:stamp}}},
         {sha:minor,html_url:project+'/commit/'+minor,commit:{message:'Minor change',committer:{date:stamp}}}],
       [sha]:{files:[{filename:'docs/retrieval.md',status:'added',patch:added}]},
       [minor]:{files:[{filename:'docs/CHANGELOG.md',status:'modified',patch:added},{filename:'docs/wording.md',status:'modified',patch:'+Short change'}]},
-      graphql:{data:{repository:{isPrivate:false,discussions:{nodes:[{url:project+'/discussions/4',title:'RAG evaluation',bodyText:body,createdAt:stamp,updatedAt:stamp,comments:{totalCount:0}}]}}}},
+      graphql:{data:{repository:{isPrivate:false,discussions:{nodes:[{url:project+'/discussions/4',title:'RAG evaluation',bodyText:body,createdAt:stamp,updatedAt:stamp,comments:{totalCount:0},answer:{authorAssociation:'MEMBER'}}]}}}},
     };
     assert.ok(path in payload);
     return {text:JSON.stringify(payload[path])};
   }});
   const result=await discovery.github({repo,days:2});
   assert.deepEqual(new Set(result.items.map(x=>x.kind)),new Set(['repository','issue','pull','release','doc','discussion']));
-  assert.equal(result.items.length,7);
+  assert.equal(result.items.length,8);
+  assert.equal(result.items.find(x=>x.url.endsWith('/issues/1')).signal,'reproduction');
+  assert.equal(result.items.find(x=>x.url.endsWith('/issues/5')).signal,null);
   assert.equal(result.items.filter(x=>x.kind==='doc').length,1);
   assert.equal(result.items.find(x=>x.url.endsWith('/pull/2')).relatedUrl,null);
   assert.equal(result.items.find(x=>x.url.endsWith('/pull/3')).relatedUrl,project+'/pull/3');
   assert.equal(result.items.find(x=>x.kind==='discussion').comments,0);
+  assert.equal(result.items.find(x=>x.kind==='discussion').signal,'maintainer_answer');
   assert.equal(result.warnings.length,0);
   assert.equal(calls.length,8);
   await assert.rejects(discovery.github({repo:'side/project'}),{code:'invalid_discovery_repo'});
