@@ -1,4 +1,11 @@
-# CHECKPOINT — FDE 研究台 v2.2
+# CHECKPOINT — FDE 研究台
+
+## 2026-11-26 今日研究与主动发现
+
+- [RUN] Windows 本机运行 FDE Hot 2.3.1，功能提交 `6deffb5`。定时采集开启，自动分析关闭，手动分析恢复原有配置，滚动 24 小时自动上限 5 次。本轮新增真实模型尝试 0，原 10 条回执含 2 条 unknown 完整保留。
+- [RUN] 旧版先出 schema 4 快照。副本迁移、旧版回滚读取及正式 schema 5 逐表核对通过，保留 35 篇原资料、2 份稿件、32 条原信源状态和历史笔记。已完成本机 Edge 与独立浏览器回归。
+- [RUN] 现有调度器启动 HN 十个可配置主题和 GitHub 仓库跟踪。当轮两渠道共新增 15 组线索。Stripe 原文和 HN 投稿按同一链接归组，原文发布日期分类独立。已验收今日看板、简报下载、偏好、可撤销反馈和已有草稿的排版。
+- [READ] 后续从 `codex/fde-daily-research` 接手，该分支基于 [草稿 PR #8](https://github.com/ygao1981/AIHOT-FDE/pull/8) 的 `c148c7a`。查看 [验收与样本](fde-workbench/docs/VALIDATION.md#231-主动发现与每日研究) 或 [本机使用说明](http://127.0.0.1:3210/guide.html#daily)。
 
 ## 2026-11-25 免费信源发现与线索池
 

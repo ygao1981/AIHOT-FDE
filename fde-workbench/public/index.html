@@ -9,6 +9,7 @@
   <title>FDE 研究台</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/discovery.js" defer></script>
+  <script src="/daily.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -54,9 +55,10 @@
   <div id="workspace" hidden>
     <a class="skip-link" href="#main-content">跳到主要内容</a>
     <header class="app-header">
-      <a class="brand" href="#library"><span class="brand-mark" aria-hidden="true">F</span><span>FDE 研究台<small>个人研究工作台</small></span></a>
+      <a class="brand" href="#today"><span class="brand-mark" aria-hidden="true">F</span><span>FDE 研究台<small>个人研究工作台</small></span></a>
       <nav class="main-tabs" role="tablist" aria-label="工作区导航">
-        <button id="tab-library" type="button" role="tab" aria-selected="true" aria-controls="view-library" data-view="library"><svg class="icon" aria-hidden="true"><use href="#i-library"/></svg>研究库</button>
+        <button id="tab-today" type="button" role="tab" aria-selected="true" aria-controls="view-today" data-view="today"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>今日研究</button>
+        <button id="tab-library" type="button" role="tab" aria-selected="false" aria-controls="view-library" tabindex="-1" data-view="library"><svg class="icon" aria-hidden="true"><use href="#i-library"/></svg>研究库</button>
         <button id="tab-discovery" type="button" role="tab" aria-selected="false" aria-controls="view-discovery" tabindex="-1" data-view="discovery"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>发现线索</button>
         <button id="tab-sources" type="button" role="tab" aria-selected="false" aria-controls="view-sources" tabindex="-1" data-view="sources"><svg class="icon" aria-hidden="true"><use href="#i-sources"/></svg>信源</button>
         <button id="tab-usage" type="button" role="tab" aria-selected="false" aria-controls="view-usage" tabindex="-1" data-view="usage"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>用量</button>
@@ -68,7 +70,40 @@
       <div id="workspace-error" class="notice error" role="alert" hidden><p id="workspace-error-text"></p><button id="retry-workspace" class="button small" type="button">重新加载</button></div>
       <div id="pause-banner" class="notice warning" hidden><div><strong>模型任务已暂停</strong><p id="pause-reason"></p></div><button id="resume-banner" type="button" class="button small">恢复处理</button></div>
 
-      <section id="view-library" class="view" role="tabpanel" aria-labelledby="tab-library">
+      <section id="view-today" class="view" role="tabpanel" aria-labelledby="tab-today" hidden>
+        <div class="page-heading">
+          <div><h1>今日研究</h1><p id="daily-heading-note" class="page-lead">查看每日发现、研究进度和可用的原文证据。</p></div>
+          <div class="daily-controls">
+            <label for="daily-day">简报日期</label><input id="daily-day" type="date">
+            <button id="daily-today" type="button" class="button small">回到今天</button>
+            <a id="daily-export" class="button small" href="/api/daily/export">导出 Markdown</a>
+          </div>
+        </div>
+        <dl id="daily-counts" class="daily-counts" aria-label="所选日期研究概况"></dl>
+        <div class="daily-toolbar">
+          <p id="daily-runtime" class="section-note"></p>
+          <button id="daily-discovery" type="button" class="button small text-button">查看主题订阅</button>
+          <a href="/guide.html#daily" class="button small text-button">使用说明</a>
+        </div>
+        <p id="daily-report" role="status"></p>
+        <div id="daily-sections" class="daily-sections"></div>
+
+        <details id="research-preferences" class="daily-settings">
+          <summary>研究偏好与推荐权重</summary>
+          <p class="form-hint">提高关注方向的权重。反馈会小幅影响后续的主题、作者和信源排序。</p>
+          <form id="preference-form">
+            <div id="preference-fields"></div>
+            <div id="preference-learned" role="status"></div>
+            <div class="discovery-actions">
+              <button id="preferences-save" class="button primary" type="submit" disabled>保存偏好</button>
+              <button id="preferences-reset" class="button" type="button" disabled>恢复默认权重</button>
+            </div>
+            <p id="preference-result" role="status"></p>
+          </form>
+        </details>
+      </section>
+
+      <section id="view-library" class="view" role="tabpanel" aria-labelledby="tab-library" hidden>
         <div class="page-heading"><div><p class="eyebrow">资料 · 证据 · 选题</p><h1>研究库</h1><p class="page-lead">优先看业务问题、实施方法和可复用经验。</p></div><div class="page-actions"><button id="refresh-library" class="button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>刷新</button><button id="export-all" class="button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>导出研究资料</button></div></div>
         <div class="stat-grid" aria-label="研究库概况"><div class="stat-card"><span>已收录资料</span><strong id="stat-total">—</strong></div><div class="stat-card"><span>待分析资料</span><strong id="stat-candidate">—</strong></div><div class="stat-card"><span>已完成分析</span><strong id="stat-analyzed">—</strong></div><div class="stat-card emphasis"><span>已列入选题</span><strong id="stat-shortlisted">—</strong></div></div>
         <div class="library-help"><p id="analysis-mode" class="section-note"></p><a class="button text-button" href="/guide.html">使用说明</a></div>
@@ -154,6 +189,20 @@
             </form>
           </div>
         </div>
+
+        <details id="topic-subscriptions" class="daily-settings">
+          <summary>Hacker News 主题订阅</summary>
+          <p id="subscription-status" class="form-hint" role="status"></p>
+          <form id="subscription-form" class="discovery-fields">
+            <div class="form-field"><label for="subscription-topic">主题</label><select id="subscription-topic" required></select></div>
+            <div class="form-field discovery-grow"><label for="subscription-keyword">搜索词</label><input id="subscription-keyword" type="text" maxlength="160" required></div>
+            <div class="form-field"><label for="subscription-hours">间隔（小时）</label><input id="subscription-hours" type="number" min="2" max="168" required></div>
+            <label class="discovery-watch"><input id="subscription-enabled" type="checkbox">启用此主题</label>
+            <button id="subscription-save" type="submit" class="button small">保存订阅</button>
+            <button id="subscription-run" type="button" class="button small">检查此主题</button>
+          </form>
+          <div id="subscription-list" class="subscription-list"></div>
+        </details>
 
         <div id="discovery-results" class="discovery-results" hidden>
           <div class="discovery-heading"><h2>发现结果</h2><button id="save-discovery-batch" class="button small" type="button" hidden>保存本页线索</button></div>
