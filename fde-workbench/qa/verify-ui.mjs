@@ -276,6 +276,7 @@ try {
   await dailyLead.getByText(/互动 未知，评论 未知/).waitFor();
   assert.match(await dailyArticle.innerText(),/历史资料/);
   await dailyArticle.getByRole('button',{name:'查看研究卡'}).click();
+  await page.locator('#personal-notes').waitFor({state:'visible'});
   assert.match(await page.locator('#detail-content').innerText(),/这是用于界面验收|业务问题/);
   await page.locator('#close-detail').click();
   await dailyLead.getByRole('button',{name:'收藏',exact:true}).click();
