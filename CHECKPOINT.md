@@ -1,5 +1,13 @@
 # CHECKPOINT — FDE 研究台
 
+## 2026-11-27 腾讯 FDE 信源专项
+
+- [RUN] Windows 正式实例运行 2.3.1，功能提交 `44c7cb8`。定时采集开启，自动分析关闭，手动分析与现有代理沿用原配置，自动额度滚动 24 小时为 5 次。本轮真实模型尝试 0。
+- [RUN] 腾讯云 ADP 实机首轮读取日期和正文各 9 条，入库 5 条。另从重点资料收录 12 篇，今日研究计为历史 14 篇、原始日期未知 3 篇，当日发布 0。研究院报告的社区镜像复用同一条记录。
+- [RUN] WeKnora 已加入 GitHub 定时跟踪。通过官方公开接口在副本核验 12 条线索可落库，重查新增 0。认证、伙伴政策与产品动态在今日研究独立筛选。
+- [RUN] 旧版快照与正式实例及副本均为 SQLite schema 5。保留 49 篇原资料、两份草稿、原有线索与全部 10 条回执，其中两条为 unknown。Windows 150 项测试、生产依赖审计及 Edge 桌面和窄屏验收通过。 [专项验收](fde-workbench/docs/VALIDATION.md#2026-11-27-腾讯-fde-信源专项) [官方考纲与伙伴入口](fde-workbench/docs/SOURCES.md#两项-fde-认证及伙伴申报)
+- [READ] 开发分支 `codex/fde-tencent-sources` 以 [草稿 PR #9](https://github.com/ygao1981/AIHOT-FDE/pull/9) 的 `c3ce8ca` 为基线。运行目录仍为 `fde-workbench/`。
+
 ## 2026-11-26 今日研究与主动发现
 
 - [RUN] Windows 本机运行 FDE Hot 2.3.1，功能提交 `6deffb5`。定时采集开启，自动分析关闭，手动分析恢复原有配置，滚动 24 小时自动上限 5 次。本轮新增真实模型尝试 0，原 10 条回执含 2 条 unknown 完整保留。

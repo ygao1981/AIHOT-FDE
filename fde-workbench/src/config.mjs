@@ -77,6 +77,11 @@ export function readSources(path = resolve(ROOT, 'config/sources.json')) {
     if (url.protocol !== 'https:' || url.username || url.password) throw new AppError('invalid_sources', '信源需要无凭据的 HTTPS 地址。');
     if (s.kind === 'html_list' && !s.linkSelector) throw new AppError('invalid_sources', `信源 ${s.name} 缺少文章链接规则。`);
     if (s.linkPattern) new RegExp(s.linkPattern);
+    for (const ref of s.references||[]) {
+      const target=new URL(ref.url);
+      if(!ref.title||target.protocol!=='https:'||target.port||target.username||target.password)
+        throw new AppError('invalid_sources','重点原文必须是无凭据的 HTTPS 地址。');
+    }
     if (s.enabled && s.kind === 'manual') throw new AppError('invalid_sources', '人工入口不能启用自动采集。');
   }
   return list;

@@ -157,3 +157,26 @@ test('local relevance keeps practical tutorials and flags announcement copy',()=
   assert.notEqual(assessResearch({title:'企业 AI 客服评测试点',body:body.replaceAll('系统已在生产环境运行','原文没有生产上线的证据')}).type,'practice');
   assert.match(assessResearch({title:'Agentic production rollout postmortem',body:body+'实现步骤、权限和复盘。'}).reasons.join(' '),/生产上线|生产/);
 });
+
+test('daily filter finds actual project markets, separates standards and policy, and keeps the date totals',t=>{
+  const {store,config}=fixture(t,{analysisEnabled:false});
+  const service=new DailyResearch(store,config),today=service.read('').today;
+  const add=(url,title,text)=>store.upsertArticle({url,title,body:text,publishedAt:'2025-09-01'}).article;
+  const local=add('https://example.org/zh-project','国内制造企业知识库客户案例',
+    '浙江某工业设备公司完成系统对接，使用知识库支持海外客户的维修请求。'+body);
+  const overseas=add('https://example.org/global-project','海外企业知识库客户案例','加拿大企业为客户完成客服系统实施。'+body);
+  const study=add('https://example.org/report','前线共创与 FDE 行业观察',body);
+  const standard=add('https://cloud.tencent.com/edu/training/cert/detail?type=FAKE','企业 FDE 职业认证 - 培训认证中心',
+    '认证简介。理论考试用于核对实施能力。'+body);
+  const ecosystem=add('https://example.org/policy','FDE 伙伴准入政策',body);
+  const promotion=add('https://example.org/new','新品发布：企业 AI 智能体',body);
+  const full=service.read(today);
+  for(const [filter,entry] of Object.entries({domestic:local,overseas,method:study,standard,ecosystem,promotion})){
+    const selected=service.read(today,undefined,filter);
+    assert.deepEqual(selected.sections.flatMap(section=>section.items).map(item=>item.id),[entry.id],filter);
+    assert.deepEqual(selected.counts,full.counts);
+    assert.ok(service.markdown(today,filter).text.includes(entry.url));
+  }
+  assert.equal(full.sections.flatMap(section=>section.items).some(item=>item.id===standard.id),false);
+  assert.throws(()=>service.read(today,undefined,'bad'),{code:'invalid_research_filter'});
+});

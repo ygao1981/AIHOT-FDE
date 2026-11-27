@@ -77,9 +77,9 @@ export function createApp(store,worker,config,{importer=importArticle,discovery=
       if(!authenticated(req))throw new AppError('login_required','请先登录个人研究台。',401);
       if(path==='/api/logout'&&method==='POST'){res.setHeader('Set-Cookie','fde_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(res,200,{ok:true});}
       if(path==='/api/overview'&&method==='GET')return send(res,200,store.overview(config));
-      if(path==='/api/daily'&&method==='GET')return send(res,200,daily.read(url.searchParams.get('day')));
+      if(path==='/api/daily'&&method==='GET')return send(res,200,daily.read(url.searchParams.get('day'),undefined,url.searchParams.get('filter')));
       if(path==='/api/daily/export'&&method==='GET'){
-        const report=daily.markdown(url.searchParams.get('day'));
+        const report=daily.markdown(url.searchParams.get('day'),url.searchParams.get('filter'));
         res.writeHead(200,{'Content-Type':'text/markdown; charset=utf-8','Content-Disposition':`attachment; filename="fde-daily-${report.day}.md"`});
         return res.end(report.text);
       }

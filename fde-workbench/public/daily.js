@@ -1,6 +1,6 @@
 'use strict';
 
-const dailyUI={request:0,day:'',current:null,profile:null,subscriptions:null};
+const dailyUI={request:0,day:'',profile:null,subscriptions:null};
 const feedbackLabels={
   follow:'值得继续关注',proposal:'可用于企业方案',wechat:'适合公众号选题',practical:'有实际工程价值',
   theory:'偏理论，暂不关注',promo:'营销或课程推广',duplicate:'重复内容',unrelated:'与研究方向无关',
@@ -10,7 +10,8 @@ const subscriptionLabels={ok:'检查完成',progress:'还有分页待检查',fai
 
 function resetDaily(){
   dailyUI.request++;
-  Object.assign(dailyUI,{day:'',current:null,profile:null,subscriptions:null});
+  Object.assign(dailyUI,{day:'',profile:null,subscriptions:null});
+  $('daily-filter').value='';
   for(const id of ['daily-sections','daily-counts','preference-fields','preference-learned','subscription-list'])$(id).replaceChildren();
   for(const id of ['daily-report','daily-runtime','preference-result','subscription-status'])$(id).textContent='';
   $('research-preferences').open=false;
@@ -18,21 +19,29 @@ function resetDaily(){
 }
 
 async function loadDaily(day=dailyUI.day){
+  dailyUI.day=day;
+  const filter=$('daily-filter').value;
+  const params=new URLSearchParams();
+  if(day)params.set('day',day);
+  if(filter)params.set('filter',filter);
   const request=++dailyUI.request;
   $('daily-report').textContent='正在读取简报…';
   try {
-    const report=await api('/api/daily'+(day?'?day='+encodeURIComponent(day):''));
+    const report=await api('/api/daily?'+params);
     if(!state.authenticated||request!==dailyUI.request)return;
-    dailyUI.current=report;dailyUI.day=report.day;
+    dailyUI.day=report.day;
     $('daily-day').value=report.day;
     $('daily-day').max=report.today;
     $('daily-today').disabled=report.day===report.today;
-    $('daily-export').href='/api/daily/export?day='+encodeURIComponent(report.day);
+    params.set('day',report.day);
+    $('daily-export').href='/api/daily/export?'+params;
     $('daily-heading-note').textContent=report.day===report.today?'查看今天的发现、研究进度和原文。':`${report.day} 的发现与发布记录。研究进度显示当前状态。`;
     $('daily-counts').replaceChildren(...Object.entries(countLabels).map(([key,label])=>
       node('div',{},node('dt',{text:label}),node('dd',{text:count(report.counts[key])}))));
     $('daily-runtime').textContent=`${report.runtime.collecting?'定时采集已开启':'定时采集已关闭'}。自动分析${report.runtime.automaticAnalysis?'已开启':'已关闭'}，滚动 24 小时剩余 ${report.runtime.remaining} / ${report.runtime.limit} 次。`;
-    $('daily-report').textContent=report.sections.some(group=>group.count)?'已按现有工程线索和研究偏好排序。':'所选日期没有新增资料或线索。';
+    $('daily-report').textContent=report.sections.some(group=>group.count)?
+      (filter?'列表和导出按资料类型筛选。上方数字为所选日期总数。':'已按现有工程线索和研究偏好排序。'):
+      (filter?'所选日期没有这个类型的资料。':'所选日期没有新增资料或线索。');
     $('daily-sections').replaceChildren(...report.sections.map(dailySection));
   } catch(error){if(state.authenticated&&request===dailyUI.request)$('daily-report').textContent=message(error);}
 }
@@ -80,7 +89,9 @@ function dailyEntry(entry){
   return node('article',{class:'daily-entry'},
     node('p',{class:'discovery-meta',text:`${entry.source}，${when}`}),
     node('h3',{text:entry.title}),
-    node('p',{class:'discovery-meta',text:[entry.checkBasis,STATUS[entry.status],STAGE[entry.stage]].filter(Boolean).join('，')}),
+    node('p',{class:'discovery-meta',text:[entry.material,entry.checkBasis,
+      entry.status==='skipped'&&['standard','ecosystem'].includes(entry.kind)?'供人工查阅':STATUS[entry.status],
+      STAGE[entry.stage]].filter(Boolean).join('，')}),
     entry.summary?node('p',{class:'discovery-excerpt',text:short(entry.summary,175)}):null,actions,details,feedback,more);
 }
 
@@ -194,6 +205,7 @@ async function changeSubscription(run){
 
 function wireDaily(){
   $('daily-day').addEventListener('change',()=>loadDaily($('daily-day').value));
+  $('daily-filter').addEventListener('change',()=>loadDaily());
   $('daily-today').addEventListener('click',()=>loadDaily(''));
   $('daily-discovery').addEventListener('click',async()=>{
     await switchView('discovery');

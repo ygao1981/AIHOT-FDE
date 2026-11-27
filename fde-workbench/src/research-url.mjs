@@ -12,6 +12,13 @@ export function xPostUrl(value) {
   return `https://x.com/i/status/${match[1]}`;
 }
 
+export function tencentArticleId(value) {
+  const url=new URL(value);
+  if(url.hostname==='cloud.tencent.com')return /^\/developer\/article\/(\d+)\/?$/.exec(url.pathname)?.[1]||null;
+  if(url.hostname==='developer.cloud.tencent.com')return /^\/article\/(\d+)\/?$/.exec(url.pathname)?.[1]||null;
+  return null;
+}
+
 export function researchKey(value) {
   const url=new URL(canonicalUrl(value));
   if(isXUrl(url.href)) {
@@ -23,6 +30,8 @@ export function researchKey(value) {
     const match=/^\/([^/]+)\/([^/]+)\/(?:issues|pull)\/(\d+)\/?$/.exec(url.pathname);
     if(match)return `https://github.com/${match[1].toLowerCase()}/${match[2].toLowerCase()}/issue-or-pull/${match[3]}`;
   }
+  const tencentId=tencentArticleId(url);
+  if(tencentId)return 'cloud.tencent.com/developer/article/'+tencentId;
   // Display and requests retain the source URL and its scheme.
   const path=url.pathname.replace(/\/+$/,'')||'/';
   return `${url.host}${path}${url.search}`;

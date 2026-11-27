@@ -1,5 +1,33 @@
 # FDE 信源目录与核查说明
 
+## 2026-11-27 腾讯 FDE 与国内交付
+
+| 来源 | 用法及已核实的限制 |
+| --- | --- |
+| 腾讯研究院 | 人工。官网经本机代理两次返回 HTTP 503。社区「小腾资讯君」公开分发的两篇材料可单篇读取，发布主体按正文说明核对。报告为社区解读，圆桌为受访者口述。 [报告解读](https://cloud.tencent.com/developer/article/2721424) [AI 透镜圆桌](https://cloud.tencent.com/developer/article/2706016) |
+| 腾讯云 ADP | 每日自动检查官方博客的「近期文章」。九条卡片正文与日期均可取得。只采纳本地初筛通过的资料。直接请求第二页参数返回相同九条，历史文章从官方精选链接人工收录。 [ADP 博客](https://adp.tencent.com/zh/blog) |
+| 腾讯云培训认证 | 观察。公开考纲和能力说明可单篇查阅与收录。动态报名和伙伴申报留在官方站。只显示最后更新时间的考纲，原始发表日记为未知。 [培训认证中心](https://cloud.tencent.com/edu/training) |
+| WorkBuddy | 观察。企业版官网、产品文档、社区 TDP 官方运营的案例摘要和客户作者的单篇原文均可读。案例专栏静态响应未提供可用的栏目文章列表，读者可从「重点资料」打开核对过的链接。 [企业版](https://cloud.tencent.com/product/workbuddy-enterprise) [产品文档](https://cloud.tencent.com/document/product/1831/138797) [案例专栏](https://developer.cloud.tencent.com/column/109050) |
+| 腾讯云开发者社区 | 只用核对过的发布账号和文章链接。对于同一文章数字编号，两个社区地址归并。不同编号的转载需要核对原文后再关联。公众号内容优先查找官方同步页，再按需手动收录。 [社区](https://developer.cloud.tencent.com/) |
+| 腾讯 WeKnora | 已有信源卡保留。新增 GitHub 首选跟踪，Issue、PR、Release 和 `docs/` 差异进入线索池。Release Atom 的日期字段为更新时间。 [官方仓库](https://github.com/Tencent/WeKnora) |
+
+ADP 方法文章可用于拆解场景包和伙伴交付。25 个包由腾讯云披露，70% 复制和 30% 定制是起步目标。毕马威内部私有化部署有文中发言支持，联合对外交付的稳定复用率仍待公开核验。东北证券有客户负责人说明数据中台、知识库接入及从 Bad Case 找需求的过程。文章准确率来自项目现场分享，其测试细节和独立复现未披露。 [毕马威联合交付](https://adp.tencent.com/zh/blog/tencent-cloud-adp-fde-methodology-kpmg-partnership) [东北证券实践](https://adp.tencent.com/zh/blog/tencent-adp-atomic-capabilities-northeast-securities)
+
+WorkBuddy 工程材料覆盖 Midas Gen 工具对接、对账、客户跟进和资产整理。六个入选案例由活动运营方编辑，适合沿着作者链接追溯各自实施证据。会计师事务所稿件有三个月运行情况和流程细节，作者机构、用量与效果按自述标明。制造案例未具名，应另核操作范围和验收数。成都材料包含培训课题和团队交付思路，按人才培养观察。 [案例精选](https://developer.cloud.tencent.com/article/2753878) [事务所工作流](https://developer.cloud.tencent.com/article/2786448) [制造场景](https://developer.cloud.tencent.com/article/2770068) [成都课题回顾](https://developer.cloud.tencent.com/article/2793720)
+
+### 两项 FDE 认证及伙伴申报
+
+| 项目 | 2026-11-27 核实的官方信息 |
+| --- | --- |
+| ADP 前沿部署工程师 | TCCA 层级专项认证，面向 ADP 合作伙伴工程师与个人开发者。ADP 团队指南列为 1,200 元／人次，Prometric 线下闭卷理论，90 分钟，40 单选＋20 多选，70／100 合格，无其他证书前置要求。考纲中场景理解与方案设计占 25%、ADP 核心功能占 22%、交付评测运维占 11%。 [认证详情](https://cloud.tencent.com/edu/training/cert/detail?type=CFD) [考试指南](https://cloud.tencent.com/document/product/658/137832) [ADP 团队考务说明](https://adp.tencent.com/zh/blog/adp-fde-certification-guide) |
+| 人工智能前沿部署工程师 | TCCP 层级职业认证，涵盖 WorkBuddy、人工智能工程、需求、验收、资产沉淀及安全。官方考纲列线下理论，120 分钟，40 单选＋20 多选，70／100 合格。官方建议具备企业交付经验和可运行原型实践。这是能力建议。公开详情没有给出可确认的报名实付价格，考位和具体报名校验以本人官方会话为准。 [认证详情](https://cloud.tencent.com/edu/training/cert/detail?type=CID) [最新考纲](https://cloud.tencent.com/document/product/658/139487?lang=zh) |
+| 证书与续证 | 两科详情均列有效期两年。腾讯云通用报名指引从最近一次通过的成绩发布日期起计算，有延续有效证书需求需重新报名参加考试。通用流程要求本人账号和个人实名认证。 [个人报名与续证指引](https://cloud.tencent.com/document/product/658/107930) [认证级别名称说明](https://cloud.tencent.com/document/product/658/106113) |
+| 伙伴政策 | 公开指南区分认证级、优选级和 FDE 级。授权图示分别涉及开发接入、调测和维保、标准服务包与全链条交付。指南要求考虑人员的 AI 应用、交付运维和 FDE 认证能力，以及企业项目和服务能力。申报页匿名响应只有应用外壳，最新最低人数、企业条件和审核材料仍需登录核对。 [官方梯次与人员说明](https://adp.tencent.com/zh/blog/adp-fde-certification-guide) [认证级](https://tpartner.cloud.tencent.com/csp/apply/base?approvalId=0&productId=1344254949987295232) [优选级](https://tpartner.cloud.tencent.com/csp/apply/base?approvalId=0&productId=1344255251167674368) [FDE 级](https://tpartner.cloud.tencent.com/csp/apply/base?approvalId=0&productId=1489109621939093504) |
+
+两项考纲分别适合做 ADP 操作能力表和企业交付能力表。TCCA 是腾讯云认证工程师，TCCP 是腾讯云认证高级工程师。个人证书与企业授权按各自的考务和申报流程核对。 [腾讯云专项与职业体系](https://cloud.tencent.com/edu/training)
+
+Datawhale FDE100 本机复核仍是动态外壳。Hello-Agents、All-in-RAG、AgentScope、Spring AI Alibaba 和百度千帆沿用已有入口，Release Atom 先作版本线索；All-in-RAG 的 Atom 返回零条。华为云盘古的官方页可读但主要是产品介绍，继续从有工程正文的单篇实践中选取。腾讯 CloudBase AI Toolkit 可作为连接器参考，保持人工阅读，以免把工具发布增加成资讯流。 [FDE100](https://fde100.datawhale.cn/) [华为云盘古](https://www.huaweicloud.com/product/pangu.html) [CloudBase AI Toolkit](https://github.com/TencentCloudBase/CloudBase-AI-Toolkit)
+
 ## 2.3.1 附加发现入口
 
 | 入口 | 默认定时行为 | 可查的原始证据 |

@@ -5,17 +5,36 @@ import { researchKey } from './research-url.mjs';
 const PREFERENCES=[
   {id:'knowledge',label:'企业知识库与智能客服',words:'知识库,客服,RAG,retrieval,customer support',weight:3},
   {id:'integration',label:'业务系统集成',words:'系统集成,传统系统,integration,legacy system,ERP,CRM',weight:3},
-  {id:'industry',label:'工业、仓储物流及运维',words:'工业,WCS,仓储,设备运维,物流,warehouse,manufacturing,maintenance',weight:3},
+  {id:'industry',label:'工业、仓储物流及运维',words:'工业,WCS,仓储,设备运维,设备售后,制造,物流,warehouse,manufacturing,maintenance',weight:3},
   {id:'software',label:'企业软件开发效率',words:'软件开发,coding agent,developer productivity,code review,开发效率',weight:2},
-  {id:'delivery',label:'售前、投标与交付',words:'售前,投标,技术交付,forward deployed,client delivery,客户协作',weight:3},
-  {id:'outcomes',label:'可验证的降本增效',words:'降本,增效,latency,cost,baseline,throughput,基线',weight:2},
-  {id:'tools',label:'可复用开源工程方法',words:'开源,Skill,MCP,open source,教程,架构,评测,evals',weight:2},
+  {id:'delivery',label:'需求调研、售前与交付',words:'售前,投标,交付,现场调研,需求挖掘,可行性,POC,验收,伙伴交付,forward deployed,client delivery,客户协作',weight:3},
+  {id:'outcomes',label:'实施成本、报价与验收',words:'降本,增效,报价,交付成本,人天,毛利,利润,验收指标,latency,cost,baseline,throughput,基线',weight:2},
+  {id:'tools',label:'可复用工程方法与场景包',words:'开源,Skill,MCP,open source,教程,架构,评测,evals,连接器,场景包,标准化,复用',weight:2},
 ];
 const FEEDBACK={
   follow:['值得继续关注',2],proposal:['可用于企业方案',3],wechat:['适合公众号选题',2],practical:['有实际工程价值',2],
   theory:['偏理论，暂不关注',-1],promo:['营销或课程推广',-3],duplicate:['重复内容',-3],unrelated:['与研究方向无关',-3],
 };
 const SECTIONS={practice:'企业落地实践',method:'工程研究与方法',lead:'值得关注的线索'};
+const FILTERS={
+  domestic:['国内 FDE 实践',entry=>entry.kind==='practice'&&entry.market==='domestic'],
+  overseas:['海外 FDE 实践',entry=>entry.kind==='practice'&&entry.market==='overseas'],
+  method:['工程研究与方法',entry=>['method','methodology'].includes(entry.kind)],
+  standard:['官方认证与能力标准',entry=>entry.kind==='standard'],
+  ecosystem:['合作伙伴与生态政策',entry=>entry.kind==='ecosystem'],
+  promotion:['产品发布与推广',entry=>entry.kind==='promotion'],
+};
+const MATERIALS={practice:'企业落地案例',method:'工程方案与实操',methodology:'FDE 方法与行业研究',
+  standard:'官方认证与能力标准',ecosystem:'合作伙伴与生态政策',promotion:'产品发布与推广'};
+function materialKind(check,result) {
+  if(!['practice','method','lead'].includes(check.type))return check.type;
+  if(result?.stage==='production'&&result.relevance==='relevant')return 'practice';
+  return result&&check.type==='practice'&&result.stage!=='production'?'method':check.type;
+}
+function overviewSection(kind){
+  if(kind==='methodology')return 'method';
+  return Object.hasOwn(SECTIONS,kind)?kind:null;
+}
 const SIGNALS={reproduction:'复现线索',maintainer_answer:'项目成员答复'};
 const datePart=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 const labelFor={hn:'Hacker News',github:'GitHub',x:'X'};
@@ -126,7 +145,9 @@ export class DailyResearch {
     else this.store.db.prepare('DELETE FROM research_feedback WHERE target_key=? AND label=?').run(group,label);
   }
 
-  read(day,now=new Date()) {
+  read(day,now=new Date(),filter='') {
+    if(filter&&!Object.hasOwn(FILTERS,filter))throw new AppError('invalid_research_filter','请选择资料类型。');
+    const view=filter?FILTERS[filter]:null;
     const scope=bounds(day,now),{start,end}=scope,db=this.store.db;
     const articles=db.prepare(`SELECT id,research_key,url,title,source_name,language,published_at,status,editorial_status,
       created_at,analysis_json,body_kind,substr(body,1,16000) body FROM articles WHERE created_at<? AND
@@ -156,8 +177,8 @@ export class DailyResearch {
       if(['candidate','queued','analyzing','needs_body'].includes(row.status))review.pending++;
       if(result)review.analyzed++;
       if(currentShortlist)review.shortlisted++;
-      const category=result&&check.type==='practice'&&result.stage!=='production'?'method':check.type;
-      entries.set(row.research_key,{key:row.research_key,id:row.id,type:'article',category:result?.stage==='production'&&result.relevance==='relevant'?'practice':category,
+      const kind=materialKind(check,result);
+      entries.set(row.research_key,{key:row.research_key,id:row.id,type:'article',category:overviewSection(kind),kind,material:MATERIALS[kind],market:check.market,
         title:result?.title||row.title,original:row.url,source:row.source_name,firstSeen:row.created_at,publishedAt:row.published_at,
         dateKind:dateKind(scope.day,originalDay),articleId:row.id,language:row.language,
         status:row.status,stage:result?.stage||null,editorialStatus:row.editorial_status,queueable:row.status==='candidate',
@@ -171,14 +192,16 @@ export class DailyResearch {
       const original=rows.find(row=>row.related_url)?.related_url||null;
       const linked=original?this.store.findResearchArticle(original):null;
       const article=linked?this.store.getArticle(linked.id):null;
-      const check=assessResearch({title:best.title,body:best.excerpt,url:original||best.url,signal:best.signal,trustedProject:best.channel==='github'});
+      const check=assessResearch({title:article?.title||best.title,body:article?.body||best.excerpt,url:original||best.url,signal:best.signal,trustedProject:best.channel==='github'});
+      const kind=materialKind(check,article?.analysis);
       const labels=flags.all(group.key).map(value=>value.label);
       const originalDay=publishedDay(article?.publishedAt);
       if(originalDay&&originalDay<scope.day)review.older++;
       if(article?.analysis)review.analyzed++;
       else if(best.priority>=2)review.pending++;
       if(article?.editorialStatus==='shortlisted'||labels.includes('wechat'))review.shortlisted++;
-      entries.set(group.key,{key:group.key,id:best.url,type:'lead',category:'lead',title:best.title,original,source:labelFor[best.channel],
+      entries.set(group.key,{key:group.key,id:best.url,type:'lead',category:overviewSection(kind)?'lead':null,kind,material:MATERIALS[kind],market:check.market,
+        title:best.title,original,source:labelFor[best.channel],
         firstSeen:group.firstSeen,publishedAt:article?.publishedAt||null,dateKind:dateKind(scope.day,originalDay),articleId:article?.id||null,
         editorialStatus:article?.editorialStatus||null,status:article?.status||null,stage:article?.analysis?.stage||null,queueable:article?.status==='candidate',
         summary:article?.analysis?.summary||best.excerpt||null,priority:Math.max(best.priority,check.priority),reasons:check.reasons,
@@ -194,18 +217,18 @@ export class DailyResearch {
       entry.score=entry.priority*4+Math.max(-5,Math.min(6,pref))+Math.max(-3,Math.min(3,adaptive))+Math.max(-6,Math.min(6,personal));
       entry.recommendation=explicit.filter(p=>p.weight>0).map(p=>p.label);
     }
-    const sections=Object.entries(SECTIONS).map(([id,label])=>{
-      const matches=[...entries.values()].filter(entry=>entry.category===id);
+    const sections=(view?[[filter,view[0]]]:Object.entries(SECTIONS)).map(([id,label])=>{
+      const matches=[...entries.values()].filter(entry=>view?view[1](entry):entry.category===id);
       return {id,label,count:matches.length,items:ranked(matches)};
     });
     const overview=this.store.overview(this.config);
-    return {...scope,counts:{newLeads:leadGroups.length,...review},sections,
+    return {...scope,filter:filter||'',counts:{newLeads:leadGroups.length,...review},sections,
       runtime:{collecting:overview.config.collectEnabled,automaticAnalysis:overview.config.autoAnalyze&&overview.config.analysisEnabled,
         remaining:Math.max(0,overview.config.dailyLimit-overview.usage.autoAttempts24h),limit:overview.config.dailyLimit}};
   }
 
-  markdown(day) {
-    const report=this.read(day);
+  markdown(day,filter) {
+    const report=this.read(day,undefined,filter);
     const {newLeads,published,older,pending,analyzed,shortlisted}=report.counts;
     const lines=[`# ${report.day} 每日研究简报`,'',
       `新发现 ${newLeads} 组线索，当日发布 ${published} 篇，发现历史资料 ${older} 篇。待深入 ${pending} 项，已有分析 ${analyzed} 篇，公众号候选 ${shortlisted} 项。`,''];
