@@ -252,6 +252,44 @@ test('React-style itemProp and a declared visible publication selector preserve 
   const chinese=extractArticle(`<html><body><span class="vp-post-date">2026年11月17日</span><article>${body}</article></body></html>`,'https://example.com',{detailDateSelector:'.vp-post-date'});
   assert.equal(chinese.publishedAt,'2026-11-17');
 });
+test('Tencent community rich articles use the current article record and keep publication separate from editing',()=>{
+  const url='https://cloud.tencent.com/developer/article/1234567';
+  const stamp='2025-08-05T12:30:17.000Z';
+  const header='<div class="mod-article-content"><span class="date-text">修改于 2025-09-24 14:34:47</span></div>';
+  const article=(articleId,plain)=>({articleInfo:{articleId,title:'FDE 行业观察',plain},
+    publishTime:Date.parse(stamp)/1000,editTime:Date.parse('2025-09-24T06:34:47Z')/1000});
+  const page=fallback=>header+'<script id="__NEXT_DATA__" type="application/json">'+JSON.stringify({props:{pageProps:{fallback}}})+'</script>';
+  const parsed=extractArticle(page({other:article(7654321,'不属于原文'),current:article(1234567,body)}),url);
+  assert.deepEqual(parsed,{title:'FDE 行业观察',body,publishedAt:stamp});
+  assert.equal(extractArticle(page({other:article(7654321,body)}),url).publishedAt,null);
+  assert.equal(extractArticle(header.replace('修改于','发布于'),url).publishedAt,'2025-09-24');
+});
+
+test('Tencent URLs reuse legacy aliases and only reviewed references get a proxy route',async t=>{
+  const {store,config}=fixture(t,{sourceProxyUrl:'http://127.0.0.1:17891'});
+  const canonical='https://cloud.tencent.com/developer/article/1234567';
+  const alias='https://developer.cloud.tencent.com/article/1234567?policyId=1004';
+  const next='https://cloud.tencent.com/developer/article/7654321';
+  store.catalog.push({id:'reviewed-fixture',name:'已核对的示例信源',language:'zh',references:[{title:'示例',url:next,readable:true}]});
+  const saved=store.upsertArticle({url:alias,title:'已有案例',body}).article;
+  store.db.prepare('UPDATE articles SET research_key=? WHERE id=?').run('developer.cloud.tencent.com/article/1234567?policyId=1004',saved.id);
+  const reused=await importArticle(store,{url:canonical},config,{fetcher:()=>assert.fail('duplicate fetch')});
+  assert.equal(reused.created,false);
+  assert.equal(reused.article.id,saved.id);
+  const accepted=await importArticle(store,{url:'https://developer.cloud.tencent.com/article/7654321?from=home'},config,
+    {fetcher:async (url,options)=>{
+      assert.equal(url,next);
+      assert.deepEqual(options.allowedHosts,['cloud.tencent.com']);
+      assert.equal(options.followRedirects,false);
+      assert.equal(options.sourceProxyUrl,config.sourceProxyUrl);
+      return {url,text:'<h1 class="title-text">企业知识库实践</h1><div class="mod-content__markdown">'+body+'</div>'};
+    }});
+  assert.equal(accepted.article.sourceName,'已核对的示例信源');
+  assert.equal(store.collectionLimits().addedToday,0);
+  await importArticle(store,{url:'https://cloud.tencent.com/developer/article/9876543'},config,
+    {fetcher:async (url,options)=>{assert.equal(options,undefined);return {url,text:'<h1 class="title-text">独立提交</h1>'};}});
+  assert.equal(store.overview(config).usage.attempts24h,0);
+});
 test('feed-body fallback is labeled partial, first collection is backfill, repeated collection deduplicates',async t=>{
   const {store,config}=fixture(t),publishedAt=new Date().toISOString();
   const rss=`<rss><channel><item><title>企业 AI 部署教程</title><link>https://example.com/a</link><pubDate>${publishedAt}</pubDate><description><![CDATA[<p>${body}</p>]]></description></item></channel></rss>`;

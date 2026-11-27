@@ -1,5 +1,78 @@
 {
   "schemaVersion": 1,
+  "tencentFdeReview": {
+    "checkedOn": "2026-11-27",
+    "transport": "Anonymous HTTPS through the existing Windows workbench source proxies. Sample and deployment activity used no model.",
+    "adp": {
+      "catalogId": "tencent-adp-engineering",
+      "entry": "https://adp.tencent.com/zh/blog",
+      "mode": "recent_static_html",
+      "listed": 9,
+      "bodyRead": 9,
+      "originalDates": 9,
+      "engineeringOrMethod": 5,
+      "promotionOrRelease": 4,
+      "addedFirst": 5,
+      "addedRepeat": 0,
+      "independentProxyChecks": 2,
+      "pageParameter": "page=2 returned the same nine links",
+      "autoRecommended": true
+    },
+    "researchInstitute": {
+      "catalogId": "tencent-research-fde",
+      "entry": "https://www.tisi.org/",
+      "homepageHttpStatus": 503,
+      "reviewedCommunityPosts": 2,
+      "bodyRead": 2,
+      "originalDates": 2,
+      "engineeringOrMethod": 2,
+      "promotionOrRelease": 0,
+      "aliasDuplicateAdded": 0,
+      "samples": [
+        {"url":"https://cloud.tencent.com/developer/article/2721424","publishedAt":"2026-08-05T12:30:17.000Z","bodyChars":3706,"evidence":"Publisher public article record publishTime; community report summary"},
+        {"url":"https://cloud.tencent.com/developer/article/2706016","publishedAt":"2026-07-09T09:46:53.000Z","bodyChars":32170,"evidence":"Publisher public article record publishTime; practitioner roundtable"}
+      ],
+      "autoRecommended": false
+    },
+    "certification": {
+      "catalogId": "tencent-fde-standards",
+      "entry": "https://cloud.tencent.com/edu/training",
+      "sampleCount": 3,
+      "bodyRead": 3,
+      "originalDates": 1,
+      "primaryMaterial": "official standards and partner guidance",
+      "engineeringOrMethod": 0,
+      "promotionOrRelease": 0,
+      "sampleLinks": ["https://cloud.tencent.com/document/product/658/137832","https://cloud.tencent.com/document/product/658/139487?lang=zh","https://adp.tencent.com/zh/blog/adp-fde-certification-guide"],
+      "partnerApplication": "Public link returned application shell; minimum staff and application credentials were not verified",
+      "autoRecommended": false
+    },
+    "workbuddy": {
+      "catalogId": "tencent-workbuddy-practice",
+      "entry": "https://developer.cloud.tencent.com/column/109050",
+      "sampleCount": 6,
+      "bodyRead": 6,
+      "originalDates": 4,
+      "engineeringOrMethod": 4,
+      "ecosystem": 1,
+      "promotionOrRelease": 1,
+      "limitation": "Public column HTML did not expose a usable article list. Publisher page retains event registration, separate from implemented projects.",
+      "autoRecommended": false
+    },
+    "weknora": {
+      "catalogId": "tencent-weknora",
+      "entry": "https://github.com/Tencent/WeKnora",
+      "mode": "GitHub public REST watch and lead review",
+      "httpRequests": 9,
+      "rawListRows": 62,
+      "normalizedActivitiesAndRepository": 17,
+      "savedLeads": 12,
+      "repeatAdded": 0,
+      "aliasNote": "App saves project activity as leads. Issue and PR identity are normalized by existing GitHub rules.",
+      "discussion": "Native destination; the workbench GraphQL credential was not used",
+      "autoRecommended": true
+    }
+  },
   "discoveryExpansion": {
     "checkedAt": "2026-11-25T10:37:42.639Z",
     "catalogSize": 32,

@@ -228,6 +228,13 @@ select { min-height: 42px; max-width: 100%; padding: 8px 29px 8px 10px; border: 
 .daily-counts dd { margin: 2px 0 0; color: var(--ink); font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .daily-toolbar { display: flex; gap: 6px 12px; align-items: center; flex-wrap: wrap; margin: 9px 0 12px; }
 .daily-toolbar .section-note { margin-right: auto; }
+.daily-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--muted); font-size: 14px; }
+.daily-filter select { width: auto; max-width: 100%; }
+.source-readings { margin: 10px 0; }
+.source-readings ul { margin: 8px 0; padding: 0; list-style: none; }
+.source-readings li { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 5px 0; }
+.source-readings a { min-width: 0; overflow-wrap: anywhere; }
+.source-readings button { flex: none; }
 #daily-report { color: var(--muted); font-size: 14px; margin-bottom: 13px; }
 .daily-sections { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,350px),1fr)); gap: 22px; align-items: start; }
 .daily-section { min-width: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 9px; padding: 17px; }

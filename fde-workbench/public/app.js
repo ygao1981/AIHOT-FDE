@@ -521,7 +521,12 @@ function sourceCard(source) {
   const description = Array.isArray(source.description) ? source.description.join('；') : text(source.description, text(source.notes, '请打开来源，判断是否适合当前研究方向。'));
   const meta = node('div', { class: 'source-meta' }, badge(language(source.language), 'outline'), source.region ? badge(source.region, 'outline') : null, !manual ? badge(source.enabled ? '已启用' : '已停用', source.enabled ? 'success' : '') : null);
   const checked = manual ? '可阅读后手动导入' : source.lastCheckedAt ? `上次检查 ${date(source.lastCheckedAt, true)} · 新增 ${count(source.lastCount)} 篇` : '尚未检查';
-  return node('article', { class: 'source-card' }, header, meta, node('p', { class: 'source-description', text: description }), source.lastError ? node('p', { class: 'source-error', text: '上次检查未完成。可以稍后重试，或打开来源手动收录。' }) : null, node('div', { class: 'source-footer' }, node('span', { text: checked }), externalLink('打开来源', source.homepage || source.url)));
+  const references=items(source.references);
+  const readings=references.length?node('details',{class:'source-readings'},node('summary',{text:'重点资料'}),
+    node('ul',{},...references.map(ref=>node('li',{},externalLink(ref.title,ref.url),
+      ref.readable?node('button',{type:'button',class:'button small','aria-label':'收录 '+ref.title,text:'收录',
+        onClick:()=>openImport({url:ref.url},{fromLead:true})}):null)))):null;
+  return node('article', { class: 'source-card' }, header, meta, node('p', { class: 'source-description', text: description }), source.lastError ? node('p', { class: 'source-error', text: '上次检查未完成。可以稍后重试，或打开来源手动收录。' }) : null, readings, node('div', { class: 'source-footer' }, node('span', { text: checked }), externalLink('打开来源', source.homepage || source.url)));
 }
 async function toggleSource(source, input) {
   const enabled = input.checked; input.disabled = true;

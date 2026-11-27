@@ -1,5 +1,96 @@
 [
   {
+    "id": "tencent-adp-engineering",
+    "name": "腾讯云 ADP 技术博客",
+    "homepage": "https://adp.tencent.com/zh/blog",
+    "url": "https://adp.tencent.com/zh/blog",
+    "kind": "html_list",
+    "enabled": true,
+    "disposition": "auto",
+    "language": "zh",
+    "region": "中国",
+    "category": "engineering",
+    "publisherType": "vendor",
+    "priority": 3,
+    "intervalHours": 24,
+    "maxItems": 9,
+    "researchOnly": true,
+    "allowedHosts": ["adp.tencent.com"],
+    "itemSelector": "[class^=\"blog_articleList\"]",
+    "linkSelector": "a[class^=\"ArticleCard_card\"][href^=\"/zh/blog/\"]",
+    "titleSelector": "h2",
+    "dateSelector": "[class^=\"ArticleCard_date\"]",
+    "detailBodySelector": "[class^=\"Markdown_markdown\"]",
+    "detailDateSelector": "[class^=\"blogDetail_heroMeta\"] span:last-child",
+    "linkPattern": "^https://adp\\.tencent\\.com/zh/blog/[a-z0-9-]+/?$",
+    "notes": "每日检查公开近期列表。选企业集成、交付方法和实操。历史精选可单独收录。25 个场景包中的七三比例是目标。",
+    "references": [
+      {"title":"ADP FDE 体系与毕马威联合交付","url":"https://adp.tencent.com/zh/blog/tencent-cloud-adp-fde-methodology-kpmg-partnership","readable":true},
+      {"title":"东北证券的业务系统与知识库接入","url":"https://adp.tencent.com/zh/blog/tencent-adp-atomic-capabilities-northeast-securities","readable":true}
+    ]
+  },
+  {
+    "id": "tencent-research-fde",
+    "name": "腾讯研究院 FDE 研究与 AI 透镜",
+    "homepage": "https://www.tisi.org/",
+    "url": "https://www.tisi.org/",
+    "kind": "manual",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "zh",
+    "region": "中国",
+    "publisherType": "research",
+    "notes": "官网通过当前代理返回 503。社区公开号转载的报告解读与圆桌可单篇读取。圆桌观点和报告是行业研究。",
+    "references": [
+      {"title":"《前线共创，双向赋能》报告解读","url":"https://cloud.tencent.com/developer/article/2721424","readable":true},
+      {"title":"AI 透镜 FDE 行业圆桌","url":"https://cloud.tencent.com/developer/article/2706016","readable":true},
+      {"title":"社区发布账号「小腾资讯君」","url":"https://cloud.tencent.com/developer/user/10625241"}
+    ]
+  },
+  {
+    "id": "tencent-fde-standards",
+    "name": "腾讯云 FDE 能力标准与伙伴政策",
+    "homepage": "https://cloud.tencent.com/edu/training",
+    "url": "https://cloud.tencent.com/edu/training",
+    "kind": "manual",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "zh",
+    "region": "中国",
+    "publisherType": "vendor",
+    "notes": "人工核对职业认证、专项认证、考纲及伙伴资质。报名、续证和申报以对应的当期官方页面为准。",
+    "references": [
+      {"title":"ADP 专项认证考试指南","url":"https://cloud.tencent.com/document/product/658/137832","readable":true},
+      {"title":"ADP 专项认证详情","url":"https://cloud.tencent.com/edu/training/cert/detail?type=CFD"},
+      {"title":"人工智能 FDE 职业认证考试指南","url":"https://cloud.tencent.com/document/product/658/139487?lang=zh","readable":true},
+      {"title":"人工智能 FDE 职业认证详情","url":"https://cloud.tencent.com/edu/training/cert/detail?type=CID"},
+      {"title":"ADP 认证和伙伴梯次指南","url":"https://adp.tencent.com/zh/blog/adp-fde-certification-guide","readable":true},
+      {"title":"FDE 级伙伴申报","url":"https://tpartner.cloud.tencent.com/csp/apply/base?productId=1489109621939093504&approvalId=0"},
+      {"title":"个人报名、考试及证书有效性","url":"https://cloud.tencent.com/document/product/658/107930"}
+    ]
+  },
+  {
+    "id": "tencent-workbuddy-practice",
+    "name": "腾讯 WorkBuddy 企业实践",
+    "homepage": "https://cloud.tencent.com/product/workbuddy-enterprise",
+    "url": "https://developer.cloud.tencent.com/column/109050",
+    "kind": "manual",
+    "enabled": false,
+    "disposition": "watch",
+    "language": "zh",
+    "region": "中国",
+    "publisherType": "vendor",
+    "notes": "只收录经过核对的运营账号选稿、客户工程经验和产品文档。征文、报班、课题演示和已部署项目分开看。",
+    "references": [
+      {"title":"行业应用指南第二期六个案例","url":"https://developer.cloud.tencent.com/article/2753878","readable":true},
+      {"title":"会计师事务所的项目管理工作流","url":"https://developer.cloud.tencent.com/article/2786448","readable":true},
+      {"title":"制造企业 WorkBuddy 协同案例","url":"https://developer.cloud.tencent.com/article/2770068","readable":true},
+      {"title":"成都 FDE 人才培养与课题回顾","url":"https://developer.cloud.tencent.com/article/2793720","readable":true},
+      {"title":"企业项目中的资料、技能和连接器","url":"https://cloud.tencent.com/document/product/1831/138797","readable":true},
+      {"title":"WorkBuddy 案例专栏","url":"https://developer.cloud.tencent.com/column/109050"}
+    ]
+  },
+  {
     "id": "uber-ai-engineering",
     "name": "Uber AI / ML 工程",
     "homepage": "https://www.uber.com/us/en/blog/engineering/uber-ai/",

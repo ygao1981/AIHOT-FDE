@@ -195,6 +195,12 @@ try {
   assert.match(await manual.innerText(),/人工阅读/);
   assert.equal(await manual.locator('input').count(),0);
   assert.equal(await page.locator('.source-card').filter({hasText:'美团技术团队'}).getByRole('link',{name:'打开来源'}).getAttribute('href'),'https://tech.meituan.com/');
+  const adp=page.locator('.source-card').filter({hasText:'腾讯云 ADP 技术博客'});
+  await adp.getByText('重点资料',{exact:true}).click();
+  await adp.getByRole('button',{name:'收录 ADP FDE 体系与毕马威联合交付'}).click();
+  assert.equal(await page.locator('#import-url').inputValue(),'https://adp.tencent.com/zh/blog/tencent-cloud-adp-fde-methodology-kpmg-partnership');
+  await page.locator('#close-import').click();
+  checked('已核对的信源入口可直接预填原文，打开表单不发起分析');
   const firstSource=page.locator('.source-card').filter({hasText:'美团技术团队'}).getByRole('switch');
   const disabledResponse = page.waitForResponse(r => r.url().endsWith('/api/sources/meituan-engineering') && r.request().method() === 'POST' && r.status() === 200);
   await firstSource.uncheck();
@@ -268,6 +274,11 @@ try {
   await page.locator('#tab-today').click();
   const dailyLead=page.locator('.daily-entry').filter({hasText:'Fictional AI evaluation tutorial'});
   const dailyArticle=page.locator('.daily-entry').filter({hasText:'界面样例：售后知识检索试点'});
+  await dailyLead.waitFor();
+  await page.locator('#daily-filter').selectOption('standard');
+  await page.getByText('所选日期没有这个类型的资料。',{exact:true}).waitFor();
+  assert.match(await page.locator('#daily-export').getAttribute('href'),/filter=standard/);
+  await page.locator('#daily-filter').selectOption('');
   await dailyLead.waitFor();
   assert.match(await page.locator('#daily-counts').innerText(),/新发现线索\s+1/);
   assert.match(await page.locator('#daily-runtime').innerText(),/自动分析已关闭.*5 \/ 5/);

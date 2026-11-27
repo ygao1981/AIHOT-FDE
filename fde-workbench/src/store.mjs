@@ -3,7 +3,7 @@ import { mkdirSync, chmodSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { AppError, MAX_AUTO_DAILY_LIMIT } from './config.mjs';
-import { researchKey } from './research-url.mjs';
+import { researchKey, tencentArticleId } from './research-url.mjs';
 
 const EDITORIAL = ['new', 'organized', 'shortlisted', 'drafting', 'published', 'archived'];
 const MODEL_WINDOW_MS = 86400000;
@@ -167,7 +167,16 @@ export class Store {
   findResearchArticle(url) {
     const row=this.db.prepare(`SELECT id,title FROM articles WHERE research_key=?
       ORDER BY analysis_json IS NULL,created_at LIMIT 1`).get(researchKey(url));
-    return row?{id:row.id,title:row.title}:null;
+    if(row)return {id:row.id,title:row.title};
+    const id=tencentArticleId(url);
+    if(!id)return null;
+    // Earlier versions kept the community alias and its query string in this key.
+    const alias='developer.cloud.tencent.com/article/'+id;
+    const original='cloud.tencent.com/developer/article/'+id;
+    const legacy=this.db.prepare(`SELECT id,title FROM articles
+      WHERE research_key=? OR research_key GLOB ? OR research_key GLOB ?
+      ORDER BY analysis_json IS NULL,created_at LIMIT 1`).get(alias,alias+'[?]*',original+'[?]*');
+    return legacy?{id:legacy.id,title:legacy.title}:null;
   }
   upsertArticle(a, {updateExisting = false, maxArticles = 10000} = {}) {
     const old = this.findUrl(a.url);
